@@ -56,6 +56,16 @@ function RootLayoutContent() {
         }
       },
     ]);
+
+    Notifications?.setNotificationCategoryAsync(NOTIFICATION_CATEGORIES.TIMER_COMPLETED, [
+      {
+        identifier: TIMER_ACTIONS.RESET,
+        buttonTitle: t.reset || 'Reset',
+        options: {
+          isDestructive: true,
+        }
+      },
+    ]);
     
     // Hide splash screen once loading and onboarding check are complete
     if (!isLoading && isFirstLaunch !== null) {

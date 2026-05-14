@@ -14,6 +14,7 @@ export interface TimerNotificationData {
 
 export const NOTIFICATION_CATEGORIES = {
   TIMER_ACTIVE: 'TIMER_ACTIVE',
+  TIMER_COMPLETED: 'TIMER_COMPLETED',
 } as const;
 
 export const TIMER_ACTIONS = {
@@ -226,7 +227,7 @@ export async function scheduleTimerCompletion(
         sound: activeSound,
         priority: Notifications.AndroidNotificationPriority?.MAX,
         vibrate: [0, 500, 200, 500, 200, 500],
-        categoryIdentifier: NOTIFICATION_CATEGORIES.TIMER_ACTIVE,
+        categoryIdentifier: NOTIFICATION_CATEGORIES.TIMER_COMPLETED,
         data: { taskId, durationMinutes: Math.round(durationMs / 60000) } as TimerNotificationData,
       } as any,
       trigger: {

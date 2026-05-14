@@ -35,6 +35,7 @@ const Index = () => {
     const router = useRouter();
     const setTimerMutation = useOfflineMutation(api.todos.setTimer, "todos:setTimer");
     const linkProject = useOfflineMutation(api.todos.linkProject, "todos:linkProject");
+    const linkTask = useOfflineMutation(api.todos.linkTask, "todos:linkTask");
     const updateTodo = useOfflineMutation(api.todos.updateTodo, "todos:updateTodo");
     const updateStatus = useOfflineMutation(api.todos.updateStatus, "todos:updateStatus");
     const { colors, isDarkMode } = useTheme();
@@ -45,6 +46,7 @@ const Index = () => {
     const [activeFilter, setActiveFilter] = useState<'All' | 'In Progress' | 'Done' | 'Not Done'>('All');
     
     const [isGlobalActionModalVisible, setGlobalActionModalVisible] = useState(false);
+    const [editingTaskId, setEditingTaskId] = useState<Id<"todos"> | null>(null);
     const [showOverdue, setShowOverdue] = useState(true);
     const [sortActive, setSortActive] = useState('');
     const [isTaskModalVisible, setIsTaskModalVisible] = useState(false);
@@ -109,8 +111,11 @@ const Index = () => {
           if (isScheduledForToday) {
             today.push(t);
             todayTotalCount++;
-          } else if (t.date !== undefined && t.date < todayStart) {
+          } else if (t.date !== undefined && t.date < todayStart && t.dueDate) {
             overdue.push(t);
+          } else {
+            today.push(t);
+            todayTotalCount++;
           }
         }
       });
@@ -188,9 +193,20 @@ const Index = () => {
       setProjectModalVisible(true);
     };
 
-    const handleSelectProject = (projectId: string | undefined) => {
-      if (selectedTodoId) {
-        linkProject({ id: selectedTodoId, projectId });
+    const handleEditTask = (id: Id<"todos">) => {
+      setEditingTaskId(id);
+    };
+
+    const handleSelectProject = (selection: { type: string; categoryId?: string; subCategoryId?: string; projectId?: string }) => {
+      if (!selectedTodoId) return;
+      if (selection.type === 'none') {
+        linkTask({ id: selectedTodoId, categoryId: undefined, subCategoryId: undefined, projectId: undefined });
+      } else if (selection.type === 'category') {
+        linkTask({ id: selectedTodoId, categoryId: selection.categoryId as any, subCategoryId: undefined, projectId: undefined });
+      } else if (selection.type === 'subCategory') {
+        linkTask({ id: selectedTodoId, categoryId: selection.categoryId as any, subCategoryId: selection.subCategoryId as any, projectId: undefined });
+      } else if (selection.type === 'project') {
+        linkTask({ id: selectedTodoId, categoryId: undefined, subCategoryId: undefined, projectId: selection.projectId });
       }
     };
 
@@ -329,8 +345,9 @@ const Index = () => {
                                onSetTimer={handleOpenTimerModal}
                                onLinkProject={handleOpenProjectModal}
                                homeStyles={homeStyles}
-                               isTimelineMode={true}
-                           />
+                                isTimelineMode={true}
+                                onOpenDetail={handleEditTask}
+                            />
                        ))}
 
                        {/* Not Done Tasks (today) - separate section */}
@@ -352,6 +369,7 @@ const Index = () => {
                                         onLinkProject={handleOpenProjectModal}
                                         homeStyles={homeStyles}
                                         isTimelineMode={true}
+                                        onOpenDetail={handleEditTask}
                                     />
                                 ))}
                             </View>
@@ -381,8 +399,9 @@ const Index = () => {
                                          onSetTimer={handleOpenTimerModal}
                                          onLinkProject={handleOpenProjectModal}
                                          homeStyles={homeStyles}
-                                         isTimelineMode={false}
-                                     />
+                                          isTimelineMode={false}
+                                          onOpenDetail={handleEditTask}
+                                      />
                                    </View>
                                  )}
                                />
@@ -436,8 +455,9 @@ const Index = () => {
                                          onSetTimer={handleOpenTimerModal}
                                          onLinkProject={handleOpenProjectModal}
                                          homeStyles={homeStyles}
-                                         isTimelineMode={true}
-                                     />
+                                          isTimelineMode={true}
+                                          onOpenDetail={handleEditTask}
+                                      />
                                  ))}
                                </View>
                              );
@@ -453,6 +473,11 @@ const Index = () => {
                     onClose={() => setIsTaskModalVisible(false)}
                     todoId={null}
                     initialDate={Date.now()}
+                />
+                <TaskDetailModal 
+                    visible={editingTaskId !== null}
+                    onClose={() => setEditingTaskId(null)}
+                    todoId={editingTaskId}
                 />
             </SafeAreaView>
 

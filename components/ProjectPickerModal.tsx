@@ -8,10 +8,17 @@ import { Id } from '@/convex/_generated/dataModel';
 
 import { useAuth } from '@/hooks/useAuth';
 
+interface LinkSelection {
+  type: 'category' | 'subCategory' | 'project' | 'none';
+  categoryId?: Id<'projectCategories'>;
+  subCategoryId?: Id<'projectSubCategories'>;
+  projectId?: string;
+}
+
 interface ProjectPickerModalProps {
   visible: boolean;
   onClose: () => void;
-  onSelect: (projectId: string | undefined) => void;
+  onSelect: (selection: LinkSelection) => void;
 }
 
 const ProjectPickerModal: React.FC<ProjectPickerModalProps> = ({ visible, onClose, onSelect }) => {
@@ -53,67 +60,104 @@ const ProjectPickerModal: React.FC<ProjectPickerModalProps> = ({ visible, onClos
   };
 
   const renderCategoryItem = ({ item }: { item: any }) => (
-    <TouchableOpacity
-      style={[styles.item, { borderBottomColor: colors.border }]}
-      onPress={() => {
-        setSelectedCatId(item._id);
-        setSelectedCatName(item.name);
-        setCurrentLevel('categoryDetail');
-      }}
-    >
-      <View style={[styles.iconContainer, { backgroundColor: item.color + '20' }]}>
-        <Ionicons name={item.icon as any || 'folder-outline'} size={20} color={item.color} />
-      </View>
-      <Text style={[styles.label, { color: colors.text }]}>{item.name}</Text>
-      <Ionicons name="chevron-forward" size={18} color={colors.border} />
-    </TouchableOpacity>
+    <View style={[styles.item, { borderBottomColor: colors.border, flexDirection: 'row', alignItems: 'center' }]}>
+      <TouchableOpacity
+        style={{ flex: 1, flexDirection: 'row', alignItems: 'center' }}
+        onPress={() => {
+          setSelectedCatId(item._id);
+          setSelectedCatName(item.name);
+          setCurrentLevel('categoryDetail');
+        }}
+      >
+        <View style={[styles.iconContainer, { backgroundColor: item.color + '20' }]}>
+          <Ionicons name={item.icon as any || 'folder-outline'} size={20} color={item.color} />
+        </View>
+        <Text style={[styles.label, { color: colors.text }]}>{item.name}</Text>
+        <Ionicons name="chevron-forward" size={18} color={colors.border} />
+      </TouchableOpacity>
+      <TouchableOpacity 
+        style={{ padding: 8, marginLeft: 8 }}
+        onPress={() => {
+          onSelect({ type: 'category', categoryId: item._id });
+          handleClose();
+        }}
+      >
+        <Ionicons name="link-outline" size={20} color={colors.primary} />
+      </TouchableOpacity>
+    </View>
   );
 
   const renderMixedItem = ({ item, section }: { item: any; section: any }) => {
     const isProject = section.type === 'project';
     return (
-      <TouchableOpacity
-        style={[styles.item, { borderBottomColor: colors.border }]}
-        onPress={() => {
-          if (isProject) {
-            onSelect(item._id);
+      <View style={[styles.item, { borderBottomColor: colors.border, flexDirection: 'row', alignItems: 'center' }]}>
+        <TouchableOpacity
+          style={{ flex: 1, flexDirection: 'row', alignItems: 'center' }}
+          onPress={() => {
+            if (isProject) {
+              onSelect({ type: 'project', projectId: item._id });
+              handleClose();
+            } else {
+              setSelectedSubId(item._id);
+              setCurrentLevel('subCategoryProjects');
+            }
+          }}
+        >
+          <View style={[styles.iconContainer, { backgroundColor: (item.color || colors.primary) + '20' }]}>
+            <Ionicons 
+              name={item.icon || (isProject ? 'rocket-outline' : 'layers-outline') as any} 
+              size={20} 
+              color={item.color || colors.primary} 
+            />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={[styles.label, { color: colors.text }]}>{item.name}</Text>
+            <Text style={{ fontSize: 11, color: colors.textMuted }}>{isProject ? 'Project' : 'Sub-Category'}</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={18} color={colors.border} />
+        </TouchableOpacity>
+        <TouchableOpacity 
+          style={{ padding: 8, marginLeft: 8 }}
+          onPress={() => {
+            if (isProject) {
+              onSelect({ type: 'project', projectId: item._id });
+            } else {
+              onSelect({ type: 'subCategory', categoryId: selectedCatId!, subCategoryId: item._id });
+            }
             handleClose();
-          } else {
-            setSelectedSubId(item._id);
-            setCurrentLevel('subCategoryProjects');
-          }
-        }}
-      >
-        <View style={[styles.iconContainer, { backgroundColor: (item.color || colors.primary) + '20' }]}>
-          <Ionicons 
-            name={item.icon || (isProject ? 'rocket-outline' : 'layers-outline') as any} 
-            size={20} 
-            color={item.color || colors.primary} 
-          />
-        </View>
-        <View style={{ flex: 1 }}>
-          <Text style={[styles.label, { color: colors.text }]}>{item.name}</Text>
-          <Text style={{ fontSize: 11, color: colors.textMuted }}>{isProject ? 'Project' : 'Sub-Category'}</Text>
-        </View>
-        <Ionicons name="chevron-forward" size={18} color={colors.border} />
-      </TouchableOpacity>
+          }}
+        >
+          <Ionicons name="link-outline" size={20} color={colors.primary} />
+        </TouchableOpacity>
+      </View>
     );
   };
 
   const renderProjectItem = ({ item }: { item: any }) => (
-    <TouchableOpacity
-      style={[styles.item, { borderBottomColor: colors.border }]}
-      onPress={() => {
-        onSelect(item._id);
-        handleClose();
-      }}
-    >
-      <View style={[styles.iconContainer, { backgroundColor: item.color + '20' }]}>
-        <Ionicons name={item.icon as any || 'rocket-outline'} size={20} color={item.color} />
-      </View>
-      <Text style={[styles.label, { color: colors.text }]}>{item.name}</Text>
-      <Ionicons name="chevron-forward" size={18} color={colors.border} />
-    </TouchableOpacity>
+    <View style={[styles.item, { borderBottomColor: colors.border, flexDirection: 'row', alignItems: 'center' }]}>
+      <TouchableOpacity
+        style={{ flex: 1, flexDirection: 'row', alignItems: 'center' }}
+        onPress={() => {
+          onSelect({ type: 'project', projectId: item._id });
+          handleClose();
+        }}
+      >
+        <View style={[styles.iconContainer, { backgroundColor: item.color + '20' }]}>
+          <Ionicons name={item.icon as any || 'rocket-outline'} size={20} color={item.color} />
+        </View>
+        <Text style={[styles.label, { color: colors.text }]}>{item.name}</Text>
+        <Ionicons name="chevron-forward" size={18} color={colors.border} />
+      </TouchableOpacity>
+      <TouchableOpacity 
+        style={{ padding: 8, marginLeft: 8 }}
+        onPress={() => {
+          onSelect({ type: 'project', projectId: item._id });
+          handleClose();
+        }}
+      >
+        <Ionicons name="link-outline" size={20} color={colors.primary} />
+      </TouchableOpacity>
+    </View>
   );
 
   const isLoading = 
@@ -149,7 +193,7 @@ const ProjectPickerModal: React.FC<ProjectPickerModalProps> = ({ visible, onClos
               <TouchableOpacity
                 style={[styles.item, { borderBottomColor: colors.border }]}
                 onPress={() => {
-                  onSelect(undefined);
+                  onSelect({ type: 'none' });
                   handleClose();
                 }}
               >

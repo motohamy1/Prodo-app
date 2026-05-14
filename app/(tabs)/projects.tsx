@@ -26,7 +26,6 @@ import { useOfflineMutation } from '@/hooks/useOfflineMutation';
 import { useMutation } from 'convex/react';
 import { api } from '@/convex/_generated/api';
 import { Id, Doc } from '@/convex/_generated/dataModel';
-import TodoInput from '@/components/TodoInput';
 import TodoCard from '@/components/TodoCard';
 import ActionModal from '@/components/ActionModal';
 import TimerModal from '@/components/TimerModal';
@@ -133,6 +132,14 @@ const AddSubCategoryModal = ({ visible, onClose, colors, styles, onAdd, initialD
             <Text style={styles.modalTitle}>{initialData ? 'Edit Sub-Category' : 'New Sub-Category'}</Text>
             <Text style={styles.modalLabel}>Name</Text>
             <TextInput style={[styles.modalInput, { minHeight: 40, paddingVertical: Platform.OS === 'ios' ? 8 : 4 }]} placeholder="e.g. Frontend, Cardiology, Sci-Fi..." placeholderTextColor={colors.textMuted} value={name} onChangeText={setName} autoFocus multiline={true} blurOnSubmit={true} scrollEnabled={false} />
+            <Text style={styles.modalLabel}>Icon</Text>
+            <View style={styles.iconPicker}>
+              {SUB_CATEGORY_ICONS.map(ic => (
+                <TouchableOpacity key={ic} style={[styles.iconOption, icon === ic && styles.iconOptionSelected]} onPress={() => setIcon(ic)}>
+                  <Ionicons name={ic as any} size={22} color={icon === ic ? colors.primary : colors.textMuted} />
+                </TouchableOpacity>
+              ))}
+            </View>
             <Text style={styles.modalLabel}>Color</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.colorPicker}>
               {ACCENT_COLORS.map(c => (
@@ -229,7 +236,7 @@ const AddProjectModal = ({ visible, onClose, colors, styles, onAdd, initialData 
   const handleAdd = () => { if (!name.trim()) return; onAdd(name.trim(), desc.trim(), icon, color); setName(''); setDesc(''); onClose(); };
   return (
     <Modal visible={visible} transparent animationType="slide">
-      <KeyboardAvoidingView style={styles.modalOverlay} behavior="padding">
+      <KeyboardAvoidingView style={styles.modalOverlay} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
         <ScrollView style={{ flex: 1 }} contentContainerStyle={{ justifyContent: 'flex-end', flexGrow: 1 }} keyboardShouldPersistTaps="handled">
           <View style={styles.modalSheet}>
             <View style={styles.modalHandle} />
@@ -442,7 +449,6 @@ const CategoryDetailView = ({
       <View style={styles.subCategoriesList}>
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
           <Text style={[styles.sectionLabel, { paddingHorizontal: 0, marginBottom: 0 }]}>Sub-Categories</Text>
-          <TouchableOpacity onPress={onAddSubCategory}><Text style={{ color: colors.primary, fontWeight: '700', fontSize: 13 }}>+ New</Text></TouchableOpacity>
         </View>
         
         {subCategories.length === 0 && (
@@ -477,17 +483,23 @@ const CategoryDetailView = ({
               ]
             })}
           >
-            <View style={[styles.subCategoryIconWrap, { backgroundColor: colors.primary + '15' }]}><Ionicons name="layers-outline" size={18} color={colors.primary} /></View>
+            <View style={[styles.subCategoryIconWrap, { backgroundColor: sub.color + '20' }]}><Ionicons name={sub.icon as any} size={18} color={sub.color} /></View>
             <Text style={styles.subCategoryName}>{sub.name}</Text>
           </TouchableOpacity>
         ))}
+        <TouchableOpacity 
+          style={[styles.subCategoryCard, { borderStyle: 'dashed', backgroundColor: 'transparent', shadowOpacity: 0, elevation: 0, justifyContent: 'center', alignItems: 'center', flexDirection: 'column', paddingVertical: 24 }]} 
+          onPress={onAddSubCategory}
+        >
+          <Ionicons name="add-circle-outline" size={32} color={colors.textMuted} />
+          <Text style={{ marginTop: 8, fontSize: 13, fontWeight: '600', color: colors.textMuted }}>Add Sub-Category</Text>
+        </TouchableOpacity>
       </View>
 
       {/* Direct Projects Section */}
       <View style={{ paddingHorizontal: 20, marginTop: 20 }}>
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
           <Text style={[styles.sectionLabel, { paddingHorizontal: 0, marginBottom: 0 }]}>Direct Projects</Text>
-          <TouchableOpacity onPress={onAddProject}><Text style={{ color: colors.primary, fontWeight: '700', fontSize: 13 }}>+ Add</Text></TouchableOpacity>
         </View>
 
         <View style={[styles.projectsGrid, { paddingHorizontal: 0 }]}>
@@ -526,7 +538,7 @@ const CategoryDetailView = ({
                   ]
                 })}
               >
-                <View style={[styles.projectGridIcon, { backgroundColor: project.color + '20' }]}><Ionicons name={project.icon as any} size={24} color={project.color} /></View>
+                <View style={[styles.projectGridIcon, { backgroundColor: project.color + '20' }]}><Ionicons name={project.icon as any} size={28} color={project.color} /></View>
                 <Text style={styles.projectGridName} numberOfLines={1}>{project.name}</Text>
                 <View style={styles.projectGridFooter}>
                    <View style={styles.gridProgressBarTrack}><View style={[styles.gridProgressBarFill, { width: `${pct}%`, backgroundColor: project.color }]} /></View>
@@ -658,7 +670,7 @@ const SubCategoryProjectsView = ({
               ]
             })}
           >
-            <View style={[styles.projectGridIcon, { backgroundColor: project.color + '20' }]}><Ionicons name={project.icon as any} size={24} color={project.color} /></View>
+            <View style={[styles.projectGridIcon, { backgroundColor: project.color + '20' }]}><Ionicons name={project.icon as any} size={28} color={project.color} /></View>
             <Text style={styles.projectGridName} numberOfLines={2}>{project.name}</Text>
             <View style={styles.projectGridFooter}>
                <View style={styles.gridProgressBarTrack}><View style={[styles.gridProgressBarFill, { width: `${pct}%`, backgroundColor: project.color }]} /></View>
@@ -692,17 +704,20 @@ const ProjectDetailView = ({ styles, colors, projectId, onDeleteProject, userId,
   const toggleCheckItem = useMutation(api.projects.toggleChecklistItem);
   const deleteCheckItem = useMutation(api.projects.deleteChecklistItem);
   const deleteTodoMutation = useMutation(api.todos.deleteTodo);
+  const addTodoMutation = useMutation(api.todos.addTodo);
   const setTimerMutation = useMutation(api.todos.setTimer);
-  const linkTodoProjectMutation = useMutation(api.todos.linkProject);
+  const linkTodoProjectMutation = useMutation(api.todos.linkTask);
 
-  const [tasksOpen, setTasksOpen] = useState(true);
-  const [checklistOpen, setChecklistOpen] = useState(true);
+  const [tasksOpen, setTasksOpen] = useState(false);
+  const [checklistOpen, setChecklistOpen] = useState(false);
   const [showAddResource, setShowAddResource] = useState(false);
   const [editingDesc, setEditingDesc] = useState(false);
   const [descText, setDescText] = useState('');
   
   const [newCheckItem, setNewCheckItem] = useState('');
   const [isAddingCheck, setIsAddingCheck] = useState(false);
+  const [newTaskText, setNewTaskText] = useState('');
+  const [isAddingTask, setIsAddingTask] = useState(false);
   
   const [isTimerModalVisible, setTimerModalVisible] = useState(false);
   const [isProjectModalVisible, setProjectModalVisible] = useState(false);
@@ -737,6 +752,19 @@ const ProjectDetailView = ({ styles, colors, projectId, onDeleteProject, userId,
     addCheckItem({ userId, projectId, text: newCheckItem.trim() });
     setNewCheckItem('');
     setIsAddingCheck(false);
+  };
+
+  const handleAddTask = () => {
+    if (!newTaskText.trim() || !userId) return;
+    addTodoMutation({
+      userId,
+      text: newTaskText.trim(),
+      date: Date.now(),
+      status: 'not_started',
+      projectId,
+    });
+    setNewTaskText('');
+    setIsAddingTask(false);
   };
 
   const todos = linkedTodos || [];
@@ -968,9 +996,31 @@ const ProjectDetailView = ({ styles, colors, projectId, onDeleteProject, userId,
                      </TouchableOpacity>
                    );
                 })}
-                <View style={{ width: '92%', alignSelf: 'center', marginTop: 8 }}>
-                   <TodoInput projectId={project._id} />
-                </View>
+                {isAddingTask ? (
+                  <View style={styles.checklistAddRow}>
+                    <Ionicons name="ellipse-outline" size={20} color={colors.border} />
+                    <TextInput 
+                      style={styles.checklistInput} 
+                      placeholder="Add a task..." 
+                      placeholderTextColor={colors.textMuted}
+                      value={newTaskText}
+                      onChangeText={setNewTaskText}
+                      onSubmitEditing={handleAddTask}
+                      autoFocus
+                      onBlur={() => {
+                        if (!newTaskText.trim()) setIsAddingTask(false);
+                      }}
+                    />
+                    <TouchableOpacity onPress={handleAddTask}>
+                      <Ionicons name="arrow-up-circle" size={28} color={newTaskText.trim() ? colors.primary : colors.textMuted} />
+                    </TouchableOpacity>
+                  </View>
+                ) : (
+                  <TouchableOpacity style={styles.checklistAddButton} onPress={() => setIsAddingTask(true)}>
+                    <Ionicons name="add" size={20} color={colors.primary} />
+                    <Text style={styles.checklistAddButtonText}>Add a task</Text>
+                  </TouchableOpacity>
+                )}
              </View>
            )}
         </View>
@@ -1011,7 +1061,18 @@ const ProjectDetailView = ({ styles, colors, projectId, onDeleteProject, userId,
       <ProjectPickerModal
         visible={isProjectModalVisible}
         onClose={() => { setProjectModalVisible(false); setSelectedTodoId(null); }}
-        onSelect={(id) => { if (selectedTodoId) linkTodoProjectMutation({ id: selectedTodoId, projectId: id }); }}
+        onSelect={(selection) => { 
+          if (!selectedTodoId) return;
+          if (selection.type === 'none') {
+            linkTodoProjectMutation({ id: selectedTodoId, categoryId: undefined, subCategoryId: undefined, projectId: undefined });
+          } else if (selection.type === 'category') {
+            linkTodoProjectMutation({ id: selectedTodoId, categoryId: selection.categoryId, subCategoryId: undefined, projectId: undefined });
+          } else if (selection.type === 'subCategory') {
+            linkTodoProjectMutation({ id: selectedTodoId, categoryId: selection.categoryId, subCategoryId: selection.subCategoryId, projectId: undefined });
+          } else if (selection.type === 'project') {
+            linkTodoProjectMutation({ id: selectedTodoId, categoryId: undefined, subCategoryId: undefined, projectId: selection.projectId });
+          }
+        }}
       />
 
       <ActionModal 

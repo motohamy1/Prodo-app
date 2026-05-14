@@ -11,6 +11,7 @@ import { useTranslation } from '@/utils/i18n';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import Svg, { Circle, Path, G, Text as SvgText } from 'react-native-svg';
 import { SubtaskRow } from './SubtaskRow';
+import { InlineTimerPicker } from './InlineTimerPicker';
 import { showTaskCompletedNotification, scheduleReminderNotification } from '@/utils/notifications';
 
 
@@ -32,17 +33,23 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ visible, onClose, tod
   const currentTodoId = taskStack.length > 0 ? taskStack[taskStack.length - 1] : todoId;
   const todo = useOfflineQuery<any>('todos.getById', api.todos.getById, currentTodoId ? { id: currentTodoId } : "skip");
   const subtasks = useOfflineQuery<any[]>('todos.getSubtasks', api.todos.getSubtasks, currentTodoId ? { parentId: currentTodoId } : "skip");
+  const checklistItems = useOfflineQuery<any[]>('todos.getTaskChecklists', api.todos.getTaskChecklists, currentTodoId ? { todoId: currentTodoId } : "skip");
   const project = useOfflineQuery<any>('projects.getProjectMetadata', api.projects.getProjectMetadata, todo?.projectId ? { id: todo.projectId } : "skip");
 
   const updateTodo = useOfflineMutation(api.todos.updateTodo, "todos:updateTodo");
   const updateStatus = useOfflineMutation(api.todos.updateStatus, "todos:updateStatus");
   const setTimer = useOfflineMutation(api.todos.setTimer, "todos:setTimer");
   const startTimer = useOfflineMutation(api.todos.startTimer, "todos:startTimer");
+  const startSubtaskTimer = useOfflineMutation(api.todos.startSubtaskTimer, "todos:startSubtaskTimer");
   const pauseTimer = useOfflineMutation(api.todos.pauseTimer, "todos:pauseTimer");
+  const pauseSubtaskTimer = useOfflineMutation(api.todos.pauseSubtaskTimer, "todos:pauseSubtaskTimer");
   const resetTimer = useOfflineMutation(api.todos.resetTimer, "todos:resetTimer");
   const removeTimer = useOfflineMutation(api.todos.removeTimer, "todos:removeTimer");
   const addTodo = useOfflineMutation(api.todos.addTodo, "todos:addTodo");
   const deleteTodo = useOfflineMutation(api.todos.deleteTodo, "todos:deleteTodo");
+  const addCheckItem = useOfflineMutation(api.todos.addTaskChecklistItem, "todos:addTaskChecklistItem");
+  const toggleCheckItem = useOfflineMutation(api.todos.toggleTaskChecklistItem, "todos:toggleTaskChecklistItem");
+  const deleteCheckItem = useOfflineMutation(api.todos.deleteTaskChecklistItem, "todos:deleteTaskChecklistItem");
 
   const [editText, setEditText] = useState("");
   const [description, setDescription] = useState("");
@@ -74,6 +81,13 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ visible, onClose, tod
       interval = setInterval(tick, 1000);
     } else if (todo?.status === 'paused' && todo?.timeLeftAtPause !== undefined) {
       setTimeLeft(todo.timeLeftAtPause);
+    } else if (todo?.status === 'done') {
+      // Show total elapsed time for completed tasks
+      if (todo?.timerDirection === 'up') {
+        setTimeLeft(todo?.timeLeftAtPause || 0);
+      } else {
+        setTimeLeft(todo?.timerDuration || 0);
+      }
     } else {
       const computedMs = (parseInt(hours) || 0) * 3600000 + (parseInt(minutes) || 0) * 60000;
       const tDuration = todo?.timerDuration || computedMs;
@@ -87,7 +101,7 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ visible, onClose, tod
   // Only initialize form state when navigating to a *different* task
   const [initializedForId, setInitializedForId] = useState<string | null>(null);
   useEffect(() => {
-    if (todo && todo._id !== initializedForId) {
+    if (todo && !Array.isArray(todo) && todo._id !== initializedForId) {
       setEditText(todo.text);
       setDescription(todo.description || "");
       setPriority(todo.priority || "Medium");
@@ -161,7 +175,8 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ visible, onClose, tod
           parentId,
           status: "not_started",
           ...(projectId ? { projectId } : {}),
-          ...(sub.timerDuration ? { timerDuration: sub.timerDuration } : {})
+          ...(sub.timerDuration ? { timerDuration: sub.timerDuration } : {}),
+          ...(sub.timerDirection ? { timerDirection: sub.timerDirection } : {})
         });
       }
     }
@@ -222,10 +237,13 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ visible, onClose, tod
     }
   };
 
-  const [newSubHours, setNewSubHours] = useState("0");
-  const [newSubMinutes, setNewSubMinutes] = useState("0");
+  const [newSubDuration, setNewSubDuration] = useState<number | undefined>(undefined);
+  const [newSubDirection, setNewSubDirection] = useState<string>('down');
   const [showNewSubTimerPicker, setShowNewSubTimerPicker] = useState(false);
-  const [pendingSubtasks, setPendingSubtasks] = useState<{text: string, timerDuration?: number}[]>([]);
+  const [pendingSubtasks, setPendingSubtasks] = useState<{text: string, timerDuration?: number, timerDirection?: string}[]>([]);
+  const [newCheckItem, setNewCheckItem] = useState('');
+  const [isAddingCheck, setIsAddingCheck] = useState(false);
+  const [checklistOpen, setChecklistOpen] = useState(true);
 
   const computedTimerMs = useMemo(() => {
     const h = parseInt(hours) || 0;
@@ -236,13 +254,6 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ visible, onClose, tod
   const effectiveTimerDuration = todo?.timerDuration || computedTimerMs;
   const effectiveTimerDirection = todo?.timerDirection || timerDirection;
 
-  const newSubDuration = useMemo(() => {
-    const h = parseInt(newSubHours) || 0;
-    const m = parseInt(newSubMinutes) || 0;
-    const ms = (h * 3600 + m * 60) * 1000;
-    return ms > 0 ? ms : undefined;
-  }, [newSubHours, newSubMinutes]);
-
   // Remaining timer budget for new subtasks in modal
   const modalSubBudget = useMemo(() => {
     if (!todo?.timerDuration || !subtasks) return undefined;
@@ -251,8 +262,8 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ visible, onClose, tod
   }, [todo?.timerDuration, subtasks]);
 
   // Subtask handlers for SubtaskRow
-  const handleStartSubtask = (id: Id<"todos">) => startTimer({ id });
-  const handlePauseSubtask = (id: Id<"todos">) => pauseTimer({ id });
+  const handleStartSubtask = (id: Id<"todos">) => startSubtaskTimer({ id });
+  const handlePauseSubtask = (id: Id<"todos">) => pauseSubtaskTimer({ id });
   const handleToggleSubComplete = (id: Id<"todos">, currentStatus: string) => 
     updateStatus({ id, status: currentStatus === 'done' ? 'not_started' : 'done' });
   const handleDeleteSub = (id: Id<"todos">) => deleteTodo({ id });
@@ -263,6 +274,12 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ visible, onClose, tod
     import('@/utils/notifications').then(n => n.updateTimerNotificationText(id, text, true, isArabic ? 'ar' : 'en'));
   };
 
+  const handleAddCheckItem = () => {
+    if (!newCheckItem.trim() || !userId || !currentTodoId) return;
+    addCheckItem({ userId, todoId: currentTodoId, text: newCheckItem.trim() });
+    setNewCheckItem('');
+    setIsAddingCheck(false);
+  };
 
   const handleAddSubtask = () => {
     if (newSubtaskText.trim() && userId) {
@@ -289,7 +306,8 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ visible, onClose, tod
           parentId: currentTodoId!,
           status: "not_started",
           projectId: todo?.projectId,
-          ...(newSubDuration && { timerDuration: newSubDuration })
+          ...(newSubDuration && { timerDuration: newSubDuration }),
+          ...(newSubDirection === 'up' && { timerDirection: 'up' })
         });
       } else {
         // Pending logic
@@ -311,11 +329,11 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ visible, onClose, tod
           return;
         }
 
-        setPendingSubtasks(prev => [...prev, { text: newSubtaskText.trim(), timerDuration: newSubDuration }]);
+        setPendingSubtasks(prev => [...prev, { text: newSubtaskText.trim(), timerDuration: newSubDuration, timerDirection: newSubDirection === 'up' ? 'up' : undefined }]);
       }
       setNewSubtaskText("");
-      setNewSubHours("0");
-      setNewSubMinutes("0");
+      setNewSubDuration(undefined);
+      setNewSubDirection('down');
       setShowNewSubTimerPicker(false);
       LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     }
@@ -645,7 +663,7 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ visible, onClose, tod
                       textAnchor="middle"
                       opacity={0.8}
                     >
-                      {todo?.status === 'in_progress' ? (isArabic ? 'جاهز؟ ركز!' : 'Stay Focused') : (isArabic ? 'جاهز للبدء؟' : 'Ready to start?')}
+                      {todo?.status === 'in_progress' ? (isArabic ? 'جاهز؟ ركز!' : 'Stay Focused') : todo?.status === 'done' ? (isArabic ? '✔️ مكتمل' : 'Completed') : (isArabic ? 'جاهز للبدء؟' : 'Ready to start?')}
                     </SvgText>
                   </Svg>
 
@@ -711,6 +729,8 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ visible, onClose, tod
                         LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
                         if (currentTodoId) removeTimer({ id: currentTodoId });
                         setTimerDirection('down');
+                        setHours("0");
+                        setMinutes("0");
                         setIsEditingTimer(false);
                       }}
                     >
@@ -813,6 +833,63 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ visible, onClose, tod
                 />
               </View>
 
+              {/* Checklist Section */}
+              {currentTodoId && (
+              <View style={[styles.section]}>
+                <TouchableOpacity style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 4 }} onPress={() => setChecklistOpen(!checklistOpen)}>
+                  <Text style={[styles.sectionLabel, { color: colors.surfaceText, marginBottom: 0 }]}>{isArabic ? "قائمة التحقق" : "Checklist"}</Text>
+                  <Ionicons name={checklistOpen ? "chevron-down" : "chevron-forward"} size={20} color={colors.textMuted} />
+                </TouchableOpacity>
+                {checklistOpen && (
+                  <View style={{ marginTop: 12, gap: 8 }}>
+                    {(checklistItems || []).map((item: any) => (
+                      <View key={item._id} style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: colors.surface, borderRadius: 12, padding: 12, borderWidth: 1, borderColor: colors.border, gap: 12 }}>
+                        <TouchableOpacity onPress={() => toggleCheckItem({ id: item._id })}>
+                          <Ionicons 
+                            name={item.isCompleted ? "checkbox" : "square-outline"} 
+                            size={22} 
+                            color={item.isCompleted ? colors.success : colors.border} 
+                          />
+                        </TouchableOpacity>
+                        <Text style={{ flex: 1, fontSize: 14, color: colors.text, textAlign: isArabic ? 'right' : 'left', textDecorationLine: item.isCompleted ? 'line-through' : 'none', opacity: item.isCompleted ? 0.6 : 1 }}>
+                          {item.text}
+                        </Text>
+                        <TouchableOpacity onPress={() => deleteCheckItem({ id: item._id })}>
+                          <Ionicons name="close" size={18} color={colors.danger} />
+                        </TouchableOpacity>
+                      </View>
+                    ))}
+                    {isAddingCheck ? (
+                      <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: colors.surface, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 8, borderWidth: 1, borderColor: projectColor + '30', gap: 10 }}>
+                        <Ionicons name="square-outline" size={20} color={colors.border} />
+                        <TextInput 
+                          style={{ flex: 1, fontSize: 14, color: colors.text, fontWeight: '500', padding: 0, textAlign: isArabic ? 'right' : 'left' }}
+                          placeholder={isArabic ? "إضافة عنصر..." : "Add checklist item..."}
+                          placeholderTextColor={colors.textMuted}
+                          value={newCheckItem}
+                          onChangeText={setNewCheckItem}
+                          onSubmitEditing={handleAddCheckItem}
+                          autoFocus
+                          onBlur={() => { if (!newCheckItem.trim()) setIsAddingCheck(false); }}
+                        />
+                        <TouchableOpacity onPress={handleAddCheckItem}>
+                          <Ionicons name="arrow-up-circle" size={26} color={newCheckItem.trim() ? projectColor : colors.textMuted} />
+                        </TouchableOpacity>
+                      </View>
+                    ) : (
+                      <TouchableOpacity 
+                        style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 10, paddingHorizontal: 12, gap: 10 }}
+                        onPress={() => setIsAddingCheck(true)}
+                      >
+                        <Ionicons name="add" size={18} color={projectColor} />
+                        <Text style={{ fontSize: 14, fontWeight: '500', color: projectColor }}>{isArabic ? "إضافة عنصر للقائمة" : "Add checklist item"}</Text>
+                      </TouchableOpacity>
+                    )}
+                  </View>
+                )}
+              </View>
+              )}
+
               {/* Subtasks Section */}
               <View style={[styles.section, { marginTop: 24 }]}>
                 <View style={[styles.sectionHeader]}>
@@ -869,7 +946,7 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ visible, onClose, tod
                         onChangeText={setNewSubtaskText}
                         onSubmitEditing={() => {
                           if (newSubtaskText.trim()) {
-                            if (newSubDuration) handleAddSubtask();
+                            if (newSubDuration || newSubDirection === 'up') handleAddSubtask();
                             else setShowNewSubTimerPicker(true);
                           }
                         }}
@@ -890,50 +967,25 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ visible, onClose, tod
                     </View>
 
                     {showNewSubTimerPicker && (
-                      <View style={{ padding: 12, backgroundColor: colors.bg + '50' }}>
-                        <Text style={{ fontSize: 11, fontWeight: '800', color: colors.textMuted, marginBottom: 12, textTransform: 'uppercase' }}>
-                          {isArabic ? "ضبط وقت المهمة الفرعية" : "Subtask Duration"}
-                        </Text>
-                        
-                        <View style={[{ flexDirection: 'row', alignItems: 'center', gap: 12 }]}>
-                          <View style={{ alignItems: 'center', gap: 4 }}>
-                            <TextInput
-                              style={{ width: 60, height: 44, backgroundColor: colors.surface, borderRadius: 10, borderWidth: 1, borderColor: colors.border, color: colors.text, textAlign: 'center', fontSize: 18, fontWeight: '800' }}
-                              keyboardType="numeric"
-                              value={newSubHours}
-                              onChangeText={setNewSubHours}
-                              maxLength={2}
-                              selectTextOnFocus
-                            />
-                            <Text style={{ fontSize: 9, fontWeight: '700', color: colors.textMuted, textTransform: 'uppercase' }}>{t.hours}</Text>
-                          </View>
-                          
-                          <Text style={{ fontSize: 20, fontWeight: '900', color: colors.text, marginTop: -15 }}>:</Text>
-                          
-                          <View style={{ alignItems: 'center', gap: 4 }}>
-                            <TextInput
-                              style={{ width: 60, height: 44, backgroundColor: colors.surface, borderRadius: 10, borderWidth: 1, borderColor: colors.border, color: colors.text, textAlign: 'center', fontSize: 18, fontWeight: '800' }}
-                              keyboardType="numeric"
-                              value={newSubMinutes}
-                              onChangeText={setNewSubMinutes}
-                              maxLength={2}
-                              selectTextOnFocus
-                            />
-                            <Text style={{ fontSize: 9, fontWeight: '700', color: colors.textMuted, textTransform: 'uppercase' }}>{t.minutes}</Text>
-                          </View>
-
-                          <TouchableOpacity 
-                            onPress={() => {
-                              LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-                              setNewSubHours("0");
-                              setNewSubMinutes("0");
-                              setShowNewSubTimerPicker(false);
-                            }}
-                            style={{ marginLeft: 'auto', padding: 8 }}
-                          >
-                            <Ionicons name="close-circle" size={24} color={colors.danger} />
-                          </TouchableOpacity>
-                        </View>
+                      <View style={{ marginTop: 8 }}>
+                        <InlineTimerPicker
+                          initialMs={newSubDuration}
+                          initialDirection={newSubDirection}
+                          maxMs={modalSubBudget}
+                          colors={colors}
+                          t={t}
+                          isArabic={isArabic}
+                          onSave={(ms: number, direction: string) => {
+                            setNewSubDuration(ms);
+                            setNewSubDirection(direction);
+                            setShowNewSubTimerPicker(false);
+                          }}
+                          onCancel={() => {
+                            setNewSubDuration(undefined);
+                            setNewSubDirection('down');
+                            setShowNewSubTimerPicker(false);
+                          }}
+                        />
                       </View>
                     )}
                   </View>

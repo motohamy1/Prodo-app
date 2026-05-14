@@ -69,6 +69,7 @@ const Planner = () => {
   const deleteTodoMutation = useOfflineMutation(api.todos.deleteTodo, "todos:deleteTodo");
   const setTimerMutation = useOfflineMutation(api.todos.setTimer, "todos:setTimer");
   const linkProjectMutation = useOfflineMutation(api.todos.linkProject, "todos:linkProject");
+  const linkTaskMutation = useOfflineMutation(api.todos.linkTask, "todos:linkTask");
   const scrollViewRef = useRef<ScrollView>(null);
 
   const scrollToBottom = () => {
@@ -266,6 +267,7 @@ const Planner = () => {
                                         <Text style={[styles.taskItemText, { fontSize: 15, fontWeight: '700' }, isArabic && { textAlign: 'right' }]} numberOfLines={2}>
                                             {task.text}
                                         </Text>
+                                        <Text style={[{ fontSize: 12, color: colors.textMuted, marginTop: 4, fontWeight: '500' }, isArabic && { textAlign: 'right' }]}>...</Text>
                                         {task.dueDate && (
                                            <Text style={[{ fontSize: 12, color: colors.textMuted, marginTop: 4, fontWeight: '600' }, isArabic && { textAlign: 'right' }]}>
                                                {new Date(task.dueDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
@@ -302,11 +304,7 @@ const Planner = () => {
                                         <Text style={[styles.taskItemText, { fontSize: 15, fontWeight: '700' }, isArabic && { textAlign: 'right' }]} numberOfLines={2}>
                                             {task.text}
                                         </Text>
-                                        {task.description && (
-                                           <Text style={[{ fontSize: 12, color: colors.textMuted, marginTop: 4, fontWeight: '500' }, isArabic && { textAlign: 'right' }]} numberOfLines={1}>
-                                               {task.description}
-                                           </Text>
-                                        )}
+                                        <Text style={[{ fontSize: 12, color: colors.textMuted, marginTop: 4, fontWeight: '500' }, isArabic && { textAlign: 'right' }]}>...</Text>
                                     </View>
                                 </TouchableOpacity>
                             ))}
@@ -452,7 +450,18 @@ const Planner = () => {
             <ProjectPickerModal
                 visible={isProjectModalVisible}
                 onClose={() => { setProjectModalVisible(false); setSelectedTodoId(null); }}
-                onSelect={(id) => { if (selectedTodoId) linkProjectMutation({ id: selectedTodoId, projectId: id }); }}
+                onSelect={(selection) => { 
+                  if (!selectedTodoId) return;
+                  if (selection.type === 'none') {
+                    linkTaskMutation({ id: selectedTodoId, categoryId: undefined, subCategoryId: undefined, projectId: undefined });
+                  } else if (selection.type === 'category') {
+                    linkTaskMutation({ id: selectedTodoId, categoryId: selection.categoryId, subCategoryId: undefined, projectId: undefined });
+                  } else if (selection.type === 'subCategory') {
+                    linkTaskMutation({ id: selectedTodoId, categoryId: selection.categoryId, subCategoryId: selection.subCategoryId, projectId: undefined });
+                  } else if (selection.type === 'project') {
+                    linkTaskMutation({ id: selectedTodoId, categoryId: undefined, subCategoryId: undefined, projectId: selection.projectId });
+                  }
+                }}
             />
 
             <ActionModal 

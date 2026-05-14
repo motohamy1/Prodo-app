@@ -75,47 +75,70 @@ export interface ColorScheme {
   };
   surfaceText: string;
   statusBarStyle: "light-content" | "dark-content";
+  radii: {
+    sm: number;
+    md: number;
+    lg: number;
+    xl: number;
+    full: number;
+    tab: number;
+  };
 }
 
+// ── Light Mode: Claymorphism ──────────────────────────────────────────
+// Milky cream background, warm orange accent, soft clay depth on surfaces.
+// Inner highlights simulate light hitting raised clay — gradients run
+// lighter at top-left → base color at bottom-right.
 const lightColors: ColorScheme = {
-  bg: "#F0F2FA",
-  surface: "#FFFFFF",
-  text: "#0D0F1A",
-  textMuted: "#475569",
-  border: "#E2E8F0",
-  primary: "#6C47FF",
-  success: "#00C58E",
-  warning: "#FFAB00",
-  danger: "#FF4D6A",
-  info: "#2196F3",
-  infoBg: "#EBF5FF",
-  successBg: "#E0FBF2",
-  warningBg: "#FFF8E1",
-  dangerBg: "#FFEBEE",
-  taskInProgressBg: "#fdc448ff", // Custom orange for in-progress
-  taskNotStartedBg: "#F1F5F9", // Slightly gray
-  taskDoneBg: "#E0FBF2",
-  taskPausedBg: "#FFF7ED", // Orange 50 - subtler orange
-  taskNotDoneBg: "#FFEBEE",
-  shadow: "#1A0050",
+  bg: "#FFF8F0",
+  surface: "#FFFEF9",
+  text: "#1E1814",
+  textMuted: "#8B7765",
+  border: "#F0E0CC",
+  primary: "#FF7E3D",
+  success: "#2DB886",
+  warning: "#E89300",
+  danger: "#E84A45",
+  info: "#5BA0D9",
+  infoBg: "#F2EDE6",
+  successBg: "#EAF5EC",
+  warningBg: "#FFF3E0",
+  dangerBg: "#FFF0EE",
+  taskInProgressBg: "#FFF2E0",
+  taskNotStartedBg: "#F8F0E6",
+  taskDoneBg: "#EAF5EC",
+  taskPausedBg: "#FDF0E0",
+  taskNotDoneBg: "#FEEAE8",
+  shadow: "#B8860B",
   gradients: {
-    background: ["#F0F2FA", "#E8ECF8"],
-    surface: ["#FFFFFF", "#F8F9FF"],
-    primary: ["#7C5CFF", "#6C47FF"],
-    success: ["#00C58E", "#00A87A"],
-    warning: ["#FFAB00", "#E09600"],
-    danger: ["#FF4D6A", "#E0394F"],
-    muted: ["#64748B", "#475569"],
-    empty: ["#EEF0F8", "#E2E8F0"],
+    background: ["#FFF8F0", "#FFF3E6"],
+    surface: ["#FFFCF7", "#FFFEF9"],
+    primary: ["#FF924D", "#FF7E3D"],
+    success: ["#40C492", "#2DB886"],
+    warning: ["#F0A320", "#E89300"],
+    danger: ["#EE6058", "#E84A45"],
+    muted: ["#A08E7A", "#8B7765"],
+    empty: ["#FFF5EC", "#F0E0CC"],
   },
   backgrounds: {
-    input: "#FFFFFF",
-    editInput: "#F8F9FF",
+    input: "#FFFEF9",
+    editInput: "#FFFBF6",
   },
-  surfaceText: "#0D0F1A",
+  surfaceText: "#1E1814",
   statusBarStyle: "dark-content" as const,
+  radii: {
+    sm: 10,
+    md: 16,
+    lg: 20,
+    xl: 26,
+    full: 30,
+    tab: 32,
+  },
 };
 
+// ── Dark Mode: Claymorphism ───────────────────────────────────────────
+// Obsidian canvas with clay depth on surfaces. Electric lime accent
+// preserved. Inner highlights lift cards off the dark background.
 const darkColors: ColorScheme = {
   bg: "#0F0F12",
   surface: "#1C1C21",
@@ -132,15 +155,15 @@ const darkColors: ColorScheme = {
   successBg: "#10261E",
   warningBg: "#2B2100",
   dangerBg: "#2B1014",
-  taskInProgressBg: "#ffe100ff", // Bright Orange
-  taskNotStartedBg: "#2C2C35", // Dark Gray (matched to border)
+  taskInProgressBg: "#2B2000",
+  taskNotStartedBg: "#1C1C21",
   taskDoneBg: "#10261E",
-  taskPausedBg: "#1C1C21",
-  taskNotDoneBg: "#ff0000", // Pure Red
+  taskPausedBg: "#201C14",
+  taskNotDoneBg: "#2B1014",
   shadow: "#000000",
   gradients: {
     background: ["#0F0F12", "#0F0F12"],
-    surface: ["#1C1C21", "#1C1C21"],
+    surface: ["#24242B", "#1C1C21"],
     primary: ["#D4F82D", "#C4E81D"],
     success: ["#00E096", "#00C58E"],
     warning: ["#FFB800", "#FFAB00"],
@@ -153,6 +176,14 @@ const darkColors: ColorScheme = {
     editInput: "#1C1C21",
   },
   statusBarStyle: "light-content" as const,
+  radii: {
+    sm: 10,
+    md: 16,
+    lg: 20,
+    xl: 26,
+    full: 30,
+    tab: 32,
+  },
 };
 
 interface ThemeContextType {

@@ -699,7 +699,7 @@ export default function NoteDetailScreen() {
               position: 'absolute',
               left: 0,
               right: 0,
-              bottom: keyboardHeight > 0 ? 25 : insets.bottom,
+              bottom: keyboardHeight > 0 ? (Platform.OS === 'ios' ? keyboardHeight : 0) : insets.bottom,
               backgroundColor: '#1A1A1A',
               paddingVertical: 12,
               paddingHorizontal: 20,

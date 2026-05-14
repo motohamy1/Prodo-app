@@ -37,12 +37,15 @@ export default function FloatingActionButton({ onPress, style }: FloatingActionB
 
 const styles = StyleSheet.create({
   fab: {
+    height: 42,
+    paddingHorizontal: 24,
+    borderRadius: 20,
     justifyContent: 'center',
     alignItems: 'center',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.25,
+    shadowRadius: 24,
     elevation: 6,
     zIndex: 100,
   },

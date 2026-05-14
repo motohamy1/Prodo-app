@@ -126,12 +126,10 @@ export default function NotesScreen() {
         <Text style={[styles.cardTitle, { color: isDarkMode ? '#FFFFFF' : '#000000' }]} numberOfLines={2}>
           {item.text || 'Untitled'}
         </Text>
-        <Text style={[styles.cardDesc, { color: isDarkMode ? '#FFFFFF99' : 'rgba(0,0,0,0.6)' }]} numberOfLines={2}>
-          {item.description || '...'}
-        </Text>
-        {item.dueDate ? (
+        <Text style={[styles.cardDesc, { color: isDarkMode ? '#FFFFFF99' : 'rgba(0,0,0,0.6)' }]}>...</Text>
+        {(item.type === 'reminder' || item.dueDate) && item.dueDate ? (
           <Text style={[styles.cardDate, { color: colors.primary }]}>
-            {new Date(item.dueDate).toLocaleDateString()}
+            {new Date(item.dueDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
           </Text>
         ) : null}
       </TouchableOpacity>

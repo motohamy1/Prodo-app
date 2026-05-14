@@ -37,6 +37,7 @@ interface TodoCardProps {
     meetingLink?: string;
     priority?: string;
     categoryId?: Id<"projectCategories">;
+    subCategoryId?: Id<"projectSubCategories">;
   };
   onSetTimer: (id: Id<"todos">) => void;
   onLongPress?: (id: Id<"todos">) => void;
@@ -45,6 +46,7 @@ interface TodoCardProps {
   depth?: number;
   isTimelineMode?: boolean;
   initialShowDetails?: boolean;
+  onOpenDetail?: (id: Id<"todos">) => void;
 }
 
 // ─── Formatting & Color Helpers ──────────────────────────────────────────
@@ -75,7 +77,7 @@ const formatDuration = (ms: number) => {
   return `${m}m`;
 };
 
-const TodoCard: React.FC<TodoCardProps> = ({ todo, onSetTimer, onLongPress, onLinkProject, homeStyles, depth = 0, isTimelineMode = false, initialShowDetails = false }) => {
+const TodoCard: React.FC<TodoCardProps> = ({ todo, onSetTimer, onLongPress, onLinkProject, homeStyles, depth = 0, isTimelineMode = false, initialShowDetails = false, onOpenDetail }) => {
   const { colors, isDarkMode } = useTheme();
   const { userId, language } = useAuth();
   const { t, isArabic } = useTranslation(language);
@@ -91,10 +93,13 @@ const TodoCard: React.FC<TodoCardProps> = ({ todo, onSetTimer, onLongPress, onLi
 
 
   const project = useOfflineQuery<any>('projects.getProjectMetadata', api.projects.getProjectMetadata, todo.projectId ? { id: todo.projectId } : "skip");
+  const linkedCategory = useOfflineQuery<any>('projects.getCategory', api.projects.getCategory, todo.categoryId ? { id: todo.categoryId } : "skip");
+  const linkedSubCategory = useOfflineQuery<any>('projects.getSubCategory', api.projects.getSubCategory, todo.subCategoryId ? { id: todo.subCategoryId } : "skip");
   const subtasks = useOfflineQuery<any[]>('todos.getSubtasks', api.todos.getSubtasks, { parentId: todo._id });
 
   const [timeLeft, setTimeLeft] = useState(todo.timerDuration || 0);
   const hasAutoCompletedRef = useRef(false);
+  const hasAutoCompletedSubtasksRef = useRef(false);
   // Optimistic status: updates immediately on user action, syncs from server
   const [optimisticStatus, setOptimisticStatus] = useState(todo.status);
 
@@ -111,6 +116,14 @@ const TodoCard: React.FC<TodoCardProps> = ({ todo, onSetTimer, onLongPress, onLi
   const [showNewSubTimerPicker, setShowNewSubTimerPicker] = useState(false);
   const [isDetailModalVisible, setIsDetailModalVisible] = useState(initialShowDetails);
   const [isActionModalVisible, setIsActionModalVisible] = useState(false);
+
+  const openDetail = () => {
+    if (onOpenDetail) {
+      onOpenDetail(todo._id);
+    } else {
+      setIsDetailModalVisible(true);
+    }
+  };
 
   const hasSubtasks = subtasks && subtasks.length > 0;
 
@@ -156,54 +169,19 @@ const TodoCard: React.FC<TodoCardProps> = ({ todo, onSetTimer, onLongPress, onLi
     if (todo.status !== 'in_progress') {
       hasAutoCompletedRef.current = false;
     }
-  }, [todo.status]);
-
-  useEffect(() => {
-    let interval: NodeJS.Timeout;
-
-    if (todo.status === 'in_progress' && todo.timerStartTime) {
-      if (todo.timerDirection === 'up') {
-        // Count-up: no auto-completion, just track elapsed time
-        const calculateTimeInfo = () => {
-          const elapsed = Date.now() - todo.timerStartTime!;
-          setTimeLeft(elapsed);
-        };
-        calculateTimeInfo();
-        interval = setInterval(calculateTimeInfo, 1000);
-      } else if (todo.timerDuration && todo.timerDuration > 0) {
-        // Count-down: auto-complete when remaining hits 0
-        const calculateTimeInfo = () => {
-          const elapsed = Date.now() - todo.timerStartTime!;
-          const remaining = Math.max(0, todo.timerDuration! - elapsed);
-          setTimeLeft(prev => prev !== remaining ? remaining : prev);
-          if (remaining === 0 && !hasAutoCompletedRef.current) {
-            hasAutoCompletedRef.current = true;
-            updateStatus({ id: todo._id, status: 'done' });
-            showTaskCompletedNotification(todo.text, isArabic ? 'ar' : 'en');
-          }
-        };
-        calculateTimeInfo();
-        interval = setInterval(calculateTimeInfo, 1000);
-      }
-    } else if (todo.status === 'paused') {
-      setTimeLeft(todo.timeLeftAtPause || 0);
-    } else if (todo.status === 'done' || todo.status === 'not_done') {
-      setTimeLeft(todo.timerDirection === 'up' && todo.timeLeftAtPause ? todo.timeLeftAtPause : 0);
-    } else {
-      setTimeLeft(todo.timerDirection === 'up' ? 0 : (todo.timerDuration || 0));
+    if (todo.status !== 'not_started' && todo.status !== 'not_done' && todo.status !== 'in_progress') {
+      hasAutoCompletedSubtasksRef.current = false;
     }
-
-    return () => { if (interval) clearInterval(interval); };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [todo.status, todo.timerDuration, todo.timerStartTime, todo.timeLeftAtPause, todo.timerDirection, todo._id]);
+  }, [todo.status]);
 
   // Separate effect for subtask auto-completion to avoid loops with timer
   useEffect(() => {
     if (!hasSubtasks) return;
     const completedSubtasks = subtasks.filter((s: any) => s.status === 'done').length;
     const totalSubtasks = subtasks.length;
-    // Only auto-complete if ALL subtasks are done AND the parent hasn't been manually set
     if (totalSubtasks > 0 && completedSubtasks === totalSubtasks && (todo.status === 'not_started' || todo.status === 'not_done' || todo.status === 'in_progress')) {
+      if (hasAutoCompletedSubtasksRef.current) return;
+      hasAutoCompletedSubtasksRef.current = true;
       updateStatus({ id: todo._id, status: 'done' });
       showTaskCompletedNotification(todo.text, isArabic ? 'ar' : 'en');
     }
@@ -263,6 +241,7 @@ const TodoCard: React.FC<TodoCardProps> = ({ todo, onSetTimer, onLongPress, onLi
   }, [updateTodo]);
 
   const moveToStatus = (status: string) => {
+    setOptimisticStatus(status);
     updateStatus({ id: todo._id, status });
     if (status === 'done') {
       showTaskCompletedNotification(todo.text, isArabic ? 'ar' : 'en');
@@ -330,25 +309,28 @@ const TodoCard: React.FC<TodoCardProps> = ({ todo, onSetTimer, onLongPress, onLi
   let cardBg = colors.surface;
   let cardBorderColor = colors.border;
   
+  // Claymorphism: status is communicated through background tint (clay surface).
+  // Borders are removed — clay depth (shadow + inner highlight) separates cards.
+  // Only overdue / not_done cards retain a subtle border as a functional signal.
   if (isDarkMode) {
-    if (todo.status === "in_progress") { cardBorderColor = colors.warning; }
-    else if (todo.status === "paused") { cardBorderColor = colors.border; }
-    else if (todo.status === "done") { cardBorderColor = colors.success; }
-    else if (todo.status === "not_done" || isPastDue) { cardBorderColor = colors.danger; }
-    else if (todo.status === "not_started") { cardBorderColor = colors.primary; }
+    if (todo.status === "in_progress") { cardBg = colors.taskInProgressBg; }
+    else if (todo.status === "paused") { cardBg = colors.taskPausedBg; }
+    else if (todo.status === "done") { cardBg = colors.taskDoneBg; }
+    else if (todo.status === "not_done" || isPastDue) { cardBg = colors.taskNotDoneBg; cardBorderColor = colors.danger; }
+    else if (todo.status === "not_started") { cardBg = colors.taskNotStartedBg; }
   } else {
-    if (todo.status === "in_progress") { cardBg = "#fdc448"; cardBorderColor = colors.warning; }
-    else if (todo.status === "paused") { cardBg = colors.surface; cardBorderColor = colors.border; }
-    else if (todo.status === "done") { cardBg = "#E0FBF2"; cardBorderColor = colors.border; }
-    else if (todo.status === "not_done" || isPastDue) { cardBg = colors.danger + '15'; cardBorderColor = colors.danger; }
-    else if (todo.status === "not_started") { cardBg = colors.primary + '15'; cardBorderColor = colors.primary; }
+    if (todo.status === "in_progress") { cardBg = colors.taskInProgressBg; }
+    else if (todo.status === "paused") { cardBg = colors.taskPausedBg; }
+    else if (todo.status === "done") { cardBg = colors.taskDoneBg; }
+    else if (todo.status === "not_done" || isPastDue) { cardBg = colors.taskNotDoneBg; cardBorderColor = colors.danger; }
+    else if (todo.status === "not_started") { cardBg = colors.taskNotStartedBg; }
   }
 
   // Detect if the card background is bright enough to need dark text
   const isBrightBg = getLuminance(cardBg) > 170;
   
-  const contentColor = isBrightBg ? '#0D0F1A' : colors.surfaceText;
-  const contentMutedColor = isBrightBg ? '#00000080' : colors.surfaceText + '80';
+  const contentColor = isBrightBg ? colors.text : colors.surfaceText;
+  const contentMutedColor = isBrightBg ? colors.text + '80' : colors.surfaceText + '80';
 
   if (todo.status === "in_progress") { 
     badgeText = t.inProgress; 
@@ -402,7 +384,7 @@ const TodoCard: React.FC<TodoCardProps> = ({ todo, onSetTimer, onLongPress, onLi
     <>
       <TouchableOpacity 
         activeOpacity={0.95}
-        onPress={() => setIsDetailModalVisible(true)}
+        onPress={() => openDetail()}
         onLongPress={() => { 
           setIsActionModalVisible(true);
           if (onLongPress) onLongPress(todo._id); 
@@ -413,9 +395,9 @@ const TodoCard: React.FC<TodoCardProps> = ({ todo, onSetTimer, onLongPress, onLi
             overflow: 'hidden', 
             position: 'relative', 
             backgroundColor: cardBg, 
-            borderColor: cardBorderColor, 
-            borderWidth: (todo.status === 'not_done' || isPastDue) ? 2 : (isDarkMode ? 1.5 : 1), 
-            padding: isTimelineMode ? 16 : 12 
+            borderColor: (todo.status === 'not_done' || isPastDue) ? cardBorderColor : 'transparent', 
+            borderWidth: (todo.status === 'not_done' || isPastDue) ? 1 : 0, 
+            padding: isTimelineMode ? 18 : 14 
           }
         ]}
       >
@@ -447,6 +429,7 @@ const TodoCard: React.FC<TodoCardProps> = ({ todo, onSetTimer, onLongPress, onLi
                 </View>
               </View>
             </View>
+            {isTimerSet && (
             <View style={{ justifyContent: 'center', alignItems: 'center', width: 56 }}>
               <CircularProgress
                 size={56} strokeWidth={4} progress={circularProgressValue}
@@ -458,6 +441,7 @@ const TodoCard: React.FC<TodoCardProps> = ({ todo, onSetTimer, onLongPress, onLi
                 </Text>
               </CircularProgress>
             </View>
+            )}
           </View>
 
           {hasSubtasks && countProgress > 0 && (
@@ -485,6 +469,28 @@ const TodoCard: React.FC<TodoCardProps> = ({ todo, onSetTimer, onLongPress, onLi
             <View style={[{ flexDirection: 'row', alignItems: 'center', gap: 12 }]}>
               {!hasSubtaskTimers && (
                 <>
+                  {!isTimerSet && (
+                    <View style={[{ flexDirection: 'row', alignItems: 'center', gap: 6 }]}>
+                      <TouchableOpacity 
+                        style={[homeStyles.iconBtn, { backgroundColor: optimisticStatus === 'not_started' || optimisticStatus === 'not_done' ? colors.primary + '20' : 'transparent', borderWidth: 1, borderColor: optimisticStatus === 'not_started' || optimisticStatus === 'not_done' ? colors.primary : colors.border }]}
+                        onPress={() => optimisticStatus !== 'not_started' && moveToStatus('not_started')}
+                      >
+                        <Ionicons name="ellipse-outline" size={16} color={optimisticStatus === 'not_started' || optimisticStatus === 'not_done' ? colors.primary : contentColor} />
+                      </TouchableOpacity>
+                      <TouchableOpacity 
+                        style={[homeStyles.iconBtn, { backgroundColor: optimisticStatus === 'in_progress' ? '#f85d08' + '20' : 'transparent', borderWidth: 1, borderColor: optimisticStatus === 'in_progress' ? '#f85d08' : colors.border }]}
+                        onPress={() => optimisticStatus !== 'in_progress' && moveToStatus('in_progress')}
+                      >
+                        <Ionicons name="play-outline" size={16} color={optimisticStatus === 'in_progress' ? '#f85d08' : contentColor} />
+                      </TouchableOpacity>
+                      <TouchableOpacity 
+                        style={[homeStyles.iconBtn, { backgroundColor: optimisticStatus === 'done' ? colors.success + '20' : 'transparent', borderWidth: 1, borderColor: optimisticStatus === 'done' ? colors.success : colors.border }]}
+                        onPress={() => optimisticStatus !== 'done' && moveToStatus('done')}
+                      >
+                        <Ionicons name="checkmark-circle-outline" size={16} color={optimisticStatus === 'done' ? colors.success : contentColor} />
+                      </TouchableOpacity>
+                    </View>
+                  )}
                   {(optimisticStatus === 'not_started' || optimisticStatus === 'not_done') && (
                     <View style={[{ flexDirection: 'row', alignItems: 'center', gap: 8 }]}>
                       {!isTimerSet ? (
@@ -528,6 +534,28 @@ const TodoCard: React.FC<TodoCardProps> = ({ todo, onSetTimer, onLongPress, onLi
               )}
               {hasSubtaskTimers && (
                 <View style={[{ flexDirection: 'row', alignItems: 'center', gap: 6 }]}>
+                  {!isTimerSet && (
+                    <>
+                      <TouchableOpacity 
+                        style={[homeStyles.iconBtn, { backgroundColor: optimisticStatus === 'not_started' || optimisticStatus === 'not_done' ? colors.primary + '20' : 'transparent', borderWidth: 1, borderColor: optimisticStatus === 'not_started' || optimisticStatus === 'not_done' ? colors.primary : colors.border }]}
+                        onPress={() => optimisticStatus !== 'not_started' && moveToStatus('not_started')}
+                      >
+                        <Ionicons name="ellipse-outline" size={16} color={optimisticStatus === 'not_started' || optimisticStatus === 'not_done' ? colors.primary : contentColor} />
+                      </TouchableOpacity>
+                      <TouchableOpacity 
+                        style={[homeStyles.iconBtn, { backgroundColor: optimisticStatus === 'in_progress' ? '#f85d08' + '20' : 'transparent', borderWidth: 1, borderColor: optimisticStatus === 'in_progress' ? '#f85d08' : colors.border }]}
+                        onPress={() => optimisticStatus !== 'in_progress' && moveToStatus('in_progress')}
+                      >
+                        <Ionicons name="play-outline" size={16} color={optimisticStatus === 'in_progress' ? '#f85d08' : contentColor} />
+                      </TouchableOpacity>
+                      <TouchableOpacity 
+                        style={[homeStyles.iconBtn, { backgroundColor: optimisticStatus === 'done' ? colors.success + '20' : 'transparent', borderWidth: 1, borderColor: optimisticStatus === 'done' ? colors.success : colors.border }]}
+                        onPress={() => optimisticStatus !== 'done' && moveToStatus('done')}
+                      >
+                        <Ionicons name="checkmark-circle-outline" size={16} color={optimisticStatus === 'done' ? colors.success : contentColor} />
+                      </TouchableOpacity>
+                    </>
+                  )}
                   {anySubtaskRunning && (
                     <View style={[{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: isBrightBg ? 'rgba(0,0,0,0.1)' : colors.warning + '15', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 8, borderWidth: 1, borderColor: isBrightBg ? 'rgba(0,0,0,0.2)' : colors.warning + '30' }]}>
                       <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: isBrightBg ? '#000000' : colors.warning }} />
@@ -566,13 +594,7 @@ const TodoCard: React.FC<TodoCardProps> = ({ todo, onSetTimer, onLongPress, onLi
             </View>
           </View>
 
-          <View style={[{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }]}>
-            <TouchableOpacity style={homeStyles.projectRow} onPress={() => onLinkProject(todo._id)}>
-              <Ionicons name="link-outline" size={16} color={todo.projectId ? (isBrightBg ? '#000' : colors.primary) : contentMutedColor} />
-              <Text style={[homeStyles.projectText, { color: contentMutedColor }, todo.projectId && { color: contentColor, fontStyle: 'normal', fontWeight: '700' }, isArabic && { textAlign: 'right' }]}>
-                {project?.name || todo.projectId || t.noProject}
-              </Text>
-            </TouchableOpacity>
+          <View style={[{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }]}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
               {todo.dueDate && (
                 <View style={[{ flexDirection: 'row', alignItems: 'center', gap: 4 }]}>
@@ -593,6 +615,13 @@ const TodoCard: React.FC<TodoCardProps> = ({ todo, onSetTimer, onLongPress, onLi
             </View>
           </View>
 
+          <TouchableOpacity style={[homeStyles.projectRow, { marginBottom: 12 }]} onPress={() => onLinkProject(todo._id)}>
+            <Ionicons name="link-outline" size={16} color={(todo.projectId || todo.subCategoryId || todo.categoryId) ? (isBrightBg ? '#000' : colors.primary) : contentMutedColor} />
+            <Text style={[homeStyles.projectText, { color: contentMutedColor }, (todo.projectId || todo.subCategoryId || todo.categoryId) && { color: contentColor, fontStyle: 'normal', fontWeight: '700' }, isArabic && { textAlign: 'right' }]}>
+              {project?.name || linkedSubCategory?.name || linkedCategory?.name || todo.projectId || t.noProject}
+            </Text>
+          </TouchableOpacity>
+
           <View style={[{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }]}>
             <View style={[{ flexDirection: 'row', alignItems: 'center', gap: 15 }]}>
               {hasSubtasks && (
@@ -601,7 +630,7 @@ const TodoCard: React.FC<TodoCardProps> = ({ todo, onSetTimer, onLongPress, onLi
                   <Text style={{ fontSize: 12, color: contentMutedColor, fontWeight: '700' }}>{stats.done}/{stats.total} {isArabic ? 'مهام' : 'Subtasks'}</Text>
                 </View>
               )}
-              <TouchableOpacity onPress={() => setIsDetailModalVisible(true)}>
+              <TouchableOpacity onPress={() => openDetail()}>
                 <Ionicons name="create-outline" size={18} color={contentColor} />
               </TouchableOpacity>
             </View>
@@ -695,7 +724,7 @@ const TodoCard: React.FC<TodoCardProps> = ({ todo, onSetTimer, onLongPress, onLi
           icon: 'create-outline', 
           onPress: () => {
             setIsActionModalVisible(false);
-            setIsDetailModalVisible(true);
+            openDetail();
           } 
         },
         {
@@ -764,11 +793,13 @@ const TodoCard: React.FC<TodoCardProps> = ({ todo, onSetTimer, onLongPress, onLi
           {endTimeStr ? <Text style={[homeStyles.timelineTimeBottom, { color: colors.textMuted }]}>{endTimeStr}</Text> : null}
         </View>
         {coreCard}
+        {!onOpenDetail && (
         <TaskDetailModal 
           visible={isDetailModalVisible}
           onClose={() => setIsDetailModalVisible(false)}
           todoId={todo._id}
         />
+        )}
         {actionModal}
       </View>
     );
@@ -777,11 +808,13 @@ const TodoCard: React.FC<TodoCardProps> = ({ todo, onSetTimer, onLongPress, onLi
   return (
     <View style={{ marginStart: depth * 16 }}>
       {coreCard}
+      {!onOpenDetail && (
       <TaskDetailModal 
         visible={isDetailModalVisible}
         onClose={() => setIsDetailModalVisible(false)}
         todoId={todo._id}
       />
+      )}
       {actionModal}
     </View>
   );

@@ -39,6 +39,7 @@ export default defineSchema({
     dueDate: v.optional(v.number()), 
     projectId: v.optional(v.string()), 
     categoryId: v.optional(v.id("projectCategories")),
+    subCategoryId: v.optional(v.id("projectSubCategories")),
     description: v.optional(v.string()),
     location: v.optional(v.string()),
     meetingLink: v.optional(v.string()),
@@ -95,4 +96,11 @@ export default defineSchema({
     text: v.string(),
     isCompleted: v.boolean(),
   }).index("by_user", ["userId"]),
+
+  taskChecklists: defineTable({
+    userId: v.optional(v.id("users")),
+    todoId: v.id("todos"),
+    text: v.string(),
+    isCompleted: v.boolean(),
+  }).index("by_todo", ["todoId"]),
 });

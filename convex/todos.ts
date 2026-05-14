@@ -72,6 +72,7 @@ export const addTodo = mutation({
     meetingLink: v.optional(v.string()),
     priority: v.optional(v.string()),
     categoryId: v.optional(v.id("projectCategories")),
+    subCategoryId: v.optional(v.id("projectSubCategories")),
     type: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
@@ -96,6 +97,7 @@ export const addTodo = mutation({
       ...(args.meetingLink !== undefined && { meetingLink: args.meetingLink }),
       ...(args.priority !== undefined && { priority: args.priority }),
       ...(args.categoryId !== undefined && { categoryId: args.categoryId }),
+      ...(args.subCategoryId !== undefined && { subCategoryId: args.subCategoryId }),
       ...(args.type !== undefined && { type: args.type }),
       ...(args.status === 'done' && { completedAt: Date.now() }),
     });
@@ -130,7 +132,12 @@ export const updateStatus = mutation({
         .collect();
       
       for (const sub of subtasks) {
-        if (sub.status === "in_progress") {
+        if (args.status === "done") {
+          // Mark ALL subtasks as done when parent is completed
+          if (sub.status !== "done") {
+            await ctx.db.patch(sub._id, { status: "done", completedAt: Date.now() });
+          }
+        } else if (sub.status === "in_progress") {
           // If pausing parent, pause running subtasks
           if (args.status === "paused") {
             if (sub.timerStartTime) {
@@ -147,7 +154,7 @@ export const updateStatus = mutation({
               await ctx.db.patch(sub._id, { status: "paused" });
             }
           } else {
-            // For done/not_done/not_started, just align status
+            // For not_done/not_started, just align status for running subtasks
             await ctx.db.patch(sub._id, { status: args.status as any });
           }
         }
@@ -441,6 +448,7 @@ export const updateTodo = mutation({
     priority: v.optional(v.string()),
     timerDirection: v.optional(v.string()),
     categoryId: v.optional(v.id("projectCategories")),
+    subCategoryId: v.optional(v.id("projectSubCategories")),
     type: v.optional(v.string()),
     dueDate: v.optional(v.number()),
     date: v.optional(v.number()),
@@ -473,6 +481,25 @@ export const linkProject = mutation({
   },
 });
 
+export const linkTask = mutation({
+  args: {
+    id: v.id("todos"),
+    categoryId: v.optional(v.id("projectCategories")),
+    subCategoryId: v.optional(v.id("projectSubCategories")),
+    projectId: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const { id, ...links } = args;
+    // Unset all link fields if none provided (unlink)
+    const patch: Record<string, any> = {};
+    const hasLinks = links.categoryId !== undefined || links.subCategoryId !== undefined || links.projectId !== undefined;
+    patch.categoryId = hasLinks ? links.categoryId : undefined;
+    patch.subCategoryId = hasLinks ? links.subCategoryId : undefined;
+    patch.projectId = hasLinks ? links.projectId : undefined;
+    await ctx.db.patch(id, patch);
+  },
+});
+
 export const updateDate = mutation({
   args: { id: v.id("todos"), date: v.number() },
   handler: async (ctx, args) => {
@@ -495,3 +522,47 @@ export const clearAllTodos = mutation({
     return { deletedCount: todos.length }
   }
 })
+
+// ─── Task Checklists ─────────────────────────────────────────────────────────
+
+export const getTaskChecklists = query({
+  args: { todoId: v.id("todos") },
+  handler: async (ctx, args) => {
+    return await ctx.db
+      .query("taskChecklists")
+      .withIndex("by_todo", (q) => q.eq("todoId", args.todoId))
+      .collect();
+  },
+});
+
+export const addTaskChecklistItem = mutation({
+  args: {
+    userId: v.id("users"),
+    todoId: v.id("todos"),
+    text: v.string(),
+  },
+  handler: async (ctx, args) => {
+    return await ctx.db.insert("taskChecklists", {
+      userId: args.userId,
+      todoId: args.todoId,
+      text: args.text,
+      isCompleted: false,
+    });
+  },
+});
+
+export const toggleTaskChecklistItem = mutation({
+  args: { id: v.id("taskChecklists") },
+  handler: async (ctx, args) => {
+    const item = await ctx.db.get(args.id);
+    if (!item) return;
+    await ctx.db.patch(args.id, { isCompleted: !item.isCompleted });
+  },
+});
+
+export const deleteTaskChecklistItem = mutation({
+  args: { id: v.id("taskChecklists") },
+  handler: async (ctx, args) => {
+    await ctx.db.delete(args.id);
+  },
+});

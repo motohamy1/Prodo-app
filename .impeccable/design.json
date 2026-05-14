@@ -1,0 +1,283 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-05-14T00:00:00.000Z",
+  "title": "Design System: ToDoIt (Claymorphism)",
+  "extensions": {
+    "colorMeta": {
+      "warm-orange": {
+        "role": "primary",
+        "displayName": "Warm Orange",
+        "canonical": "oklch(68% 0.18 50)",
+        "tonalRamp": ["#1a0a00", "#331400", "#4d1e00", "#7a3208", "#a64710", "#cc5d1a", "#ff7e3d", "#ffb380"]
+      },
+      "electric-lime": {
+        "role": "primary",
+        "displayName": "Electric Lime",
+        "canonical": "oklch(92% 0.22 135)",
+        "tonalRamp": ["#1a1f04", "#2d3406", "#3f4a08", "#5c6a0c", "#7a8e10", "#a1bd14", "#c8e81d", "#e8fa6a"]
+      },
+      "teal-mint": {
+        "role": "tertiary",
+        "displayName": "Teal Mint",
+        "canonical": "oklch(65% 0.12 165)",
+        "tonalRamp": ["#00291c", "#003b28", "#004e35", "#006b48", "#008a5c", "#2db886", "#4dcca0", "#80e6c4"]
+      },
+      "warm-amber": {
+        "role": "tertiary",
+        "displayName": "Warm Amber",
+        "canonical": "oklch(72% 0.15 75)",
+        "tonalRamp": ["#1a0e00", "#331c00", "#4d2a00", "#7a4200", "#a65b00", "#cc7400", "#e89300", "#ffbb40"]
+      },
+      "clay-coral": {
+        "role": "tertiary",
+        "displayName": "Clay Coral",
+        "canonical": "oklch(60% 0.18 20)",
+        "tonalRamp": ["#1a0806", "#330f0c", "#4d1612", "#7a201a", "#a62a22", "#cc352a", "#e84a45", "#f5807a"]
+      },
+      "muted-blue": {
+        "role": "tertiary",
+        "displayName": "Muted Blue",
+        "canonical": "oklch(62% 0.10 250)",
+        "tonalRamp": ["#0a1620", "#14263a", "#1e3655", "#2d4d7a", "#3d6499", "#4d7bb8", "#5ba0d9", "#8cc4f0"]
+      },
+      "milky-cream": {
+        "role": "neutral",
+        "displayName": "Milky Cream",
+        "canonical": "oklch(97% 0.012 85)",
+        "tonalRamp": ["#f8f0e0", "#faf3e6", "#fcf6ec", "#fdf8f0", "#fefaf4", "#fffcf8", "#fffefa", "#fffefc"]
+      },
+      "warm-white": {
+        "role": "neutral",
+        "displayName": "Warm White",
+        "canonical": "oklch(99% 0.005 85)",
+        "tonalRamp": ["#fdfaf5", "#fefbf7", "#fefcf8", "#fefdf9", "#fefdfa", "#fffefb", "#fffefc", "#fffffd"]
+      },
+      "warm-brown": {
+        "role": "neutral",
+        "displayName": "Warm Brown",
+        "canonical": "oklch(16% 0.012 65)",
+        "tonalRamp": ["#0a0804", "#0f0c06", "#141008", "#1e1814", "#28201a", "#322820", "#3c3028", "#4a3c32"]
+      },
+      "obsidian": {
+        "role": "neutral",
+        "displayName": "Obsidian",
+        "canonical": "oklch(12% 0.005 260)",
+        "tonalRamp": ["#0a0a0c", "#0f0f12", "#141419", "#1a1a20", "#22222a", "#2c2c35", "#3a3a45", "#4a4a58"]
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Display",
+        "purpose": "Screen-level headings: auth titles, section headers. Maximum 2 per screen. Softer at weight 700."
+      },
+      "title": {
+        "displayName": "Title",
+        "purpose": "Card titles, modal titles, list item headings. Weight 600 for gentler clay-matched presence."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "Task text, descriptions, settings labels, form copy. Weight 500."
+      },
+      "label": {
+        "displayName": "Label",
+        "purpose": "Badges, tab labels, action buttons, meta info. Weight 700-800 for bold hierarchy contrast."
+      }
+    },
+    "shadows": [
+      {
+        "name": "clay-card-light",
+        "value": "0 6px 20px rgba(184, 134, 11, 0.12)",
+        "purpose": "Task cards and surface containers in light mode. Soft, warm-tinted clay puff."
+      },
+      {
+        "name": "clay-card-dark",
+        "value": "0 6px 20px rgba(0, 0, 0, 0.25)",
+        "purpose": "Task cards and surface containers in dark mode."
+      },
+      {
+        "name": "clay-fab-light",
+        "value": "0 8px 24px rgba(255, 126, 61, 0.25)",
+        "purpose": "Floating action button in light mode. Pronounced clay depth at accent color."
+      },
+      {
+        "name": "clay-fab-dark",
+        "value": "0 8px 24px rgba(212, 248, 45, 0.3)",
+        "purpose": "Floating action button in dark mode."
+      },
+      {
+        "name": "clay-modal",
+        "value": "0 -12px 28px rgba(184, 134, 11, 0.15)",
+        "purpose": "Bottom sheets and modal overlays. Strong upward clay depth separation."
+      },
+      {
+        "name": "clay-pill-active",
+        "value": "0 3px 12px rgba(184, 134, 11, 0.1)",
+        "purpose": "Active filter pill with subtle puff. Inactive pills are completely flat."
+      }
+    ],
+    "motion": [
+      {
+        "name": "clay-press",
+        "value": "cubic-bezier(0.2, 0, 0, 1)",
+        "purpose": "Press compression animation. Scale 0.97, shadow shrinks. 120ms. Simulates pressing into soft clay."
+      },
+      {
+        "name": "clay-transition",
+        "value": "cubic-bezier(0.33, 0, 0.1, 1)",
+        "purpose": "State transitions between clay depth levels. 200ms. Softer than standard ease-out — feels organic."
+      },
+      {
+        "name": "clay-layout",
+        "value": "cubic-bezier(0.42, 0, 0.58, 1)",
+        "purpose": "Layout changes: subtask expansion, card reveal. Via LayoutAnimation.Presets.easeInEaseOut."
+      }
+    ],
+    "breakpoints": [
+      { "name": "phone", "value": "375px" },
+      { "name": "phone-wide", "value": "428px" },
+      { "name": "tablet", "value": "768px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button (FAB)",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Floating action button in light mode with warm orange claymorphism treatment. Puffy, tactile, casts a warm shadow.",
+      "html": "<button class=\"ds-btn-fab\">Add a Task</button>",
+      "css": ".ds-btn-fab { background: linear-gradient(135deg, #FF924D 0%, #FF7E3D 100%); color: #FFFFFF; padding: 14px 24px; border-radius: 20px; border: none; font-size: 13px; font-weight: 700; font-family: -apple-system, BlinkMacSystemFont, 'Inter', sans-serif; cursor: pointer; box-shadow: 0 8px 24px rgba(255,126,61,0.25), inset 0 1px 0 rgba(255,255,255,0.2); transition: transform 0.12s cubic-bezier(0.2,0,0,1), box-shadow 0.12s cubic-bezier(0.2,0,0,1); } .ds-btn-fab:hover { transform: translateY(-2px); box-shadow: 0 10px 28px rgba(255,126,61,0.3); } .ds-btn-fab:active { transform: scale(0.97); box-shadow: 0 4px 12px rgba(255,126,61,0.15); } .ds-btn-fab:focus-visible { outline: 2px solid #FF7E3D; outline-offset: 2px; }"
+    },
+    {
+      "name": "Auth Button (Dark Mode)",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Full-width auth submit button in dark mode. Electric lime with clay depth on obsidian.",
+      "html": "<button class=\"ds-btn-auth\">Sign In</button>",
+      "css": ".ds-btn-auth { width: 100%; height: 56px; background: linear-gradient(135deg, #D4F82D 0%, #C4E81D 100%); color: #000000; border-radius: 20px; border: none; font-size: 18px; font-weight: 700; font-family: -apple-system, BlinkMacSystemFont, sans-serif; cursor: pointer; box-shadow: 0 8px 24px rgba(212,248,45,0.3), inset 0 1px 0 rgba(255,255,255,0.15); transition: transform 0.12s cubic-bezier(0.2,0,0,1), box-shadow 0.12s cubic-bezier(0.2,0,0,1); } .ds-btn-auth:hover { transform: translateY(-1px); } .ds-btn-auth:active { transform: scale(0.97); box-shadow: 0 4px 12px rgba(212,248,45,0.15); } .ds-btn-auth:focus-visible { outline: 2px solid #D4F82D; outline-offset: 2px; } .ds-btn-auth:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }"
+    },
+    {
+      "name": "Icon Button (Status Toggle)",
+      "kind": "button",
+      "refersTo": "button-icon",
+      "description": "36px circular icon button with soft clay border. Used for play, pause, check status actions.",
+      "html": "<button class=\"ds-btn-icon\" aria-label=\"Start task\"><svg width=\"16\" height=\"16\" viewBox=\"0 0 512 512\"><path d=\"M133 440a35.37 35.37 0 0 1-17.5-4.67c-12-6.8-19.46-20-19.46-34.33V111c0-14.33 7.46-27.53 19.46-34.33a35.13 35.13 0 0 1 35.77.45l247.85 148.36a36 36 0 0 1 0 61l-247.89 148.4A35.5 35.5 0 0 1 133 440z\" fill=\"#FF7E3D\"/></svg></button>",
+      "css": ".ds-btn-icon { width: 36px; height: 36px; border-radius: 18px; border: 1px solid rgba(240,224,204,0.3); background: linear-gradient(135deg, #FFFCF7 0%, #FFFEF9 100%); display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 3px 8px rgba(184,134,11,0.08); transition: transform 0.12s cubic-bezier(0.2,0,0,1), box-shadow 0.12s; } .ds-btn-icon:hover { box-shadow: 0 4px 12px rgba(184,134,11,0.12); } .ds-btn-icon:active { transform: scale(0.92); box-shadow: 0 1px 4px rgba(184,134,11,0.06); } .ds-btn-icon:focus-visible { outline: 2px solid #FF7E3D; outline-offset: 2px; }"
+    },
+    {
+      "name": "Task Card (In Progress, Light Mode)",
+      "kind": "card",
+      "refersTo": "card-task",
+      "description": "Clay-surfaced task card in the in-progress state. Warm orange clay tint with soft puff shadow and inner highlight.",
+      "html": "<article class=\"ds-card-clay\"><div class=\"ds-card-clay__header\"><div class=\"ds-card-clay__title-group\"><h3 class=\"ds-card-clay__title\">Design the onboarding flow</h3><span class=\"ds-card-clay__badge ds-card-clay__badge--progress\">In Progress</span></div><div class=\"ds-card-clay__timer\"><svg width=\"56\" height=\"56\" viewBox=\"0 0 56 56\"><circle cx=\"28\" cy=\"28\" r=\"24\" fill=\"none\" stroke=\"rgba(184,134,11,0.08)\" stroke-width=\"4\"/><circle cx=\"28\" cy=\"28\" r=\"24\" fill=\"none\" stroke=\"#E89300\" stroke-width=\"4\" stroke-dasharray=\"150.8\" stroke-dashoffset=\"60\" stroke-linecap=\"round\" transform=\"rotate(-90 28 28)\"/></svg><span class=\"ds-card-clay__timer-text\">01:30</span></div></div><div class=\"ds-card-clay__progress\"><div class=\"ds-card-clay__progress-bar\"><div class=\"ds-card-clay__progress-fill\" style=\"width:40%\"></div></div><span class=\"ds-card-clay__progress-text\">40%</span></div><div class=\"ds-card-clay__actions\"><button class=\"ds-btn-icon\"><svg width=\"14\" height=\"14\" viewBox=\"0 0 512 512\"><path d=\"M368 464H144V144h224zm48-320v320a48 48 0 0 1-48 48H144a48 48 0 0 1-48-48V144a48 48 0 0 1 48-48h64v-32a16 16 0 0 1 32 0v32h32v-32a16 16 0 0 1 32 0v32h64a48 48 0 0 1 48 48z\" fill=\"#8B7765\"/></svg></button></div></article>",
+      "css": ".ds-card-clay { background: linear-gradient(135deg, #FFF8ED 0%, #FFF2E0 100%); border-radius: 26px; padding: 18px; box-shadow: 0 6px 20px rgba(184,134,11,0.12); position: relative; overflow: hidden; } .ds-card-clay__header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; } .ds-card-clay__title-group { flex: 1; padding-right: 8px; } .ds-card-clay__title { font-family: -apple-system, BlinkMacSystemFont, 'Inter', sans-serif; font-size: 18px; font-weight: 600; color: #1E1814; margin: 0 0 10px 0; line-height: 1.3; } .ds-card-clay__badge { display: inline-block; padding: 4px 12px; border-radius: 16px; background: rgba(232,147,0,0.15); color: #D48300; font-size: 12px; font-weight: 700; box-shadow: 0 1px 3px rgba(184,134,11,0.06); } .ds-card-clay__timer { position: relative; width: 56px; height: 56px; display: flex; align-items: center; justify-content: center; } .ds-card-clay__timer-text { position: absolute; font-size: 10px; font-weight: 700; color: #E89300; } .ds-card-clay__progress { display: flex; align-items: center; gap: 8px; margin: 8px 0; } .ds-card-clay__progress-bar { flex: 1; height: 6px; border-radius: 4px; background: rgba(184,134,11,0.08); overflow: hidden; } .ds-card-clay__progress-fill { height: 100%; border-radius: 4px; background: linear-gradient(135deg, #FF924D 0%, #FF7E3D 100%); } .ds-card-clay__progress-text { font-size: 12px; font-weight: 800; color: #FF7E3D; } .ds-card-clay__actions { display: flex; justify-content: space-between; align-items: center; margin-top: 8px; }"
+    },
+    {
+      "name": "Auth Input Field (Light Mode)",
+      "kind": "input",
+      "refersTo": "input-field",
+      "description": "Full-width clay input with soft border and warm white surface gradient.",
+      "html": "<div class=\"ds-input-group\"><label class=\"ds-input-label\">Email Address</label><div class=\"ds-input-wrapper\"><svg width=\"20\" height=\"20\" viewBox=\"0 0 512 512\"><path d=\"M424 80H88a56.06 56.06 0 0 0-56 56v240a56.06 56.06 0 0 0 56 56h336a56.06 56.06 0 0 0 56-56V136a56.06 56.06 0 0 0-56-56zm-14.18 92.63-144 112a16 16 0 0 1-19.64 0l-144-112a16 16 0 1 1 19.36-25.26L256 251.73l134.18-104.36a16 16 0 0 1 19.64 25.26z\" fill=\"#8B7765\"/></svg><input class=\"ds-input-field\" type=\"email\" placeholder=\"example@gmail.com\" /></div></div>",
+      "css": ".ds-input-group { margin-bottom: 20px; } .ds-input-label { display: block; font-size: 14px; font-weight: 700; color: #1E1814; margin-bottom: 8px; margin-left: 4px; } .ds-input-wrapper { display: flex; align-items: center; gap: 12px; height: 56px; padding: 0 16px; background: linear-gradient(135deg, #FFFCF7 0%, #FFFEF9 100%); border: 1px solid rgba(240,224,204,0.4); border-radius: 20px; box-shadow: 0 3px 10px rgba(184,134,11,0.06); transition: border-color 0.2s cubic-bezier(0.33,0,0.1,1), box-shadow 0.2s; } .ds-input-wrapper:focus-within { border-color: rgba(255,126,61,0.4); box-shadow: 0 3px 14px rgba(255,126,61,0.1), 0 0 0 3px rgba(255,126,61,0.06); } .ds-input-field { flex: 1; height: 100%; background: transparent; border: none; color: #1E1814; font-size: 16px; font-weight: 500; font-family: -apple-system, BlinkMacSystemFont, sans-serif; outline: none; } .ds-input-field::placeholder { color: rgba(139,119,101,0.35); }"
+    },
+    {
+      "name": "Filter Pill Group (Light Mode)",
+      "kind": "chip",
+      "refersTo": "chip-filter",
+      "description": "Clay-adapted segmented control. Active pill has clay puff, inactive is flat cream. No hard borders.",
+      "html": "<nav class=\"ds-pill-group\"><button class=\"ds-pill\">All<span class=\"ds-pill-count\">12</span></button><button class=\"ds-pill ds-pill--active\">In Progress<span class=\"ds-pill-count\">3</span></button><button class=\"ds-pill\">Done<span class=\"ds-pill-count\">8</span></button><button class=\"ds-pill\">Paused<span class=\"ds-pill-count\">1</span></button></nav>",
+      "css": ".ds-pill-group { display: flex; gap: 6px; padding: 6px; background: rgba(240,224,204,0.3); border-radius: 20px; } .ds-pill { flex: 1; padding: 12px 14px; border-radius: 16px; border: none; background: transparent; color: #8B7765; font-size: 13px; font-weight: 700; font-family: -apple-system, BlinkMacSystemFont, sans-serif; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 4px; transition: background 0.2s cubic-bezier(0.33,0,0.1,1), box-shadow 0.2s, color 0.2s; } .ds-pill--active { background: linear-gradient(135deg, #FFFCF7 0%, #FFFEF9 100%); color: #1E1814; box-shadow: 0 3px 12px rgba(184,134,11,0.1); } .ds-pill:hover:not(.ds-pill--active) { background: rgba(255,254,249,0.5); } .ds-pill-count { font-size: 10px; font-weight: 600; opacity: 0.5; }"
+    },
+    {
+      "name": "Status Badge (Clay Surfaced)",
+      "kind": "chip",
+      "refersTo": "chip-badge",
+      "description": "Clay-surfaced status badge with subtle lift. Colored tint with soft shadow instead of flat background.",
+      "html": "<span class=\"ds-badge ds-badge--done\">Done</span> <span class=\"ds-badge ds-badge--warning\">Paused</span> <span class=\"ds-badge ds-badge--danger\">Not Done</span>",
+      "css": ".ds-badge { display: inline-block; padding: 4px 12px; border-radius: 16px; font-size: 12px; font-weight: 700; font-family: -apple-system, BlinkMacSystemFont, sans-serif; box-shadow: 0 1px 3px rgba(184,134,11,0.06); } .ds-badge--done { background: rgba(45,184,134,0.12); color: #2DB886; } .ds-badge--warning { background: rgba(232,147,0,0.12); color: #E89300; } .ds-badge--danger { background: rgba(232,74,69,0.10); color: #E84A45; }"
+    },
+    {
+      "name": "Tab Bar (Light Mode, Clay)",
+      "kind": "nav",
+      "refersTo": "navigation",
+      "description": "Bottom tab bar with claymorphism treatment. Soft top shadow, warm cream background, orange active indicator.",
+      "html": "<nav class=\"ds-tab-bar\"><a class=\"ds-tab\" href=\"#\"><svg width=\"24\" height=\"24\" viewBox=\"0 0 512 512\"><path d=\"M416 174.74V48h-80v58.45L256 32 0 272h64v208h144V320h96v160h144V272h64l-96-97.26z\" fill=\"#8B7765\"/></svg><span>To-Do</span></a><a class=\"ds-tab ds-tab--active\" href=\"#\"><svg width=\"24\" height=\"24\" viewBox=\"0 0 512 512\"><path d=\"M480 128H32v352h448zM32 128V32h448v96\" fill=\"#FF7E3D\"/></svg><span>Planner</span></a><a class=\"ds-tab\" href=\"#\"><svg width=\"28\" height=\"28\" viewBox=\"0 0 512 512\"><path d=\"M256 48C141.31 48 48 141.31 48 256s93.31 208 208 208 208-93.31 208-208S370.69 48 256 48zm108.25 222.25l-144 144a16 16 0 0 1-22.62 0l-96-96a16 16 0 0 1 22.62-22.62L208 379.29l132.69-132.7a16 16 0 0 1 23.56 23.66z\" fill=\"#8B7765\"/></svg><span>Add</span></a><a class=\"ds-tab\" href=\"#\"><svg width=\"24\" height=\"24\" viewBox=\"0 0 512 512\"><path d=\"M336 192h40a40 40 0 0 1 40 40v192a40 40 0 0 1-40 40H136a40 40 0 0 1-40-40V232a40 40 0 0 1 40-40h40m160-72-80-80-80 80m80 272V40\" fill=\"#8B7765\"/></svg><span>Projects</span></a><a class=\"ds-tab\" href=\"#\"><svg width=\"24\" height=\"24\" viewBox=\"0 0 512 512\"><path d=\"M495.9 166.6c3.2 8.7.5 18.4-6.4 24.6l-43.3 39.4c1.1 8.3 1.7 16.8 1.7 25.4s-.6 17.1-1.7 25.4l43.3 39.4c6.9 6.2 9.6 15.9 6.4 24.6-4.4 11.9-9.7 23.3-15.8 34.3l-4.7 8.1c-6.6 11-14 21.4-22.1 31.2-5.9 7.2-15.7 9.6-24.5 6.8l-55.7-17.7c-13.4 10.3-28.2 18.9-44 25.4l-12.5 57.1c-2 9.1-9 16.3-18.2 17.8-13.8 2.3-28 3.5-42.5 3.5s-28.7-1.2-42.5-3.5c-9.2-1.5-16.2-8.7-18.2-17.8l-12.5-57.1c-15.8-6.5-30.6-15.1-44-25.4l-55.6 17.8c-8.8 2.8-18.6.4-24.5-6.8-8.1-9.8-15.5-20.2-22.1-31.2l-4.7-8.1c-6.1-11-11.4-22.4-15.8-34.3-3.2-8.7-.5-18.4 6.4-24.6l43.3-39.4C64.6 273.1 64 264.6 64 256s.6-17.1 1.7-25.4l-43.3-39.4c-6.9-6.2-9.6-15.9-6.4-24.6 4.4-11.9 9.7-23.3 15.8-34.3l4.7-8.1c6.6-11 14-21.4 22.1-31.2 5.9-7.2 15.7-9.6 24.5-6.8l55.7 17.7c13.4-10.3 28.2-18.9 44-25.4l12.5-57.1c2-9.1 9-16.3 18.2-17.8C227.3 1.2 241.5 0 256 0s28.7 1.2 42.5 3.5c9.2 1.5 16.2 8.7 18.2 17.8l12.5 57.1c15.8 6.5 30.6 15.1 44 25.4l55.7-17.7c8.8-2.8 18.6-.4 24.5 6.8 8.1 9.8 15.5 20.2 22.1 31.2l4.7 8.1c6.1 11 11.4 22.4 15.8 34.3zM256 336a80 80 0 1 0 0-160 80 80 0 0 0 0 160z\" fill=\"#8B7765\"/></svg><span>Settings</span></a></nav>",
+      "css": ".ds-tab-bar { position: fixed; bottom: 0; left: 0; right: 0; display: flex; background: #FFF8F0; border-top-left-radius: 32px; border-top-right-radius: 32px; padding: 12px 0 30px 0; justify-content: space-around; box-shadow: 0 -4px 16px rgba(184,134,11,0.08); } .ds-tab { display: flex; flex-direction: column; align-items: center; gap: 4px; text-decoration: none; font-size: 12px; font-weight: 700; color: #8B7765; font-family: -apple-system, BlinkMacSystemFont, sans-serif; transition: color 0.2s cubic-bezier(0.33,0,0.1,1); padding: 4px 0; } .ds-tab--active { color: #FF7E3D; } .ds-tab:hover { color: #1E1814; }"
+    },
+    {
+      "name": "Action Modal (Bottom Sheet, Clay)",
+      "kind": "custom",
+      "refersTo": "modal",
+      "description": "Clay-surfaced bottom sheet with soft top inner highlight, warm cream background, and rounded drag handle.",
+      "html": "<aside class=\"ds-modal\"><div class=\"ds-modal__overlay\"><div class=\"ds-modal__sheet\"><div class=\"ds-modal__handle\"></div><div class=\"ds-modal__header\"><h3 class=\"ds-modal__title\">Design onboarding flow</h3><button class=\"ds-modal__close\"><svg width=\"28\" height=\"28\" viewBox=\"0 0 512 512\"><path d=\"M256 48C141.31 48 48 141.31 48 256s93.31 208 208 208 208-93.31 208-208S370.69 48 256 48zm86.63 137.37a16 16 0 0 1 0 22.62L278.62 272l64.01 64.01a16 16 0 0 1-22.62 22.62L256 294.62l-64.01 64.01a16 16 0 0 1-22.62-22.62L233.38 272l-64.01-64.01a16 16 0 0 1 22.62-22.62L256 249.38l64.01-64.01a16 16 0 0 1 22.62 0z\" fill=\"#8B7765\"/></svg></button></div><div class=\"ds-modal__options\"><button class=\"ds-modal__option\"><span class=\"ds-modal__option-icon\"><svg width=\"22\" height=\"22\" viewBox=\"0 0 512 512\"><path d=\"M384 224v184a40 40 0 0 1-40 40H104a40 40 0 0 1-40-40V168a40 40 0 0 1 40-40h167.48M459.94 53.25a16.06 16.06 0 0 0-23.22-.56L282.79 199.81l-14.33 47.49 47.95-15.52L468.94 76.75a16.06 16.06 0 0 0 .56-23.22z\" fill=\"#FF7E3D\"/></svg></span><span>Edit</span></button><button class=\"ds-modal__option ds-modal__option--danger\"><span class=\"ds-modal__option-icon ds-modal__option-icon--danger\"><svg width=\"22\" height=\"22\" viewBox=\"0 0 512 512\"><path d=\"M432 144l-28.67 275.74A32 32 0 0 1 371.55 448H140.46a32 32 0 0 1-31.78-28.26L80 144m256-64H176a16 16 0 0 1 0-32h160a16 16 0 0 1 0 32z\" fill=\"#E84A45\"/></svg></span><span>Delete</span></button></div><button class=\"ds-modal__cancel\">Cancel</button></div></div></aside>",
+      "css": ".ds-modal__overlay { position: fixed; inset: 0; background: rgba(30,24,20,0.5); display: flex; justify-content: flex-end; flex-direction: column; } .ds-modal__sheet { background: linear-gradient(135deg, #FFFCF7 0%, #FFF8F0 100%); border-top-left-radius: 32px; border-top-right-radius: 32px; box-shadow: 0 -12px 28px rgba(184,134,11,0.15); padding: 12px 20px 40px 20px; } .ds-modal__handle { width: 44px; height: 5px; border-radius: 4px; background: rgba(184,134,11,0.2); margin: 0 auto 20px auto; } .ds-modal__header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; } .ds-modal__title { font-size: 22px; font-weight: 600; color: #1E1814; } .ds-modal__close { background: none; border: none; cursor: pointer; padding: 4px; } .ds-modal__options { margin-bottom: 16px; border-radius: 20px; overflow: hidden; box-shadow: 0 3px 10px rgba(184,134,11,0.06); } .ds-modal__option { width: 100%; display: flex; align-items: center; gap: 16px; padding: 16px; background: linear-gradient(135deg, #FFFCF7 0%, #FFFEF9 100%); border: none; border-bottom: 1px solid rgba(240,224,204,0.4); cursor: pointer; font-size: 17px; font-weight: 600; color: #1E1814; font-family: -apple-system, BlinkMacSystemFont, sans-serif; transition: background 0.15s; } .ds-modal__option:hover { background: #FFFBF5; } .ds-modal__option--danger { color: #E84A45; } .ds-modal__option-icon { width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; border-radius: 14px; background: rgba(255,126,61,0.1); } .ds-modal__option-icon--danger { background: rgba(232,74,69,0.08); } .ds-modal__cancel { width: 100%; padding: 16px; border-radius: 20px; background: linear-gradient(135deg, #FFFCF7 0%, #FFFEF9 100%); border: 1px solid rgba(240,224,204,0.4); color: #1E1814; font-size: 17px; font-weight: 700; font-family: -apple-system, BlinkMacSystemFont, sans-serif; cursor: pointer; margin-top: 8px; box-shadow: 0 3px 10px rgba(184,134,11,0.06); transition: transform 0.12s cubic-bezier(0.2,0,0,1); } .ds-modal__cancel:hover { transform: scale(0.98); }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Plush Studio",
+    "overview": "ToDoIt feels like stepping into a sunlit creative studio furnished with soft clay objects: rounded, tactile, warmly lit. Every surface has substance — cards rise from the background like shaped clay, buttons compress under touch, and the milky cream canvas makes the whole space feel calm and inviting. The interface is a studio, not a warehouse.\n\nThe system uses claymorphism as its depth model: every raised surface casts a soft, diffuse shadow and wears a subtle inner highlight (lighter at the top-left, settling to base color at the bottom-right). This dual-shadow technique creates the illusion of puffy, inflated clay — surfaces feel substantial and touchable rather than flat or sharply raised. No hard 1px borders. No cold whites. No pure blacks.\n\nThis system explicitly rejects enterprise clutter, SaaS-cream, gamified toys, brutalist posturing, and adds a clay-specific prohibition: no flat surfaces, no cold neutrals, no shadowless elevation.",
+    "keyCharacteristics": [
+      "Claymorphism depth model: dual shadows (soft outer + inner highlight) on every raised surface",
+      "Warm milky cream light mode with tangerine orange accent; obsidian dark mode with electric lime",
+      "Chunky, generous border radii (10px minimum, 26px for cards, 32px for navigation)",
+      "Softer typography hierarchy: display at weight 700, titles at 600, bold labels at 700 for contrast",
+      "Task status expressed through warm clay surface tints (not flat colored backgrounds)",
+      "RTL-aware with bidirectional text and flipped directional treatments"
+    ],
+    "rules": [
+      {
+        "name": "The Warm/Cool Rule",
+        "body": "The accent shifts between warm orange (light mode) and electric lime (dark mode). Never use warm orange as a primary accent on dark backgrounds, and never use electric lime as a primary accent on light backgrounds. Both are committed accents in their respective modes — this is intentional, not inconsistent.",
+        "section": "colors"
+      },
+      {
+        "name": "The Clay Floor Rule",
+        "body": "Every neutral in the system carries a warm yellow undertone. No pure white (#FFFFFF), no pure black (#000000), no pure gray. These cold neutrals read as anti-clay — they feel flat, digital, and incompatible with the tactile clay depth model. Prohibited in all contexts.",
+        "section": "colors"
+      },
+      {
+        "name": "The Soft Signal Rule",
+        "body": "The four task-status semantic colors (teal, amber, coral, blue) appear as soft clay surface tints, not as hard-edged colored elements. A done task is a warm clay surface with teal depth, not a green card with a flat background.",
+        "section": "colors"
+      },
+      {
+        "name": "The Soft Head / Bold Label Rule",
+        "body": "Headings use weight 600-700 for a gentler, clay-matched presence. Labels, badges, and interactive text elements use weight 700-800 to maintain information hierarchy. Never use weight 400 or 300.",
+        "section": "typography"
+      },
+      {
+        "name": "The One-Third Rule",
+        "body": "All body copy maxes at 65-75 characters per line. Task descriptions, settings text, and form labels must not fill the full screen width.",
+        "section": "typography"
+      },
+      {
+        "name": "The No Shadow, No Surface Rule",
+        "body": "Any interactive surface MUST have both the outer clay shadow and the inner highlight gradient at rest. Flat elements are static content only. If you can press it, it must have clay depth.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "Apply both clay shadows (soft outer + inner highlight gradient) to every pressable surface at rest.",
+      "Use 20px as the minimum radius for any interactive surface and 26px for cards.",
+      "Use warm orange for primary actions only — never as decoration.",
+      "Use warm, yellow-undertone neutrals exclusively. Milky cream, warm white, warm brown.",
+      "Use clay surface tints for task status cards. Color communicates state before the badge text.",
+      "Keep body copy at 65-75 characters per line.",
+      "Pair softer headings (600-700) with bold labels (700-800).",
+      "Support RTL as a first-class layout direction."
+    ],
+    "donts": [
+      "Don't use hard 1px solid borders on any raised surface. Clay separates through depth, not lines.",
+      "Don't use cold neutrals: pure white, pure black, pure gray. Every neutral must carry warm yellow-brown.",
+      "Don't use gradient text. Emphasis through weight and size.",
+      "Don't use glassmorphism. Claymorphism is the depth model — don't mix depth metaphors.",
+      "Don't leave any interactive surface shadowless at rest.",
+      "Don't create identical card grids. Every card shows task status through clay surface color.",
+      "Don't default to modals for inline interactions.",
+      "Don't let the interface look like enterprise clutter. Every screen should feel like a studio.",
+      "Don't drift toward generic SaaS aesthetic. No white cards on gray, no blue-dominant CTAs.",
+      "Don't add gamification layers. Delight comes from clay tactility itself.",
+      "Don't hardcode color values. Always read from useTheme().colors.",
+      "Don't use border-left or border-right greater than 1px as a colored accent stripe."
+    ]
+  }
+}

@@ -127,10 +127,10 @@ const styles = StyleSheet.create({
     elevation: 20,
   },
   handle: {
-    width: 40,
+    width: 44,
     height: 5,
-    borderRadius: 2.5,
-    backgroundColor: 'rgba(150,150,150,0.3)',
+    borderRadius: 4,
+    backgroundColor: 'rgba(150,150,150,0.25)',
     alignSelf: 'center',
     marginBottom: 20,
   },
@@ -163,7 +163,7 @@ const styles = StyleSheet.create({
   iconWrap: {
     width: 40,
     height: 40,
-    borderRadius: 12,
+    borderRadius: 14,
     justifyContent: 'center',
     alignItems: 'center',
   },
