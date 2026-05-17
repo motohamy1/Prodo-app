@@ -27,13 +27,13 @@ const Settings = () => {
   const { showGuide, dismissGuide } = useScreenGuide('settings');
 
   const settingsTips: GuideTip[] = isArabic ? [
-    { icon: 'person-circle-outline', title: 'ملفك الشخصي', description: 'اضغط على صورتك لتغييرها، أو اضغط على أيقونة القلم لتعديل اسمك.', accentColor: '#7C5CFF' },
-    { icon: 'moon-outline', title: 'الوضع الداكن', description: 'فعّل الوضع الداكن لراحة عينيك في الإضاءة المنخفضة.', accentColor: '#D4F82D' },
-    { icon: 'language-outline', title: 'تغيير اللغة', description: 'بدّل بين العربية والإنجليزية من إعدادات التفضيلات.', accentColor: '#4ECDC4' },
+    { icon: 'person-circle-outline', title: 'ملفك الشخصي', description: 'اضغط على صورتك لتغييرها، أو اضغط على أيقونة القلم لتعديل اسمك.', accentColor: colors.primary },
+    { icon: 'moon-outline', title: 'الوضع الداكن', description: 'فعّل الوضع الداكن لراحة عينيك في الإضاءة المنخفضة.', accentColor: colors.warning },
+    { icon: 'language-outline', title: 'تغيير اللغة', description: 'بدّل بين العربية والإنجليزية من إعدادات التفضيلات.', accentColor: colors.success },
   ] : [
-    { icon: 'person-circle-outline', title: 'Your Profile', description: 'Tap your photo to change it, or tap the edit icon to update your name.', accentColor: '#7C5CFF' },
-    { icon: 'moon-outline', title: 'Dark Mode', description: 'Toggle dark mode for a comfortable experience in low light.', accentColor: '#D4F82D' },
-    { icon: 'language-outline', title: 'Switch Language', description: 'Switch between Arabic and English from the Preferences section.', accentColor: '#4ECDC4' },
+    { icon: 'person-circle-outline', title: 'Your Profile', description: 'Tap your photo to change it, or tap the edit icon to update your name.', accentColor: colors.primary },
+    { icon: 'moon-outline', title: 'Dark Mode', description: 'Toggle dark mode for a comfortable experience in low light.', accentColor: colors.warning },
+    { icon: 'language-outline', title: 'Switch Language', description: 'Switch between Arabic and English from the Preferences section.', accentColor: colors.success },
   ];
   
   const userSettings = useOfflineQuery<any>('auth.getUserSettings', api.auth.getUserSettings, userId ? { userId } : "skip");
@@ -169,7 +169,7 @@ const Settings = () => {
           value={status ?? isDarkMode} 
           onValueChange={onPress || toggleDarkMode}
           trackColor={{ false: colors.border, true: colors.primary + '50' }}
-          thumbColor={(status ?? isDarkMode) ? colors.primary : '#f4f3f4'}
+          thumbColor={(status ?? isDarkMode) ? colors.primary : colors.surface}
         />
       )}
     </TouchableOpacity>
@@ -279,14 +279,14 @@ const Settings = () => {
                   style={[styles.saveButton, { marginBottom: 12, backgroundColor: notificationSound === 'default' ? colors.primary : colors.surface }]}
                   onPress={() => handleSoundChange('default')}
                 >
-                  <Text style={[styles.saveButtonText, { color: notificationSound === 'default' ? '#000' : colors.text }]}>{isArabic ? 'النغمة الافتراضية' : 'Default'}</Text>
+                  <Text style={[styles.saveButtonText, { color: colors.text }]}>{isArabic ? 'النغمة الافتراضية' : 'Default'}</Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity 
                   style={[styles.saveButton, { marginBottom: 24, backgroundColor: notificationSound === 'alarm_tone.wav' ? colors.primary : colors.surface }]}
                   onPress={() => handleSoundChange('alarm_tone.wav')}
                 >
-                  <Text style={[styles.saveButtonText, { color: notificationSound === 'alarm_tone.wav' ? '#000' : colors.text }]}>{isArabic ? 'نغمة مخصصة' : 'Custom Sound'}</Text>
+                  <Text style={[styles.saveButtonText, { color: colors.text }]}>{isArabic ? 'نغمة مخصصة' : 'Custom Sound'}</Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity style={[styles.saveButton, { backgroundColor: colors.danger }]} onPress={() => setIsSoundModalVisible(false)}>
@@ -306,7 +306,7 @@ const Settings = () => {
                 icon="moon-outline" 
                 label={t.darkMode} 
                 type="switch" 
-                color="#7C5CFF" 
+                color={colors.primary} 
                 onPress={toggleDarkMode}
                 status={isDarkMode}
               />
@@ -317,7 +317,7 @@ const Settings = () => {
                 type="switch"
                 status={userSettings?.notificationsEnabled}
                 onPress={handleToggleNotifications}
-                color="#FF6B6B" 
+                color={colors.danger} 
               />
               <View style={styles.divider} />
               <SettingItem 
@@ -325,7 +325,7 @@ const Settings = () => {
                 label={isArabic ? 'نغمة الإشعار' : 'Notification Sound'}
                 value={notificationSound === 'default' ? (isArabic ? 'الافتراضية' : 'Default') : (isArabic ? 'مخصصة' : 'Custom')}
                 onPress={() => setIsSoundModalVisible(true)}
-                color="#FF9F43" 
+                color={colors.warning} 
               />
               <View style={styles.divider} />
               <SettingItem 
@@ -333,7 +333,7 @@ const Settings = () => {
                 label={t.language} 
                 value={isArabic ? 'العربية' : 'English'}
                 onPress={handleToggleLanguage}
-                color="#4ECDC4" 
+                color={colors.success} 
               />
             </View>
           </View>
@@ -380,13 +380,13 @@ const Settings = () => {
               <SettingItem 
                 icon="shield-checkmark-outline" 
                 label={t.privacy} 
-                color="#00C58E" 
+                color={colors.success} 
               />
               <View style={styles.divider} />
               <SettingItem 
                 icon="help-circle-outline" 
                 label={t.help} 
-                color="#FFAB00" 
+                color={colors.warning} 
               />
               <View style={styles.divider} />
               <SettingItem 

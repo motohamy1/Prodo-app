@@ -1,9 +1,9 @@
-import "fast-text-encoding";
-import "react-native-get-random-values";
+import { ThemeProvider } from "@/hooks/useTheme";
 import { ConvexProvider, ConvexReactClient } from "convex/react";
 import { Stack } from "expo-router";
-import { ThemeProvider } from "@/hooks/useTheme";
 import * as SplashScreen from "expo-splash-screen";
+import "fast-text-encoding";
+import "react-native-get-random-values";
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync().catch(() => {});
@@ -13,17 +13,16 @@ const convex = new ConvexReactClient(convexUrl, {
   unsavedChangesWarning: false,
 });
 
-import { AuthProvider, useAuth } from "@/hooks/useAuth";
-import { useEffect } from "react";
-import { LayoutAnimation, Platform, UIManager } from "react-native";
-import { requestPermissionsAsync } from "@/utils/notifications";
-import { useSyncManager } from "@/hooks/useSyncManager";
-import { useNotifications } from "@/hooks/useNotifications";
-import { useTranslation } from "@/utils/i18n";
-import { NOTIFICATION_CATEGORIES, TIMER_ACTIONS, Notifications } from "@/utils/notifications";
-import { BACKGROUND_NOTIFICATION_TASK } from "@/utils/backgroundTask";
-import { useOnboarding } from "@/hooks/useOnboarding";
 import WelcomeOnboarding from "@/components/WelcomeOnboarding";
+import { AuthProvider, useAuth } from "@/hooks/useAuth";
+import { useNotifications } from "@/hooks/useNotifications";
+import { useOfflineFirstInit } from "@/hooks/useOfflineFirstInit";
+import { useOnboarding } from "@/hooks/useOnboarding";
+import { useSyncManager } from "@/hooks/useSyncManager";
+import { useTranslation } from "@/utils/i18n";
+import { NOTIFICATION_CATEGORIES, Notifications, TIMER_ACTIONS } from "@/utils/notifications";
+import { useEffect } from "react";
+import { Platform, UIManager } from "react-native";
 
 // Register the background task (already defined in backgroundTask.ts via defineTask)
 
@@ -33,6 +32,7 @@ if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental
 
 function RootLayoutContent() {
   useSyncManager();
+  const { isInitialized, migrationInProgress, error: offlineError } = useOfflineFirstInit();
   const { hasPermission } = useNotifications();
   const { isLoading, language, setLanguage } = useAuth();
   const { t } = useTranslation(language);
@@ -73,8 +73,8 @@ function RootLayoutContent() {
     }
   }, [language, t, isLoading, isFirstLaunch]);
 
-  // Still checking storage
-  if (isLoading || isFirstLaunch === null) return null;
+  // Still checking storage and offline-first initialization
+  if (isLoading || isFirstLaunch === null || migrationInProgress) return null;
 
   if (isFirstLaunch) {
     return (

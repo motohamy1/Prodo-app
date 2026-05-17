@@ -1,7 +1,7 @@
+import { Id } from "@/convex/_generated/dataModel";
 import * as SecureStore from 'expo-secure-store';
 import React, { createContext, ReactNode, useContext, useEffect, useState } from "react";
 import { Platform } from "react-native";
-import { Id } from "@/convex/_generated/dataModel";
 
 const memoryStorage: Record<string, string> = {};
 
@@ -53,11 +53,12 @@ const safeStorage = {
   }
 };
 
-import { useMutation, useQuery } from 'convex/react';
 import { api } from '@/convex/_generated/api';
+import { useMutation, useQuery } from 'convex/react';
 
 interface AuthContextType {
   userId: Id<"users"> | null;
+  user: any | null;
   isLoading: boolean;
   isAnonymous: boolean;
   language: string;
@@ -141,6 +142,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   return (
     <AuthContext.Provider value={{ 
       userId, 
+      user,
       isLoading, 
       isAnonymous: user ? (user.isAnonymous ?? false) : true,
       language: user?.language ?? pendingLanguage ?? "en",

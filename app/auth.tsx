@@ -83,8 +83,8 @@ const AuthScreen = () => {
             keyboardShouldPersistTaps="handled"
           >
             <View style={styles.header}>
-              <View style={[styles.logoContainer, { backgroundColor: colors.primary }]}>
-                <Ionicons name="checkbox" size={40} color="#FFF" />
+              <View style={[styles.logoContainer, { backgroundColor: colors.primary, shadowColor: colors.text }]}>
+                <Ionicons name="checkbox" size={40} color={colors.surfaceText} />
               </View>
               <Text style={[styles.title, { color: colors.text }]}>
                 {isLogin ? (isArabic ? 'مرحباً بعودتك' : 'Welcome Back') : (isArabic ? 'إنشاء حساب' : 'Create Account')}
@@ -98,7 +98,7 @@ const AuthScreen = () => {
               {!isLogin && (
                 <View style={[styles.inputGroup, isArabic && { alignItems: 'flex-end' }]}>
                   <Text style={[styles.label, { color: isDarkMode ? colors.text : colors.surfaceText }]}>{isArabic ? 'الاسم الكامل' : 'Full Name'}</Text>
-                  <View style={[styles.inputWrapper, { backgroundColor: colors.surface, borderColor: colors.border, flexDirection: isArabic ? 'row-reverse' : 'row' }]}>
+                  <View style={[styles.inputWrapper, { backgroundColor: colors.surface, borderColor: colors.border, flexDirection: isArabic ? 'row-reverse' : 'row', shadowColor: colors.text }]}>
                     <Ionicons name="person-outline" size={20} color={colors.surfaceText + '60'} />
                     <TextInput
                       style={[styles.input, { color: colors.surfaceText, minHeight: 50, paddingVertical: Platform.OS === 'ios' ? 12 : 8 }, isArabic && { textAlign: 'right' }]}
@@ -144,14 +144,14 @@ const AuthScreen = () => {
               </View>
  
               <TouchableOpacity 
-                style={[styles.button, { backgroundColor: colors.primary }]}
+                style={[styles.button, { backgroundColor: colors.primary, shadowColor: colors.text }]}
                 onPress={handleAuth}
                 disabled={loading}
               >
                 {loading ? (
-                  <ActivityIndicator color="#FFF" />
+                  <ActivityIndicator color={colors.surfaceText} />
                 ) : (
-                  <Text style={[styles.buttonText, { color: isDarkMode ? '#000' : '#FFF' }]}>{isLogin ? (isArabic ? 'تسجيل الدخول' : 'Sign In') : (isArabic ? 'إنشاء حساب' : 'Sign Up')}</Text>
+                  <Text style={[styles.buttonText, { color: colors.surfaceText }]}>{isLogin ? (isArabic ? 'تسجيل الدخول' : 'Sign In') : (isArabic ? 'إنشاء حساب' : 'Sign Up')}</Text>
                 )}
               </TouchableOpacity>
  
@@ -210,7 +210,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 20,
-    shadowColor: "#000",
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.12,
     shadowRadius: 20,
@@ -246,7 +245,6 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     paddingHorizontal: 16,
     height: 56,
-    shadowColor: "#000",
     shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.06,
     shadowRadius: 10,
@@ -265,14 +263,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginTop: 10,
-    shadowColor: "#000",
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.2,
     shadowRadius: 16,
     elevation: 5,
   },
   buttonText: {
-    color: '#FFF',
     fontSize: 18,
     fontWeight: '800',
   },

@@ -457,7 +457,7 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ visible, onClose, tod
                   multiline
                   scrollEnabled={true}
                   placeholder={isArabic ? "عنوان المهمة..." : "Task Title..."}
-                  placeholderTextColor={isDarkMode ? "#FFFFFF40" : "#00000040"}
+                  placeholderTextColor={isDarkMode ? colors.surfaceText + '40' : colors.text + '40'}
                 />
               </View>
 
@@ -622,7 +622,7 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ visible, onClose, tod
                         cx="110"
                         cy="110"
                         r="90"
-                        stroke={isDarkMode ? colors.border : "#E2E8F0"}
+                        stroke={isDarkMode ? colors.border : colors.border}
                         strokeWidth="12"
                         fill="none"
                         opacity={isDarkMode ? 0.2 : 0.5}
@@ -696,7 +696,7 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ visible, onClose, tod
 
                     {isCountUp && (
                       <TouchableOpacity 
-                        style={[styles.secondaryButton, { borderColor: '#22c55e40', backgroundColor: isDarkMode ? 'rgba(34,197,94,0.15)' : 'rgba(34,197,94,0.1)' }]}
+                        style={[styles.secondaryButton, { borderColor: colors.success + '40', backgroundColor: isDarkMode ? colors.success + '26' : colors.success + '1A' }]}
                         onPress={() => {
                           if (currentTodoId) {
                             updateStatus({ id: currentTodoId, status: 'done' });
@@ -704,7 +704,7 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ visible, onClose, tod
                           }
                         }}
                       >
-                        <Ionicons name="checkmark-circle" size={20} color="#22c55e" />
+                        <Ionicons name="checkmark-circle" size={20} color={colors.success} />
                       </TouchableOpacity>
                     )}
                   </View>
@@ -750,7 +750,7 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ visible, onClose, tod
               <View style={[styles.section]}>
                 <Text style={[styles.sectionLabel, { color: colors.surfaceText }]}>{isArabic ? "الحالة" : "Status"}</Text>
                 
-                <View style={[{ flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: isDarkMode ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)', padding: 4, borderRadius: 12 }]}>
+                <View style={[{ flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: isDarkMode ? colors.surfaceText + '08' : colors.text + '05', padding: 4, borderRadius: 12 }]}>
                   <TouchableOpacity
                     onPress={() => {
                       setStatus('in_progress');
@@ -762,7 +762,7 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ visible, onClose, tod
                         }
                       }
                     }}
-                    style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4, paddingVertical: 8, borderRadius: 8, borderWidth: 1, borderColor: status === 'in_progress' ? '#f85d08' : 'transparent', backgroundColor: status === 'in_progress' ? '#f85d08' : 'transparent' }}
+                    style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4, paddingVertical: 8, borderRadius: 8, borderWidth: 1, borderColor: status === 'in_progress' ? colors.warning : 'transparent', backgroundColor: status === 'in_progress' ? colors.warning : 'transparent' }}
                   >
                     <Ionicons name="play" size={14} color={status === 'in_progress' ? '#FFF' : colors.textMuted} />
                     <Text style={{ fontSize: 11, fontWeight: '700', color: status === 'in_progress' ? '#FFF' : colors.textMuted }}>{t.inProgress}</Text>
@@ -787,7 +787,7 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ visible, onClose, tod
                       setStatus('not_done');
                       if (currentTodoId) updateStatus({ id: currentTodoId, status: 'not_done' });
                     }}
-                    style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4, paddingVertical: 8, borderRadius: 8, borderWidth: 1, borderColor: status === 'not_done' ? '#ff0000' : 'transparent', backgroundColor: status === 'not_done' ? '#ff0000' : 'transparent' }}
+                    style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4, paddingVertical: 8, borderRadius: 8, borderWidth: 1, borderColor: status === 'not_done' ? colors.danger : 'transparent', backgroundColor: status === 'not_done' ? colors.danger : 'transparent' }}
                   >
                     <Ionicons name="close-circle" size={14} color={status === 'not_done' ? '#FFF' : colors.textMuted} />
                     <Text style={{ fontSize: 11, fontWeight: '700', color: status === 'not_done' ? '#FFF' : colors.textMuted }}>{t.notDone}</Text>
@@ -809,7 +809,7 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ visible, onClose, tod
                       ]}
                       onPress={() => handleUpdatePriority(p)}
                     >
-                      <Text style={[styles.priorityText, { color: priority === p ? (isDarkMode ? '#FFFFFF' : (p === 'High' ? colors.danger : p === 'Medium' ? colors.warning : colors.primary)) : colors.textMuted }]}>
+                      <Text style={[styles.priorityText, { color: priority === p ? (isDarkMode ? colors.surfaceText : (p === 'High' ? colors.danger : p === 'Medium' ? colors.warning : colors.primary)) : colors.textMuted }]}>
                         {p === 'Low' ? (isArabic ? 'منخفضة' : 'Low') : p === 'Medium' ? (isArabic ? 'متوسطة' : 'Med') : (isArabic ? 'عالية' : 'High')}
                       </Text>
                     </TouchableOpacity>
@@ -829,7 +829,7 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ visible, onClose, tod
                   multiline
                   scrollEnabled={true}
                   placeholder={isArabic ? "أضف وصفاً هنا..." : "Add details here..."}
-                  placeholderTextColor={isDarkMode ? "#FFFFFF40" : "#00000040"}
+                  placeholderTextColor={isDarkMode ? colors.surfaceText + '40' : colors.text + '40'}
                 />
               </View>
 
@@ -938,7 +938,7 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ visible, onClose, tod
                       <TextInput
                         style={[styles.addSubtaskInput, { color: colors.text, minHeight: 40, paddingVertical: Platform.OS === 'ios' ? 8 : 4 }, isArabic && { textAlign: 'right' }]}
                         placeholder={isArabic ? "إضافة مهمة فرعية..." : "Add a subtask..."}
-                        placeholderTextColor={isDarkMode ? "#FFFFFF40" : "#00000040"}
+                        placeholderTextColor={isDarkMode ? colors.surfaceText + '40' : colors.text + '40'}
                         multiline={true}
                         blurOnSubmit={true}
                         scrollEnabled={false}

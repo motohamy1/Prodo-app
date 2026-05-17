@@ -149,12 +149,12 @@ export const SubtaskRow = ({
                : colors.taskNotStartedBg;
 
   const isBrightBg = getLuminance(cardBg) > 170;
-  const contentColor = isBrightBg ? '#0D0F1A' : colors.surfaceText;
-  const contentMutedColor = isBrightBg ? '#00000080' : colors.surfaceText + '80';
+  const contentColor = isBrightBg ? colors.text : colors.surfaceText;
+  const contentMutedColor = isBrightBg ? colors.text + '80' : colors.surfaceText + '80';
 
   if (isEditing) {
     return (
-      <View style={[{ backgroundColor: cardBg, borderRadius: 12, padding: 12, gap: 10, borderWidth: 1, borderColor: isBrightBg ? '#00000020' : colors.border + '40', marginBottom: 8 }]}>
+      <View style={[{ backgroundColor: cardBg, borderRadius: 12, padding: 12, gap: 10, borderWidth: 1, borderColor: isBrightBg ? colors.text + '20' : colors.border + '40', marginBottom: 8 }]}>
         <Text style={[{ fontSize: 10, fontWeight: '800', color: contentColor, letterSpacing: 0.5, textTransform: 'uppercase' }, isArabic && { textAlign: 'right' }]}>{t.editingSubtask}</Text>
 
         <View style={[{ flexDirection: 'row', alignItems: 'center', gap: 10 }]}>
@@ -166,7 +166,7 @@ export const SubtaskRow = ({
             />
           </TouchableOpacity>
           <TextInput
-            style={[{ flex: 1, color: contentColor, fontSize: 16, backgroundColor: isBrightBg ? '#00000008' : colors.bg, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 8, borderWidth: 1, borderColor: isBrightBg ? '#00000040' : colors.primary, fontWeight: '600' }, isArabic && { textAlign: 'right' }]}
+            style={[{ flex: 1, color: contentColor, fontSize: 16, backgroundColor: isBrightBg ? colors.text + '08' : colors.bg, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 8, borderWidth: 1, borderColor: isBrightBg ? colors.text + '40' : colors.primary, fontWeight: '600' }, isArabic && { textAlign: 'right' }]}
             value={editText}
             onChangeText={setEditText}
             autoFocus
@@ -176,8 +176,8 @@ export const SubtaskRow = ({
 
         <TouchableOpacity
           style={[localStyles.actionBtn, {
-            backgroundColor: hasTimer ? (isBrightBg ? '#00000010' : colors.surfaceText + '10') : 'transparent',
-            borderColor: isBrightBg ? '#00000030' : colors.surfaceText + '30',
+            backgroundColor: hasTimer ? (isBrightBg ? colors.text + '10' : colors.surfaceText + '10') : 'transparent',
+            borderColor: isBrightBg ? colors.text + '30' : colors.surfaceText + '30',
             borderWidth: 1,
             alignSelf: isArabic ? 'flex-end' : 'flex-start'
           }]}
@@ -208,13 +208,13 @@ export const SubtaskRow = ({
 
         <View style={[{ flexDirection: 'row', gap: 10 }]}>
            <TouchableOpacity
-            style={{ flex: 1, backgroundColor: sub.status === 'in_progress' ? '#f85d08' : colors.primary, paddingVertical: 10, borderRadius: 10, alignItems: 'center' }}
+            style={{ flex: 1, backgroundColor: sub.status === 'in_progress' ? colors.warning : colors.primary, paddingVertical: 10, borderRadius: 10, alignItems: 'center' }}
             onPress={handleSaveEdit}
           >
-            <Text style={{ color: (sub.status === 'in_progress' || colors.primary === '#f85d08') ? '#FFF' : (isDarkMode ? '#000' : '#FFF'), fontWeight: '800', fontSize: 14 }}>{t.save}</Text>
+            <Text style={{ color: (sub.status === 'in_progress' || colors.primary === colors.warning) ? colors.surfaceText : (isDarkMode ? colors.text : colors.surfaceText), fontWeight: '800', fontSize: 14 }}>{t.save}</Text>
           </TouchableOpacity>
           <TouchableOpacity
-            style={{ flex: 1, backgroundColor: isBrightBg ? '#00000015' : colors.border, paddingVertical: 10, borderRadius: 10, alignItems: 'center' }}
+            style={{ flex: 1, backgroundColor: isBrightBg ? colors.text + '15' : colors.border, paddingVertical: 10, borderRadius: 10, alignItems: 'center' }}
             onPress={() => { setIsEditing(false); setShowTimerPicker(false); }}
           >
             <Text style={{ color: contentColor, fontWeight: '700', fontSize: 14 }}>{t.cancel}</Text>
@@ -225,7 +225,7 @@ export const SubtaskRow = ({
   }
 
   return (
-    <View style={[{ backgroundColor: cardBg, borderRadius: 12, overflow: 'hidden', borderWidth: 1, borderColor: isBrightBg ? '#00000010' : colors.border + '20' }]}>
+    <View style={[{ backgroundColor: cardBg, borderRadius: 12, overflow: 'hidden', borderWidth: 1, borderColor: isBrightBg ? colors.text + '10' : colors.border + '20' }]}>
       <View style={[{ flexDirection: 'row', alignItems: 'center', padding: 12 }]}>
         <TouchableOpacity onPress={() => onToggleComplete(sub._id, sub.status)}>
           <Ionicons
@@ -260,26 +260,26 @@ export const SubtaskRow = ({
               flexDirection: 'row',
               alignItems: 'center',
               gap: 8,
-              backgroundColor: isRunning ? (isBrightBg ? '#f85d08' : colors.warning + '15') : isPaused ? (isBrightBg ? '#00000010' : colors.surfaceText + '10') : (isBrightBg ? '#00000008' : colors.surfaceText + '08'),
+              backgroundColor: isRunning ? (isBrightBg ? colors.warning : colors.warning + '15') : isPaused ? (isBrightBg ? colors.text + '10' : colors.surfaceText + '10') : (isBrightBg ? colors.text + '08' : colors.surfaceText + '08'),
               paddingHorizontal: 12,
               paddingVertical: 6,
               borderRadius: 12,
               marginStart: 8,
               borderWidth: 1,
-              borderColor: isRunning ? (isBrightBg ? '#f85d08' : colors.warning + '30') : (isBrightBg ? '#00000020' : colors.surfaceText + '20'),
+              borderColor: isRunning ? (isBrightBg ? colors.warning : colors.warning + '30') : (isBrightBg ? colors.text + '20' : colors.surfaceText + '20'),
             }]}
           >
             <CircularProgress
               size={24}
               strokeWidth={2}
               progress={sub.timerDuration ? ((sub.timerDuration - subTimeLeft) / sub.timerDuration) * 100 : 0}
-              color={isRunning ? (isBrightBg ? '#FFF' : colors.warning) : contentColor}
-              unfilledColor={isBrightBg ? 'rgba(0,0,0,0.05)' : colors.surfaceText + '10'}
+              color={isRunning ? (isBrightBg ? colors.surfaceText : colors.warning) : contentColor}
+              unfilledColor={isBrightBg ? colors.text + '0D' : colors.surfaceText + '10'}
             >
               <Ionicons
                 name={isRunning ? 'pause' : 'play'}
                 size={10}
-                color={isRunning ? (isBrightBg ? '#FFF' : colors.warning) : contentColor}
+                color={isRunning ? (isBrightBg ? colors.surfaceText : colors.warning) : contentColor}
               />
             </CircularProgress>
             <Text
@@ -287,7 +287,7 @@ export const SubtaskRow = ({
                 fontSize: 12,
                 fontWeight: '800',
                 fontVariant: ['tabular-nums'],
-                color: isRunning ? (isBrightBg ? '#FFF' : colors.warning) : contentColor,
+                color: isRunning ? (isBrightBg ? colors.surfaceText : colors.warning) : contentColor,
               }}
             >
               {isRunning || isPaused ? formatTime(subTimeLeft) : formatDuration(sub.timerDuration!)}
@@ -307,7 +307,7 @@ export const SubtaskRow = ({
 
         <View style={[{ flexDirection: 'row', alignItems: 'center', gap: 8, marginStart: 8 }]}>
            <TouchableOpacity onPress={() => (setIsEditing(true), setEditText(sub.text))}>
-            <Ionicons name="create-outline" size={20} color={isBrightBg ? '#000000' : colors.primary} />
+            <Ionicons name="create-outline" size={20} color={isBrightBg ? colors.text : colors.primary} />
           </TouchableOpacity>
           <TouchableOpacity onPress={() => onDelete(sub._id)}>
             <Ionicons name="trash-outline" size={20} color={colors.danger} />

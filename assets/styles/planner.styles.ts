@@ -1,4 +1,4 @@
-import { ColorScheme } from "@/hooks/useTheme";
+import { ColorScheme, getNeoShadow } from "@/hooks/useTheme";
 import { StyleSheet, Dimensions, Platform } from "react-native";
 
 const { width } = Dimensions.get('window');
@@ -11,6 +11,9 @@ const gridCardWidth = (width - 48 - gapSize) / 2; // 2 columns with padding 24*2
 
 
 export const createPlannerStyles = (colors: ColorScheme, isArabic: boolean = false) => {
+  const raised = getNeoShadow(colors, 'raised', isArabic);
+  const flat = getNeoShadow(colors, 'flat', isArabic);
+  const inset = getNeoShadow(colors, 'inset', isArabic);
   return StyleSheet.create({
     container: {
       flex: 1,
@@ -43,7 +46,7 @@ export const createPlannerStyles = (colors: ColorScheme, isArabic: boolean = fal
       width: cardWidth,
       height: cardWidth * 1.1,
       borderRadius: 26,
-      backgroundColor: colors.surface,
+      backgroundColor: raised.backgroundColor,
       justifyContent: 'center',
       alignItems: 'center',
       shadowColor: colors.shadow,
@@ -63,7 +66,7 @@ export const createPlannerStyles = (colors: ColorScheme, isArabic: boolean = fal
       marginBottom: 2,
     },
     selectedMonthName: {
-      color: '#FFF',
+      color: colors.surfaceText,
     },
     monthStats: {
       fontSize: 10,
@@ -73,7 +76,7 @@ export const createPlannerStyles = (colors: ColorScheme, isArabic: boolean = fal
       letterSpacing: 0.5,
     },
     selectedMonthStats: {
-      color: 'rgba(255,255,255,0.7)',
+      color: colors.surfaceText + 'B3',
     },
     monthIndicator: {
       position: 'absolute',
@@ -95,7 +98,7 @@ export const createPlannerStyles = (colors: ColorScheme, isArabic: boolean = fal
       width: cardWidth,
       height: cardWidth * 1.1,
       borderRadius: 26,
-      backgroundColor: colors.surface,
+      backgroundColor: raised.backgroundColor,
       justifyContent: 'center',
       alignItems: 'center',
       shadowColor: colors.shadow,
@@ -124,7 +127,7 @@ export const createPlannerStyles = (colors: ColorScheme, isArabic: boolean = fal
       marginBottom: 2,
     },
     todayText: {
-      color: '#000000',
+      color: colors.text,
     },
     dayStats: {
         fontSize: 10,
@@ -133,7 +136,7 @@ export const createPlannerStyles = (colors: ColorScheme, isArabic: boolean = fal
         textTransform: 'uppercase',
     },
     todayStats: {
-        color: 'rgba(0,0,0,0.6)',
+        color: colors.text + '99',
     },
     taskDot: {
       width: 4,
@@ -162,7 +165,7 @@ export const createPlannerStyles = (colors: ColorScheme, isArabic: boolean = fal
       marginTop: 4,
     },
     dayItem: {
-      backgroundColor: colors.surface,
+      backgroundColor: raised.backgroundColor,
       marginHorizontal: 20,
       marginBottom: 12,
       borderRadius: 26,

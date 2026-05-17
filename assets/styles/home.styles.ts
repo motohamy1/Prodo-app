@@ -1,7 +1,13 @@
-import { ColorScheme } from "@/hooks/useTheme";
+import { ColorScheme, getNeoShadow } from "@/hooks/useTheme";
 import { Platform, StyleSheet } from "react-native";
 
 export const createHomeStyles = (colors: ColorScheme, isArabic: boolean = false) => {
+  const raised = getNeoShadow(colors, 'raised', isArabic);
+  const raisedLg = getNeoShadow(colors, 'raisedLg', isArabic);
+  const flat = getNeoShadow(colors, 'flat', isArabic);
+  const inset = getNeoShadow(colors, 'inset', isArabic);
+  const pressed = getNeoShadow(colors, 'pressed', isArabic);
+
   const styles = StyleSheet.create({
     container: {
       flex: 1,
@@ -38,14 +44,14 @@ export const createHomeStyles = (colors: ColorScheme, isArabic: boolean = false)
       width: 44,
       height: 44,
       borderRadius: 22,
-      backgroundColor: colors.surface + "20",
+      backgroundColor: raised.backgroundColor,
       justifyContent: 'center',
       alignItems: 'center',
-      shadowColor: colors.shadow,
-      shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 0.05,
-      shadowRadius: 8,
-      elevation: 2,
+      shadowColor: raised.shadowColor,
+      shadowOffset: raised.shadowOffset,
+      shadowOpacity: raised.shadowOpacity,
+      shadowRadius: raised.shadowRadius,
+      elevation: raised.elevation,
     },
     scrollContent: {
       paddingVertical: 12,
@@ -56,27 +62,27 @@ export const createHomeStyles = (colors: ColorScheme, isArabic: boolean = false)
     todaysPlanCard: {
       backgroundColor: colors.primary,
       borderRadius: 30,
+      shadowColor: raisedLg.shadowColor,
+      shadowOffset: raisedLg.shadowOffset,
+      shadowOpacity: raisedLg.shadowOpacity,
+      shadowRadius: raisedLg.shadowRadius,
+      elevation: raisedLg.elevation,
       padding: 22,
       marginHorizontal: 16,
       flexDirection: 'row',
       justifyContent: 'space-between',
       alignItems: 'center',
       marginBottom: 24,
-      shadowColor: colors.shadow,
-      shadowOffset: { width: 0, height: 8 },
-      shadowOpacity: 0.15,
-      shadowRadius: 24,
-      elevation: 6,
     },
     todaysPlanTitle: {
       fontSize: isArabic ? 22 : 20,
       fontWeight: '800',
-      color: '#000000',
+      color: colors.surfaceText,
       marginBottom: 4,
     },
     todaysPlanSubtitle: {
       fontSize: isArabic ? 14 : 14,
-      color: 'rgba(0,0,0,0.6)',
+      color: colors.surfaceText + '99',
       fontWeight: '700',
     },
 
@@ -84,7 +90,7 @@ export const createHomeStyles = (colors: ColorScheme, isArabic: boolean = false)
     pillsContainer: {
       flexDirection: 'row',
       marginHorizontal: 16,
-      backgroundColor: colors.surface + '80',
+      backgroundColor: flat.backgroundColor,
       borderRadius: 20,
       padding: 6,
       gap: 6,
@@ -98,12 +104,12 @@ export const createHomeStyles = (colors: ColorScheme, isArabic: boolean = false)
       justifyContent: 'center',
     },
     pillActive: {
-      backgroundColor: colors.surface,
-      shadowColor: colors.shadow,
-      shadowOffset: { width: 0, height: 3 },
-      shadowOpacity: 0.08,
-      shadowRadius: 12,
-      elevation: 3,
+      backgroundColor: raised.backgroundColor,
+      shadowColor: raised.shadowColor,
+      shadowOffset: raised.shadowOffset,
+      shadowOpacity: raised.shadowOpacity,
+      shadowRadius: raised.shadowRadius,
+      elevation: raised.elevation,
     },
     pillInactive: {
       backgroundColor: 'transparent',
@@ -165,14 +171,14 @@ export const createHomeStyles = (colors: ColorScheme, isArabic: boolean = false)
     },
     card: {
       flex: 1,
-      backgroundColor: colors.surface,
       borderRadius: 26,
       padding: 18,
-      shadowColor: colors.shadow,
-      shadowOffset: { width: 0, height: 6 },
-      shadowOpacity: 0.08,
-      shadowRadius: 20,
-      elevation: 4,
+      backgroundColor: raised.backgroundColor,
+      shadowColor: raised.shadowColor,
+      shadowOffset: raised.shadowOffset,
+      shadowOpacity: raised.shadowOpacity,
+      shadowRadius: raised.shadowRadius,
+      elevation: raised.elevation,
     },
     cardNotDone: {
       shadowColor: colors.danger,
@@ -228,6 +234,12 @@ export const createHomeStyles = (colors: ColorScheme, isArabic: boolean = false)
       paddingVertical: 8,
       borderRadius: 16,
       gap: 4,
+      backgroundColor: raised.backgroundColor,
+      shadowColor: raised.shadowColor,
+      shadowOffset: raised.shadowOffset,
+      shadowOpacity: raised.shadowOpacity,
+      shadowRadius: raised.shadowRadius,
+      elevation: raised.elevation,
     },
     actionBtnText: {
       fontSize: 12,
@@ -238,6 +250,12 @@ export const createHomeStyles = (colors: ColorScheme, isArabic: boolean = false)
       height: 36,
       justifyContent: 'center',
       alignItems: 'center',
+      backgroundColor: raised.backgroundColor,
+      shadowColor: raised.shadowColor,
+      shadowOffset: raised.shadowOffset,
+      shadowOpacity: raised.shadowOpacity,
+      shadowRadius: raised.shadowRadius,
+      elevation: raised.elevation,
       borderRadius: 18,
     },
     dividerDashed: {
@@ -296,17 +314,17 @@ export const createHomeStyles = (colors: ColorScheme, isArabic: boolean = false)
     addButton: {
       flexDirection: 'row',
       alignItems: 'center',
-      backgroundColor: colors.surface,
+      backgroundColor: raised.backgroundColor,
       marginHorizontal: 16,
       padding: 16,
       borderRadius: 20,
       gap: 12,
       marginBottom: 12,
-      shadowColor: colors.shadow,
-      shadowOffset: { width: 0, height: 4 },
-      shadowOpacity: 0.06,
-      shadowRadius: 12,
-      elevation: 2,
+      shadowColor: raised.shadowColor,
+      shadowOffset: raised.shadowOffset,
+      shadowOpacity: raised.shadowOpacity,
+      shadowRadius: raised.shadowRadius,
+      elevation: raised.elevation,
     },
     addButtonText: {
       fontSize: 16,
@@ -315,18 +333,16 @@ export const createHomeStyles = (colors: ColorScheme, isArabic: boolean = false)
     },
 
     addInputContainer: {
-      backgroundColor: colors.surface,
+      backgroundColor: inset.backgroundColor,
       marginHorizontal: 16,
       padding: 16,
       borderRadius: 26,
-      borderWidth: 1,
-      borderColor: colors.primary + '30',
       marginBottom: 0,
-      shadowColor: colors.shadow,
-      shadowOffset: { width: 0, height: 5 },
-      shadowOpacity: 0.06,
-      shadowRadius: 16,
-      elevation: 3,
+      shadowColor: inset.shadowColor,
+      shadowOffset: inset.shadowOffset,
+      shadowOpacity: inset.shadowOpacity,
+      shadowRadius: inset.shadowRadius,
+      elevation: inset.elevation,
     },
     addInput: {
       fontSize: 16,
@@ -340,11 +356,11 @@ export const createHomeStyles = (colors: ColorScheme, isArabic: boolean = false)
       backgroundColor: colors.primary,
       justifyContent: 'center',
       alignItems: 'center',
-      shadowColor: colors.primary,
-      shadowOffset: { width: 0, height: 8 },
-      shadowOpacity: 0.25,
-      shadowRadius: 24,
-      elevation: 6,
+      shadowColor: raisedLg.shadowColor,
+      shadowOffset: raisedLg.shadowOffset,
+      shadowOpacity: raisedLg.shadowOpacity,
+      shadowRadius: raisedLg.shadowRadius,
+      elevation: raisedLg.elevation,
     },
   });
 

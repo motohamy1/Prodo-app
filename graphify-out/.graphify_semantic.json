@@ -1,0 +1,1125 @@
+{
+  "nodes": [
+    {
+      "id": "todo_entity",
+      "label": "Todo (Task)",
+      "file_type": "document",
+      "source_file": "convex/schema.ts",
+      "source_location": "todos table"
+    },
+    {
+      "id": "timer_entity",
+      "label": "Timer",
+      "file_type": "rationale",
+      "source_file": "specs/006-phase-2-fixes/spec.md",
+      "source_location": "Key Entities"
+    },
+    {
+      "id": "project_entity",
+      "label": "Project",
+      "file_type": "document",
+      "source_file": "convex/schema.ts",
+      "source_location": "projects table"
+    },
+    {
+      "id": "projectcategory_entity",
+      "label": "Project Category",
+      "file_type": "document",
+      "source_file": "convex/schema.ts",
+      "source_location": "projectCategories table"
+    },
+    {
+      "id": "projectsubcategory_entity",
+      "label": "Project Sub-Category",
+      "file_type": "document",
+      "source_file": "convex/schema.ts",
+      "source_location": "projectSubCategories table"
+    },
+    {
+      "id": "notification_entity",
+      "label": "Notification",
+      "file_type": "document",
+      "source_file": "utils/notifications.ts",
+      "source_location": "notifications module"
+    },
+    {
+      "id": "subtask_entity",
+      "label": "Subtask",
+      "file_type": "document",
+      "source_file": "convex/schema.ts",
+      "source_location": "todos.parentId index"
+    },
+    {
+      "id": "projectresource_entity",
+      "label": "Project Resource",
+      "file_type": "document",
+      "source_file": "convex/schema.ts",
+      "source_location": "projectResources table"
+    },
+    {
+      "id": "checklist_entity",
+      "label": "Task Checklist",
+      "file_type": "document",
+      "source_file": "convex/schema.ts",
+      "source_location": "taskChecklists table"
+    },
+    {
+      "id": "user_entity",
+      "label": "User",
+      "file_type": "document",
+      "source_file": "convex/schema.ts",
+      "source_location": "users table"
+    },
+    {
+      "id": "taskstatus_notstarted",
+      "label": "Task Status: Not Started",
+      "file_type": "document",
+      "source_file": "specs/002-task-status-logic/spec.md",
+      "source_location": "State Machine"
+    },
+    {
+      "id": "taskstatus_notdone",
+      "label": "Task Status: Not Done",
+      "file_type": "document",
+      "source_file": "specs/002-task-status-logic/spec.md",
+      "source_location": "State Machine"
+    },
+    {
+      "id": "taskstatus_inprogress",
+      "label": "Task Status: In Progress",
+      "file_type": "document",
+      "source_file": "specs/002-task-status-logic/spec.md",
+      "source_location": "State Machine"
+    },
+    {
+      "id": "taskstatus_paused",
+      "label": "Task Status: Paused",
+      "file_type": "document",
+      "source_file": "specs/002-task-status-logic/spec.md",
+      "source_location": "State Machine"
+    },
+    {
+      "id": "taskstatus_done",
+      "label": "Task Status: Done",
+      "file_type": "document",
+      "source_file": "specs/002-task-status-logic/spec.md",
+      "source_location": "State Machine"
+    },
+    {
+      "id": "timer_countdown",
+      "label": "Countdown Timer",
+      "file_type": "rationale",
+      "source_file": "convex/schema.ts",
+      "source_location": "timerDirection field"
+    },
+    {
+      "id": "timer_countup",
+      "label": "Count-Up Timer",
+      "file_type": "rationale",
+      "source_file": "convex/schema.ts",
+      "source_location": "timerDirection field"
+    },
+    {
+      "id": "timer_elapsed_preservation",
+      "label": "Elapsed Time Preservation",
+      "file_type": "rationale",
+      "source_file": "specs/006-phase-2-fixes/spec.md",
+      "source_location": "FR-001"
+    },
+    {
+      "id": "timer_auto_complete",
+      "label": "Auto-Complete on Timer Expiry",
+      "file_type": "rationale",
+      "source_file": "specs/002-task-status-logic/spec.md",
+      "source_location": "FR-002"
+    },
+    {
+      "id": "timer_circular_progress",
+      "label": "Circular Timer Progress",
+      "file_type": "rationale",
+      "source_file": "DESIGN.md",
+      "source_location": "Circular Progress component"
+    },
+    {
+      "id": "notification_timer_completion",
+      "label": "Timer Completion Notification",
+      "file_type": "rationale",
+      "source_file": "specs/003-phase-2-notification/spec.md",
+      "source_location": "FR-001"
+    },
+    {
+      "id": "notification_morning_summary",
+      "label": "Morning Due Tasks Summary (9AM)",
+      "file_type": "rationale",
+      "source_file": "specs/003-phase-2-notification/spec.md",
+      "source_location": "FR-002"
+    },
+    {
+      "id": "notification_evening_summary",
+      "label": "Evening Missed Tasks Summary (8PM)",
+      "file_type": "rationale",
+      "source_file": "specs/003-phase-2-notification/spec.md",
+      "source_location": "FR-003"
+    },
+    {
+      "id": "notification_native_actions",
+      "label": "Notification Native Actions",
+      "file_type": "rationale",
+      "source_file": "specs/003-phase-2-notification/spec.md",
+      "source_location": "FR-005"
+    },
+    {
+      "id": "notification_sound_settings",
+      "label": "Customizable Notification Sound",
+      "file_type": "rationale",
+      "source_file": "specs/008-phase-4-to-6-fixes/spec.md",
+      "source_location": "FR-007"
+    },
+    {
+      "id": "notification_channel_management",
+      "label": "Notification Channel Management",
+      "file_type": "rationale",
+      "source_file": "fix01.md",
+      "source_location": "T2.1"
+    },
+    {
+      "id": "design_claymorphism",
+      "label": "Claymorphism Design System",
+      "file_type": "document",
+      "source_file": "DESIGN.md",
+      "source_location": "Overview"
+    },
+    {
+      "id": "design_warm_palette",
+      "label": "Warm Color Palette",
+      "file_type": "document",
+      "source_file": "DESIGN.md",
+      "source_location": "Colors section"
+    },
+    {
+      "id": "design_dualshadow_depth",
+      "label": "Dual-Shadow Depth Model",
+      "file_type": "rationale",
+      "source_file": "DESIGN.md",
+      "source_location": "Elevation section"
+    },
+    {
+      "id": "design_task_card_clay",
+      "label": "Clay Task Card with Status Tint",
+      "file_type": "document",
+      "source_file": "DESIGN.md",
+      "source_location": "Task Card component"
+    },
+    {
+      "id": "design_fab",
+      "label": "Floating Action Button",
+      "file_type": "document",
+      "source_file": "DESIGN.md",
+      "source_location": "Elevation - FAB"
+    },
+    {
+      "id": "design_rtl_support",
+      "label": "RTL & Arabic First-Class Support",
+      "file_type": "document",
+      "source_file": "DESIGN.md",
+      "source_location": "Do section - RTL"
+    },
+    {
+      "id": "design_typography_system",
+      "label": "Typography System (Soft/Bold Hierarchy)",
+      "file_type": "document",
+      "source_file": "DESIGN.md",
+      "source_location": "Typography section"
+    },
+    {
+      "id": "arch_offline_first",
+      "label": "Offline-First Architecture",
+      "file_type": "rationale",
+      "source_file": "specs/005-phase-1-fixes/spec.md",
+      "source_location": "User Story 1"
+    },
+    {
+      "id": "arch_convex_backend",
+      "label": "Convex Backend (Real-time Sync)",
+      "file_type": "document",
+      "source_file": "README.md",
+      "source_location": "Tech Stack"
+    },
+    {
+      "id": "arch_optimistic_ui",
+      "label": "Optimistic UI Updates",
+      "file_type": "rationale",
+      "source_file": "specs/004-long-press-actions/spec.md",
+      "source_location": "Edge Cases"
+    },
+    {
+      "id": "arch_localization_i18n",
+      "label": "i18n Localization (EN/AR)",
+      "file_type": "document",
+      "source_file": "README.md",
+      "source_location": "Localization"
+    },
+    {
+      "id": "arch_expo_router",
+      "label": "Expo Router File-Based Navigation",
+      "file_type": "document",
+      "source_file": "README.md",
+      "source_location": "Tech Stack"
+    },
+    {
+      "id": "arch_mutation_system",
+      "label": "Offline Mutation Queue",
+      "file_type": "rationale",
+      "source_file": "hooks/useOfflineMutation.ts",
+      "source_location": "offline mutation hook"
+    },
+    {
+      "id": "arch_cache_first",
+      "label": "Cache-First Data Loading",
+      "file_type": "rationale",
+      "source_file": "hooks/useOfflineQuery.ts",
+      "source_location": "offline query hook"
+    },
+    {
+      "id": "arch_cascade_delete",
+      "label": "Cascade Deletion Pattern",
+      "file_type": "rationale",
+      "source_file": "fix01.md",
+      "source_location": "T3.1-T3.2"
+    },
+    {
+      "id": "product_purpose",
+      "label": "Product Purpose: External Brain",
+      "file_type": "document",
+      "source_file": "PRODUCT.md",
+      "source_location": "Product Purpose"
+    },
+    {
+      "id": "product_clarity_over_density",
+      "label": "Design Principle: Clarity over Density",
+      "file_type": "document",
+      "source_file": "PRODUCT.md",
+      "source_location": "Design Principles"
+    },
+    {
+      "id": "product_momentum_matters",
+      "label": "Design Principle: Momentum Matters",
+      "file_type": "document",
+      "source_file": "PRODUCT.md",
+      "source_location": "Design Principles"
+    },
+    {
+      "id": "product_personality_no_gamification",
+      "label": "Design Principle: Personality without Gamification",
+      "file_type": "document",
+      "source_file": "PRODUCT.md",
+      "source_location": "Design Principles"
+    },
+    {
+      "id": "product_inclusive_design",
+      "label": "Design Principle: Inclusive by Design",
+      "file_type": "document",
+      "source_file": "PRODUCT.md",
+      "source_location": "Design Principles"
+    },
+    {
+      "id": "onboarding_flow",
+      "label": "Welcome Onboarding Flow",
+      "file_type": "document",
+      "source_file": "ONBOARDING.md",
+      "source_location": "Overview"
+    },
+    {
+      "id": "onboarding_language_select",
+      "label": "First-Launch Language Selection",
+      "file_type": "rationale",
+      "source_file": "ONBOARDING.md",
+      "source_location": "Phase 1"
+    },
+    {
+      "id": "onboarding_welcome_slides",
+      "label": "Welcome Guide Slides",
+      "file_type": "rationale",
+      "source_file": "ONBOARDING.md",
+      "source_location": "Phase 2"
+    },
+    {
+      "id": "fix_notification_undefined_name",
+      "label": "Bug: Notification Shows undefined Task Name",
+      "file_type": "paper",
+      "source_file": "fix02.md",
+      "source_location": "1.1"
+    },
+    {
+      "id": "fix_internet_required_first_load",
+      "label": "Bug: Internet Required on First Load",
+      "file_type": "paper",
+      "source_file": "fix02.md",
+      "source_location": "1.2"
+    },
+    {
+      "id": "fix_keyboard_blocks_confirm",
+      "label": "Bug: Keyboard Blocks Confirm Button",
+      "file_type": "paper",
+      "source_file": "fix02.md",
+      "source_location": "3.1"
+    },
+    {
+      "id": "fix_done_tasks_in_today",
+      "label": "Bug: Done Tasks in Today Section",
+      "file_type": "paper",
+      "source_file": "fix02.md",
+      "source_location": "4.1"
+    },
+    {
+      "id": "fix_rename_all_filter",
+      "label": "Issue: Rename All Filter to To-Do",
+      "file_type": "paper",
+      "source_file": "fix02.md",
+      "source_location": "4.2"
+    },
+    {
+      "id": "fix_fab_design",
+      "label": "Issue: FAB Button Design",
+      "file_type": "paper",
+      "source_file": "fix02.md",
+      "source_location": "5.1"
+    },
+    {
+      "id": "fix_notification_custom_sound",
+      "label": "Feature: Customizable Notification Sound",
+      "file_type": "paper",
+      "source_file": "fix02.md",
+      "source_location": "6.1"
+    },
+    {
+      "id": "fix_paused_task_categorization",
+      "label": "Bug: Paused Tasks in Wrong Category",
+      "file_type": "paper",
+      "source_file": "fix01.md",
+      "source_location": "T1.3"
+    },
+    {
+      "id": "fix_timer_edit_resets",
+      "label": "Bug: Timer Edit Resets Elapsed Time",
+      "file_type": "paper",
+      "source_file": "fix02.md",
+      "source_location": "2.2"
+    },
+    {
+      "id": "fix_subtask_creation_modal",
+      "label": "Bug: Subtask Creation in Detail Modal",
+      "file_type": "paper",
+      "source_file": "fix02.md",
+      "source_location": "3.3"
+    },
+    {
+      "id": "fix_longpress_unwired",
+      "label": "Bug: Unwired Long-Press Handlers",
+      "file_type": "paper",
+      "source_file": "fix01.md",
+      "source_location": "Phase 3"
+    },
+    {
+      "id": "fix_concurrent_timer_edits",
+      "label": "Issue: Concurrent Timer Edit Handling",
+      "file_type": "paper",
+      "source_file": "specs/006-phase-2-fixes/spec.md",
+      "source_location": "Edge Cases"
+    },
+    {
+      "id": "fix_corrupted_cache",
+      "label": "Issue: Corrupted Cache Recovery",
+      "file_type": "paper",
+      "source_file": "specs/005-phase-1-fixes/spec.md",
+      "source_location": "Edge Cases"
+    },
+    {
+      "id": "concept_sync_manager",
+      "label": "Sync Manager",
+      "file_type": "rationale",
+      "source_file": "hooks/useSyncManager.ts",
+      "source_location": "sync hook"
+    },
+    {
+      "id": "concept_periodic_sync",
+      "label": "Periodic Background Sync",
+      "file_type": "rationale",
+      "source_file": "utils/periodicSyncManager.ts",
+      "source_location": "sync manager"
+    },
+    {
+      "id": "concept_conflict_resolution",
+      "label": "Conflict Resolution",
+      "file_type": "rationale",
+      "source_file": "utils/conflictResolution.ts",
+      "source_location": "conflict resolution"
+    },
+    {
+      "id": "concept_offline_migration",
+      "label": "Offline Data Migration",
+      "file_type": "rationale",
+      "source_file": "utils/offlineMigration.ts",
+      "source_location": "migration"
+    },
+    {
+      "id": "concept_local_database",
+      "label": "Local SQLite Database",
+      "file_type": "rationale",
+      "source_file": "utils/localDatabase.ts",
+      "source_location": "local storage"
+    },
+    {
+      "id": "concept_screen_guide",
+      "label": "Screen Guide Tips",
+      "file_type": "rationale",
+      "source_file": "components/ScreenGuide.tsx",
+      "source_location": "guide component"
+    },
+    {
+      "id": "concept_action_modal",
+      "label": "Action Modal (Long Press Menu)",
+      "file_type": "rationale",
+      "source_file": "components/ActionModal.tsx",
+      "source_location": "modal component"
+    }
+  ],
+  "edges": [
+    {
+      "source": "projectcategory_entity",
+      "target": "projectsubcategory_entity",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "convex/schema.ts"
+    },
+    {
+      "source": "projectsubcategory_entity",
+      "target": "project_entity",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "convex/schema.ts"
+    },
+    {
+      "source": "project_entity",
+      "target": "projectresource_entity",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "convex/schema.ts"
+    },
+    {
+      "source": "project_entity",
+      "target": "checklist_entity",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "convex/schema.ts"
+    },
+    {
+      "source": "todo_entity",
+      "target": "subtask_entity",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "convex/schema.ts"
+    },
+    {
+      "source": "todo_entity",
+      "target": "checklist_entity",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "convex/schema.ts"
+    },
+    {
+      "source": "todo_entity",
+      "target": "timer_entity",
+      "relation": "has",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "convex/schema.ts"
+    },
+    {
+      "source": "todo_entity",
+      "target": "project_entity",
+      "relation": "belongs_to",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "convex/schema.ts"
+    },
+    {
+      "source": "user_entity",
+      "target": "todo_entity",
+      "relation": "owns",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "convex/schema.ts"
+    },
+    {
+      "source": "taskstatus_notstarted",
+      "target": "taskstatus_inprogress",
+      "relation": "transitions_to",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "specs/002-task-status-logic/spec.md"
+    },
+    {
+      "source": "taskstatus_notdone",
+      "target": "taskstatus_inprogress",
+      "relation": "transitions_to",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "specs/002-task-status-logic/spec.md"
+    },
+    {
+      "source": "taskstatus_inprogress",
+      "target": "taskstatus_paused",
+      "relation": "transitions_to",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "specs/002-task-status-logic/spec.md"
+    },
+    {
+      "source": "taskstatus_inprogress",
+      "target": "taskstatus_done",
+      "relation": "transitions_to",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "specs/002-task-status-logic/spec.md"
+    },
+    {
+      "source": "taskstatus_paused",
+      "target": "taskstatus_inprogress",
+      "relation": "transitions_to",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "specs/002-task-status-logic/spec.md"
+    },
+    {
+      "source": "timer_entity",
+      "target": "timer_countdown",
+      "relation": "has_type",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "convex/schema.ts"
+    },
+    {
+      "source": "timer_entity",
+      "target": "timer_countup",
+      "relation": "has_type",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "convex/schema.ts"
+    },
+    {
+      "source": "timer_entity",
+      "target": "timer_auto_complete",
+      "relation": "implements",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "specs/002-task-status-logic/spec.md"
+    },
+    {
+      "source": "timer_entity",
+      "target": "timer_elapsed_preservation",
+      "relation": "implements",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "specs/006-phase-2-fixes/spec.md"
+    },
+    {
+      "source": "timer_entity",
+      "target": "timer_circular_progress",
+      "relation": "displays",
+      "confidence": "INFERRED",
+      "confidence_score": 0.95,
+      "source_file": "DESIGN.md"
+    },
+    {
+      "source": "notification_entity",
+      "target": "notification_timer_completion",
+      "relation": "schedules",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "specs/003-phase-2-notification/spec.md"
+    },
+    {
+      "source": "notification_entity",
+      "target": "notification_morning_summary",
+      "relation": "schedules",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "specs/003-phase-2-notification/spec.md"
+    },
+    {
+      "source": "notification_entity",
+      "target": "notification_evening_summary",
+      "relation": "schedules",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "specs/003-phase-2-notification/spec.md"
+    },
+    {
+      "source": "notification_entity",
+      "target": "notification_native_actions",
+      "relation": "provides",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "specs/003-phase-2-notification/spec.md"
+    },
+    {
+      "source": "notification_entity",
+      "target": "notification_sound_settings",
+      "relation": "configures",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "specs/008-phase-4-to-6-fixes/spec.md"
+    },
+    {
+      "source": "notification_timer_completion",
+      "target": "timer_entity",
+      "relation": "notifies",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "specs/003-phase-2-notification/spec.md"
+    },
+    {
+      "source": "notification_morning_summary",
+      "target": "todo_entity",
+      "relation": "reminds_about",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "specs/003-phase-2-notification/spec.md"
+    },
+    {
+      "source": "design_claymorphism",
+      "target": "design_dualshadow_depth",
+      "relation": "uses",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "DESIGN.md"
+    },
+    {
+      "source": "design_claymorphism",
+      "target": "design_warm_palette",
+      "relation": "uses",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "DESIGN.md"
+    },
+    {
+      "source": "design_claymorphism",
+      "target": "design_task_card_clay",
+      "relation": "applies_to",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "DESIGN.md"
+    },
+    {
+      "source": "design_claymorphism",
+      "target": "design_fab",
+      "relation": "applies_to",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "DESIGN.md"
+    },
+    {
+      "source": "design_claymorphism",
+      "target": "design_typography_system",
+      "relation": "complements",
+      "confidence": "INFERRED",
+      "confidence_score": 0.85,
+      "source_file": "DESIGN.md"
+    },
+    {
+      "source": "design_task_card_clay",
+      "target": "taskstatus_notstarted",
+      "relation": "styles",
+      "confidence": "INFERRED",
+      "confidence_score": 0.95,
+      "source_file": "DESIGN.md"
+    },
+    {
+      "source": "design_task_card_clay",
+      "target": "taskstatus_notdone",
+      "relation": "styles",
+      "confidence": "INFERRED",
+      "confidence_score": 0.95,
+      "source_file": "DESIGN.md"
+    },
+    {
+      "source": "design_task_card_clay",
+      "target": "taskstatus_inprogress",
+      "relation": "styles",
+      "confidence": "INFERRED",
+      "confidence_score": 0.95,
+      "source_file": "DESIGN.md"
+    },
+    {
+      "source": "design_task_card_clay",
+      "target": "taskstatus_done",
+      "relation": "styles",
+      "confidence": "INFERRED",
+      "confidence_score": 0.95,
+      "source_file": "DESIGN.md"
+    },
+    {
+      "source": "design_rtl_support",
+      "target": "arch_localization_i18n",
+      "relation": "enables",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "PRODUCT.md"
+    },
+    {
+      "source": "arch_offline_first",
+      "target": "arch_cache_first",
+      "relation": "implements",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "hooks/useOfflineQuery.ts"
+    },
+    {
+      "source": "arch_offline_first",
+      "target": "arch_mutation_system",
+      "relation": "implements",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "hooks/useOfflineMutation.ts"
+    },
+    {
+      "source": "arch_offline_first",
+      "target": "concept_conflict_resolution",
+      "relation": "requires",
+      "confidence": "INFERRED",
+      "confidence_score": 0.85,
+      "source_file": "utils/conflictResolution.ts"
+    },
+    {
+      "source": "arch_offline_first",
+      "target": "concept_periodic_sync",
+      "relation": "requires",
+      "confidence": "INFERRED",
+      "confidence_score": 0.85,
+      "source_file": "utils/periodicSyncManager.ts"
+    },
+    {
+      "source": "arch_offline_first",
+      "target": "concept_offline_migration",
+      "relation": "requires",
+      "confidence": "INFERRED",
+      "confidence_score": 0.85,
+      "source_file": "utils/offlineMigration.ts"
+    },
+    {
+      "source": "arch_convex_backend",
+      "target": "arch_offline_first",
+      "relation": "supports",
+      "confidence": "INFERRED",
+      "confidence_score": 0.75,
+      "source_file": "README.md"
+    },
+    {
+      "source": "arch_optimistic_ui",
+      "target": "arch_offline_first",
+      "relation": "part_of",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "specs/004-long-press-actions/spec.md"
+    },
+    {
+      "source": "arch_cascade_delete",
+      "target": "projectcategory_entity",
+      "relation": "applies_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.85,
+      "source_file": "fix01.md"
+    },
+    {
+      "source": "fix_notification_undefined_name",
+      "target": "notification_entity",
+      "relation": "affects",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "fix02.md"
+    },
+    {
+      "source": "fix_notification_undefined_name",
+      "target": "timer_entity",
+      "relation": "affects",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "fix02.md"
+    },
+    {
+      "source": "fix_internet_required_first_load",
+      "target": "arch_offline_first",
+      "relation": "affects",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "fix02.md"
+    },
+    {
+      "source": "fix_keyboard_blocks_confirm",
+      "target": "todo_entity",
+      "relation": "affects",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "fix02.md"
+    },
+    {
+      "source": "fix_done_tasks_in_today",
+      "target": "taskstatus_done",
+      "relation": "affects",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "fix02.md"
+    },
+    {
+      "source": "fix_rename_all_filter",
+      "target": "arch_expo_router",
+      "relation": "affects",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "fix02.md"
+    },
+    {
+      "source": "fix_fab_design",
+      "target": "design_fab",
+      "relation": "improves",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "fix02.md"
+    },
+    {
+      "source": "fix_notification_custom_sound",
+      "target": "notification_sound_settings",
+      "relation": "implements",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "fix02.md"
+    },
+    {
+      "source": "fix_paused_task_categorization",
+      "target": "taskstatus_paused",
+      "relation": "affects",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "fix01.md"
+    },
+    {
+      "source": "fix_timer_edit_resets",
+      "target": "timer_elapsed_preservation",
+      "relation": "affects",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "fix02.md"
+    },
+    {
+      "source": "fix_subtask_creation_modal",
+      "target": "subtask_entity",
+      "relation": "affects",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "fix02.md"
+    },
+    {
+      "source": "fix_longpress_unwired",
+      "target": "concept_action_modal",
+      "relation": "affects",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "fix01.md"
+    },
+    {
+      "source": "fix_concurrent_timer_edits",
+      "target": "timer_entity",
+      "relation": "affects",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "specs/006-phase-2-fixes/spec.md"
+    },
+    {
+      "source": "product_clarity_over_density",
+      "target": "design_claymorphism",
+      "relation": "informs",
+      "confidence": "INFERRED",
+      "confidence_score": 0.85,
+      "source_file": "PRODUCT.md"
+    },
+    {
+      "source": "product_momentum_matters",
+      "target": "design_task_card_clay",
+      "relation": "informs",
+      "confidence": "INFERRED",
+      "confidence_score": 0.75,
+      "source_file": "PRODUCT.md"
+    },
+    {
+      "source": "product_inclusive_design",
+      "target": "design_rtl_support",
+      "relation": "informs",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "PRODUCT.md"
+    },
+    {
+      "source": "product_personality_no_gamification",
+      "target": "design_claymorphism",
+      "relation": "informs",
+      "confidence": "INFERRED",
+      "confidence_score": 0.85,
+      "source_file": "PRODUCT.md"
+    },
+    {
+      "source": "onboarding_flow",
+      "target": "onboarding_language_select",
+      "relation": "includes_step",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "ONBOARDING.md"
+    },
+    {
+      "source": "onboarding_flow",
+      "target": "onboarding_welcome_slides",
+      "relation": "includes_step",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "ONBOARDING.md"
+    },
+    {
+      "source": "onboarding_flow",
+      "target": "arch_localization_i18n",
+      "relation": "requires",
+      "confidence": "INFERRED",
+      "confidence_score": 0.95,
+      "source_file": "ONBOARDING.md"
+    },
+    {
+      "source": "concept_screen_guide",
+      "target": "onboarding_flow",
+      "relation": "complements",
+      "confidence": "INFERRED",
+      "confidence_score": 0.75,
+      "source_file": "ONBOARDING.md"
+    },
+    {
+      "source": "concept_sync_manager",
+      "target": "concept_periodic_sync",
+      "relation": "orchestrates",
+      "confidence": "INFERRED",
+      "confidence_score": 0.85,
+      "source_file": "hooks/useSyncManager.ts"
+    },
+    {
+      "source": "concept_sync_manager",
+      "target": "concept_conflict_resolution",
+      "relation": "handles",
+      "confidence": "INFERRED",
+      "confidence_score": 0.85,
+      "source_file": "hooks/useSyncManager.ts"
+    },
+    {
+      "source": "concept_sync_manager",
+      "target": "concept_local_database",
+      "relation": "reads_from",
+      "confidence": "INFERRED",
+      "confidence_score": 0.85,
+      "source_file": "hooks/useSyncManager.ts"
+    },
+    {
+      "source": "taskstatus_notstarted",
+      "target": "taskstatus_notdone",
+      "relation": "conceptually_related_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.75,
+      "source_file": "specs/002-task-status-logic/spec.md"
+    }
+  ],
+  "hyperedges": [
+    {
+      "id": "task_status_machine",
+      "label": "Task Status State Machine",
+      "nodes": [
+        "taskstatus_notstarted",
+        "taskstatus_notdone",
+        "taskstatus_inprogress",
+        "taskstatus_paused",
+        "taskstatus_done"
+      ],
+      "relation": "form",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "convex/schema.ts"
+    },
+    {
+      "id": "notification_system",
+      "label": "Notification System",
+      "nodes": [
+        "notification_entity",
+        "notification_timer_completion",
+        "notification_morning_summary",
+        "notification_evening_summary",
+        "notification_native_actions",
+        "notification_sound_settings"
+      ],
+      "relation": "form",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "specs/003-phase-2-notification/spec.md"
+    },
+    {
+      "id": "claymorphism_system",
+      "label": "Claymorphism Design System",
+      "nodes": [
+        "design_claymorphism",
+        "design_warm_palette",
+        "design_dualshadow_depth",
+        "design_task_card_clay",
+        "design_fab",
+        "design_typography_system"
+      ],
+      "relation": "form",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "DESIGN.md"
+    },
+    {
+      "id": "offline_first_architecture",
+      "label": "Offline-First Architecture",
+      "nodes": [
+        "arch_offline_first",
+        "arch_cache_first",
+        "arch_mutation_system",
+        "concept_sync_manager",
+        "concept_periodic_sync",
+        "concept_conflict_resolution",
+        "concept_local_database",
+        "concept_offline_migration"
+      ],
+      "relation": "form",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "specs/005-phase-1-fixes/spec.md"
+    },
+    {
+      "id": "product_philosophy",
+      "label": "Product Design Philosophy",
+      "nodes": [
+        "product_purpose",
+        "product_clarity_over_density",
+        "product_momentum_matters",
+        "product_personality_no_gamification",
+        "product_inclusive_design"
+      ],
+      "relation": "form",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "PRODUCT.md"
+    }
+  ],
+  "input_tokens": 0,
+  "output_tokens": 0
+}

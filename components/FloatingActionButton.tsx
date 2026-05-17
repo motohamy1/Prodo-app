@@ -1,8 +1,8 @@
-import useTheme from '@/hooks/useTheme';
 import { useAuth } from '@/hooks/useAuth';
+import useTheme, { getNeoShadow } from '@/hooks/useTheme';
 import { useTranslation } from '@/utils/i18n';
 import React from 'react';
-import { StyleProp, StyleSheet, Text, TouchableOpacity, ViewStyle, Platform } from 'react-native';
+import { Platform, StyleProp, StyleSheet, Text, TouchableOpacity, ViewStyle } from 'react-native';
 
 interface FloatingActionButtonProps {
   onPress: () => void;
@@ -13,17 +13,29 @@ export default function FloatingActionButton({ onPress, style }: FloatingActionB
   const { colors } = useTheme();
   const { language } = useAuth();
   const { isArabic } = useTranslation(language);
+  const raisedLg = getNeoShadow(colors, 'raisedLg', isArabic);
 
   return (
     <TouchableOpacity
-      style={[styles.fab, { backgroundColor: colors.primary || '#D4F82D' }, style]}
+      style={[
+        styles.fab, 
+        { 
+          backgroundColor: colors.primary,
+          shadowColor: raisedLg.shadowColor,
+          shadowOffset: raisedLg.shadowOffset,
+          shadowOpacity: raisedLg.shadowOpacity,
+          shadowRadius: raisedLg.shadowRadius,
+          elevation: raisedLg.elevation,
+        }, 
+        style
+      ]}
       onPress={onPress}
       activeOpacity={0.8}
     >
       <Text style={[
         styles.text, 
         { 
-          color: '#000000',
+          color: colors.surfaceText,
           fontSize: 12,
           fontWeight: '800',
           fontFamily: Platform.OS === 'ios' ? 'Inter' : 'sans-serif-medium'

@@ -1,7 +1,7 @@
-import React from 'react';
-import { View, Text, Modal, TouchableOpacity, StyleSheet, TouchableWithoutFeedback, Platform } from 'react-native';
+import useTheme, { getNeoShadow } from '@/hooks/useTheme';
 import { Ionicons } from '@expo/vector-icons';
-import useTheme from '@/hooks/useTheme';
+import React from 'react';
+import { Modal, Platform, StyleSheet, Text, TouchableOpacity, TouchableWithoutFeedback, View } from 'react-native';
 
 export interface ActionOption {
   label: string;
@@ -20,6 +20,7 @@ interface ActionModalProps {
 
 const ActionModal: React.FC<ActionModalProps> = ({ visible, onClose, options, title, isArabic = false }) => {
   const { colors, isDarkMode } = useTheme();
+  const raised = getNeoShadow(colors, 'raised', isArabic);
 
   return (
     <Modal
@@ -34,11 +35,14 @@ const ActionModal: React.FC<ActionModalProps> = ({ visible, onClose, options, ti
             <View style={[
               styles.content, 
               { 
-                backgroundColor: colors.bg, 
+                backgroundColor: colors.neomorphic.raised.backgroundColor, 
                 borderTopLeftRadius: 32, 
                 borderTopRightRadius: 32,
-                borderWidth: 1,
-                borderColor: colors.border
+                shadowColor: colors.shadow,
+                shadowOffset: { width: -8, height: -8 },
+                shadowOpacity: 0.1,
+                shadowRadius: 16,
+                elevation: 8,
               }
             ]}>
               <View style={styles.handle} />
@@ -58,7 +62,14 @@ const ActionModal: React.FC<ActionModalProps> = ({ visible, onClose, options, ti
                     key={index}
                     style={[
                       styles.option,
-                      { backgroundColor: colors.surface },
+                      { 
+                        backgroundColor: colors.neomorphic.raised.backgroundColor,
+                        shadowColor: colors.shadow,
+                        shadowOffset: { width: 4, height: 4 },
+                        shadowOpacity: 0.1,
+                        shadowRadius: 8,
+                        elevation: 4,
+                      },
                       index === 0 && { borderTopLeftRadius: 20, borderTopRightRadius: 20 },
                       index === options.length - 1 && { borderBottomLeftRadius: 20, borderBottomRightRadius: 20 },
                       index < options.length - 1 && { borderBottomWidth: 1, borderBottomColor: colors.border }
@@ -70,7 +81,14 @@ const ActionModal: React.FC<ActionModalProps> = ({ visible, onClose, options, ti
                   >
                     <View style={[
                       styles.iconWrap, 
-                      { backgroundColor: option.variant === 'destructive' ? colors.danger + '15' : colors.primary + '15' }
+                      { 
+                        backgroundColor: colors.neomorphic.raised.backgroundColor,
+                        shadowColor: colors.shadow,
+                        shadowOffset: { width: 2, height: 2 },
+                        shadowOpacity: 0.1,
+                        shadowRadius: 4,
+                        elevation: 2,
+                      }
                     ]}>
                       <Ionicons 
                         name={option.icon} 
@@ -120,7 +138,7 @@ const styles = StyleSheet.create({
     paddingBottom: Platform.OS === 'ios' ? 40 : 24,
     paddingTop: 12,
     paddingHorizontal: 20,
-    shadowColor: "#000",
+    shadowColor: '#000',
     shadowOffset: { width: 0, height: -10 },
     shadowOpacity: 0.2,
     shadowRadius: 20,
@@ -148,7 +166,7 @@ const styles = StyleSheet.create({
   },
   optionsContainer: {
     marginBottom: 16,
-    shadowColor: "#000",
+    shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
     shadowRadius: 8,

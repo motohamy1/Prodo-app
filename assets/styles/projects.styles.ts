@@ -1,11 +1,14 @@
-import { ColorScheme } from "@/hooks/useTheme";
+import { ColorScheme, getNeoShadow } from "@/hooks/useTheme";
 import { StyleSheet, Dimensions, Platform } from "react-native";
 
 const { width: windowWidth } = Dimensions.get("window");
 const width = windowWidth || 375;
 
-export const createProjectsStyles = (colors: ColorScheme) =>
-  StyleSheet.create({
+export const createProjectsStyles = (colors: ColorScheme) => {
+  const raised = getNeoShadow(colors, 'raised', false);
+  const flat = getNeoShadow(colors, 'flat', false);
+  const inset = getNeoShadow(colors, 'inset', false);
+  return StyleSheet.create({
     // ── Root ──────────────────────────────────────────────────────────────────
     container: {
       flex: 1,
@@ -48,7 +51,7 @@ export const createProjectsStyles = (colors: ColorScheme) =>
       width: 40,
       height: 40,
       borderRadius: 16,
-      backgroundColor: colors.surface,
+      backgroundColor: raised.backgroundColor,
       justifyContent: "center",
       alignItems: "center",
       shadowColor: colors.shadow,
@@ -111,7 +114,7 @@ export const createProjectsStyles = (colors: ColorScheme) =>
       width: '100%',
       borderRadius: 26,
       padding: 20,
-      backgroundColor: colors.surface,
+      backgroundColor: raised.backgroundColor,
       flexDirection: "row",
       alignItems: "center",
       shadowColor: colors.shadow,
@@ -160,7 +163,7 @@ export const createProjectsStyles = (colors: ColorScheme) =>
     },
     subCategoryCard: {
       width: '100%',
-      backgroundColor: colors.surface,
+      backgroundColor: raised.backgroundColor,
       borderRadius: 20,
       padding: 18,
       flexDirection: 'row',
@@ -199,7 +202,7 @@ export const createProjectsStyles = (colors: ColorScheme) =>
       height: (width - 40 - 12) / 2 * 1.2,
       borderRadius: 26,
       padding: 10,
-      backgroundColor: colors.surface,
+      backgroundColor: raised.backgroundColor,
       justifyContent: "center",
       alignItems: "center",
       shadowColor: colors.shadow,
@@ -350,7 +353,7 @@ export const createProjectsStyles = (colors: ColorScheme) =>
       color: colors.success,
     },
     descriptionBox: {
-      backgroundColor: colors.surface,
+      backgroundColor: raised.backgroundColor,
       borderRadius: 20,
       padding: 16,
       minHeight: 80,
@@ -380,7 +383,7 @@ export const createProjectsStyles = (colors: ColorScheme) =>
     tasksToggle: {
       flexDirection: "row",
       alignItems: "center",
-      backgroundColor: colors.surface,
+      backgroundColor: raised.backgroundColor,
       borderRadius: 20,
       padding: 16,
       marginBottom: 2,
@@ -441,7 +444,7 @@ export const createProjectsStyles = (colors: ColorScheme) =>
       borderBottomRightRadius: 16,
     },
     resourceCard: {
-      backgroundColor: colors.surface,
+      backgroundColor: raised.backgroundColor,
       borderRadius: 18,
       padding: 14,
       flexDirection: "row",
@@ -478,11 +481,11 @@ export const createProjectsStyles = (colors: ColorScheme) =>
     // ── Modal Styles ──────────────────────────────────────────────────────────
     modalOverlay: {
       flex: 1,
-      backgroundColor: "rgba(0,0,0,0.6)",
+      backgroundColor: colors.text + '99',
       justifyContent: "flex-end",
     },
     modalSheet: {
-      backgroundColor: colors.surface,
+      backgroundColor: raised.backgroundColor,
       borderTopLeftRadius: 32,
       borderTopRightRadius: 32,
       paddingTop: 12,
@@ -566,7 +569,7 @@ export const createProjectsStyles = (colors: ColorScheme) =>
     modalPrimaryBtnText: {
       fontSize: 16,
       fontWeight: "800",
-      color: colors.bg === '#0F0F12' ? '#000000' : '#FFFFFF',
+      color: colors.bg === '#0F0F12' ? colors.text : colors.surfaceText,
     },
     modalSecondaryBtn: {
       alignItems: "center",
@@ -645,7 +648,7 @@ export const createProjectsStyles = (colors: ColorScheme) =>
     checklistAddRow: {
        flexDirection: 'row',
        alignItems: 'center',
-       backgroundColor: colors.surface,
+       backgroundColor: raised.backgroundColor,
        borderRadius: 20,
        paddingHorizontal: 16,
        paddingVertical: 12,
@@ -658,12 +661,13 @@ export const createProjectsStyles = (colors: ColorScheme) =>
        shadowRadius: 12,
        elevation: 3,
     },
-    checklistInput: {
-       flex: 1,
-       fontSize: 16, // Match TodoInput text size
-       color: colors.text,
-       marginLeft: 12, // Match TodoInput margin
-       fontWeight: "500",
-       padding: 0,
-    },
+     checklistInput: {
+        flex: 1,
+        fontSize: 16, // Match TodoInput text size
+        color: colors.text,
+        marginLeft: 12, // Match TodoInput margin
+        fontWeight: "500",
+        padding: 0,
+     },
   });
+};

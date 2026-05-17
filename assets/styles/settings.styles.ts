@@ -1,9 +1,12 @@
-import { ColorScheme } from "@/hooks/useTheme";
+import { ColorScheme, getNeoShadow } from "@/hooks/useTheme";
 import { StyleSheet, Dimensions, Platform } from "react-native";
 
 const { width } = Dimensions.get('window');
 
 export const createSettingsStyles = (colors: ColorScheme, isArabic: boolean = false) => {
+  const raised = getNeoShadow(colors, 'raised', isArabic);
+  const flat = getNeoShadow(colors, 'flat', isArabic);
+  const inset = getNeoShadow(colors, 'inset', isArabic);
   return StyleSheet.create({
     container: {
       flex: 1,
@@ -41,7 +44,7 @@ export const createSettingsStyles = (colors: ColorScheme, isArabic: boolean = fa
       marginRight: isArabic ? 4 : 0,
     },
     card: {
-      backgroundColor: colors.surface,
+      backgroundColor: raised.backgroundColor,
       borderRadius: 30,
       padding: 4,
       shadowColor: colors.shadow,
@@ -169,7 +172,7 @@ export const createSettingsStyles = (colors: ColorScheme, isArabic: boolean = fa
     },
     modalOverlay: {
       flex: 1,
-      backgroundColor: 'rgba(0,0,0,0.5)',
+      backgroundColor: colors.text + '80',
       justifyContent: 'flex-end',
     },
     modalContent: {
@@ -201,7 +204,7 @@ export const createSettingsStyles = (colors: ColorScheme, isArabic: boolean = fa
       marginBottom: 8,
     },
     textInput: {
-      backgroundColor: colors.surface,
+      backgroundColor: inset.backgroundColor,
       borderRadius: 20,
       padding: 16,
       color: colors.text,
@@ -220,7 +223,7 @@ export const createSettingsStyles = (colors: ColorScheme, isArabic: boolean = fa
       marginTop: 24,
     },
     saveButtonText: {
-      color: colors.bg === '#0F0F12' ? '#000000' : '#FFFFFF',
+      color: colors.bg === '#0F0F12' ? colors.text : colors.surfaceText,
       fontSize: 16,
       fontWeight: '800',
     },

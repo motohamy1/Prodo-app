@@ -41,8 +41,8 @@ const TimerModal: React.FC<TimerModalProps> = ({ visible, onClose, onSave, initi
 
   return (
     <Modal visible={visible} transparent animationType="fade">
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.overlay}>
-        <View style={[styles.modalContainer, { backgroundColor: colors.surface }]}>
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={[styles.overlay, { backgroundColor: colors.text + '80' }]}>
+        <View style={[styles.modalContainer, { backgroundColor: colors.surface, shadowColor: colors.text }]}>
           <Text style={[styles.title, { color: colors.text }]}>Timer & Deadline</Text>
           
           <Text style={[styles.sectionTitle, { color: colors.textMuted }]}>Timer Duration</Text>
@@ -114,8 +114,8 @@ const TimerModal: React.FC<TimerModalProps> = ({ visible, onClose, onSave, initi
             <TouchableOpacity style={[styles.button, styles.cancelButton, { borderColor: colors.border }]} onPress={onClose}>
               <Text style={[styles.buttonText, { color: colors.textMuted }]}>Cancel</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={[styles.button, styles.saveButton, { backgroundColor: colors.primary }]} onPress={handleSave}>
-              <Text style={[styles.buttonText, { color: isDarkMode ? '#000' : '#FFF' }]}>Save Settings</Text>
+            <TouchableOpacity style={[styles.button, styles.saveButton, { backgroundColor: colors.primary, shadowColor: colors.text }]} onPress={handleSave}>
+              <Text style={[styles.buttonText, { color: colors.surfaceText }]}>Save Settings</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -127,7 +127,6 @@ const TimerModal: React.FC<TimerModalProps> = ({ visible, onClose, onSave, initi
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
     justifyContent: 'center',
     alignItems: 'center',
     padding: 24,
@@ -138,7 +137,6 @@ const styles = StyleSheet.create({
     padding: 24,
     alignItems: 'center',
     elevation: 20,
-    shadowColor: '#000',
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.15,
     shadowRadius: 24,
@@ -215,7 +213,6 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
   },
   saveButton: {
-    shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.1,
     shadowRadius: 8,

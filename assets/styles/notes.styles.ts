@@ -1,5 +1,5 @@
 import { StyleSheet, Dimensions, Platform } from 'react-native';
-import { ColorScheme } from "@/hooks/useTheme";
+import { ColorScheme, getNeoShadow } from "@/hooks/useTheme";
 
 const { width } = Dimensions.get('window');
 const cardWidth = width * 0.45;
@@ -7,6 +7,9 @@ const gridCardWidth = (width - 48 - 12) / 2; // (Screen - horizontal padding*2 -
 
 
 export const createNotesStyles = (colors: ColorScheme, isArabic: boolean = false) => {
+  const raised = getNeoShadow(colors, 'raised', isArabic);
+  const flat = getNeoShadow(colors, 'flat', isArabic);
+  const inset = getNeoShadow(colors, 'inset', isArabic);
   return StyleSheet.create({
     container: {
       flex: 1,
@@ -54,7 +57,7 @@ export const createNotesStyles = (colors: ColorScheme, isArabic: boolean = false
       padding: 16,
       marginHorizontal: 8,
       justifyContent: 'space-between',
-      shadowColor: "#000",
+      shadowColor: colors.shadow,
       shadowOffset: { width: 0, height: 6 },
       shadowOpacity: 0.08,
       shadowRadius: 16,
@@ -63,7 +66,7 @@ export const createNotesStyles = (colors: ColorScheme, isArabic: boolean = false
     cardTitle: {
       fontSize: 18,
       fontWeight: '700',
-      color: '#000000',
+      color: colors.text,
       marginBottom: 8,
       fontFamily: Platform.OS === 'ios' ? 'Inter' : 'sans-serif-medium',
       writingDirection: 'auto',
@@ -75,13 +78,13 @@ export const createNotesStyles = (colors: ColorScheme, isArabic: boolean = false
     cardDesc: {
       fontSize: 14,
       fontWeight: '500',
-      color: 'rgba(0,0,0,0.6)',
+      color: colors.text + '99',
       flex: 1,
     },
     cardDate: {
       fontSize: 12,
       fontWeight: '600',
-      color: 'rgba(0,0,0,0.8)',
+      color: colors.text + 'CC',
     },
     emptyText: {
       paddingHorizontal: 24,
@@ -122,10 +125,10 @@ export const createNotesStyles = (colors: ColorScheme, isArabic: boolean = false
       width: 44,
       height: 44,
       borderRadius: 22, // perfect circle
-      backgroundColor: colors.surface, // subtle background for icon containers
+      backgroundColor: raised.backgroundColor, // subtle background for icon containers
       justifyContent: 'center',
       alignItems: 'center',
-      shadowColor: "#000",
+      shadowColor: colors.shadow,
       shadowOffset: { width: 0, height: 2 },
       shadowOpacity: 0.2,
       shadowRadius: 4,
@@ -174,7 +177,7 @@ export const createNotesStyles = (colors: ColorScheme, isArabic: boolean = false
       backgroundColor: '#1C1C1E', // Charcoal dark
       borderRadius: 24,
       padding: 16,
-      shadowColor: "#000",
+      shadowColor: colors.shadow,
       shadowOffset: { width: 0, height: 10 },
       shadowOpacity: 0.3,
       shadowRadius: 20,
@@ -204,7 +207,7 @@ export const createNotesStyles = (colors: ColorScheme, isArabic: boolean = false
       gap: 8,
     },
     toolbarFontText: {
-      color: '#FFFFFF',
+      color: colors.surfaceText,
       fontSize: 14,
       fontWeight: '600',
     },
@@ -231,7 +234,7 @@ export const createNotesStyles = (colors: ColorScheme, isArabic: boolean = false
     // Reminder Modal Styles
     modalOverlay: {
       flex: 1,
-      backgroundColor: 'rgba(0,0,0,0.4)',
+      backgroundColor: colors.text + '66',
       justifyContent: 'flex-end',
     },
     modalContent: {
@@ -252,7 +255,7 @@ export const createNotesStyles = (colors: ColorScheme, isArabic: boolean = false
       width: 40,
       height: 40,
       borderRadius: 12,
-      backgroundColor: colors.surface,
+      backgroundColor: raised.backgroundColor,
       justifyContent: 'center',
       alignItems: 'center',
     },
@@ -272,7 +275,7 @@ export const createNotesStyles = (colors: ColorScheme, isArabic: boolean = false
       marginTop: 20,
     },
     reminderTitleInput: {
-      backgroundColor: colors.surface,
+      backgroundColor: inset.backgroundColor,
       borderRadius: 20,
       paddingHorizontal: 16,
       paddingVertical: 16,
@@ -280,7 +283,7 @@ export const createNotesStyles = (colors: ColorScheme, isArabic: boolean = false
       color: colors.text,
     },
     calendarCard: {
-      backgroundColor: colors.surface,
+      backgroundColor: raised.backgroundColor,
       borderRadius: 30,
       padding: 16,
       shadowColor: colors.shadow,
@@ -334,7 +337,7 @@ export const createNotesStyles = (colors: ColorScheme, isArabic: boolean = false
       color: colors.text,
     },
     dayTextActive: {
-      color: '#000000',
+      color: colors.text,
       fontWeight: '800',
     },
     timePresetsRow: {
@@ -374,7 +377,7 @@ export const createNotesStyles = (colors: ColorScheme, isArabic: boolean = false
     createReminderText: {
       fontSize: 18,
       fontWeight: '800',
-      color: '#000000', 
+      color: colors.text, 
     },
     // Checklist Styles
     checklistContainer: {
@@ -417,7 +420,7 @@ export const createNotesStyles = (colors: ColorScheme, isArabic: boolean = false
       borderRadius: 32,
       padding: 16,
       justifyContent: 'space-between',
-      shadowColor: "#000",
+      shadowColor: colors.shadow,
       shadowOffset: { width: 0, height: 4 },
       shadowOpacity: 0.1,
       shadowRadius: 10,
@@ -431,7 +434,7 @@ export const createNotesStyles = (colors: ColorScheme, isArabic: boolean = false
       gap: 12,
     },
     inlineReminderHeader: {
-      backgroundColor: colors.surface,
+      backgroundColor: raised.backgroundColor,
       borderRadius: 30,
       padding: 20,
       marginBottom: 24,

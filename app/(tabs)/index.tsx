@@ -1,44 +1,46 @@
 import { createHomeStyles } from "@/assets/styles/home.styles";
+import { useOfflineFirstTodos, useSyncStatus } from "@/hooks/useOfflineFirstData";
+import { useOfflineMutation } from "@/hooks/useOfflineMutation";
 import useTheme from "@/hooks/useTheme";
 import { Ionicons } from '@expo/vector-icons';
-import { useOfflineQuery } from "@/hooks/useOfflineQuery";
-import { useOfflineMutation } from "@/hooks/useOfflineMutation";
-import React, { useState, useMemo, useRef } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
+import { Alert } from 'react-native';
 
-import { StatusBar, View, Text, ScrollView, FlatList, ActivityIndicator, TouchableOpacity, KeyboardAvoidingView, Platform, Share } from 'react-native';
+import ActionModal from "@/components/ActionModal";
+import CircularProgress from "@/components/CircularProgress";
+import FloatingActionButton from "@/components/FloatingActionButton";
+import Header from "@/components/Header";
+import ProjectPickerModal from "@/components/ProjectPickerModal";
+import type { GuideTip } from "@/components/ScreenGuide";
+import ScreenGuide from "@/components/ScreenGuide";
+import TaskDetailModal from "@/components/TaskDetailModal";
+import TimerModal from "@/components/TimerModal";
+import TodoCard from "@/components/TodoCard";
+import { useAuth } from "@/hooks/useAuth";
+import { useDailyReminders } from "@/hooks/useDailyReminders";
+import { useScreenGuide } from "@/hooks/useScreenGuide";
+import { useTaskTimers } from "@/hooks/useTaskTimers";
+import { useRouter } from "expo-router";
+import { ActivityIndicator, FlatList, KeyboardAvoidingView, Platform, ScrollView, StatusBar, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { api } from "../../convex/_generated/api";
 import { Id } from '../../convex/_generated/dataModel';
-import { useRouter } from "expo-router";
-import Header from "@/components/Header";
-import TodoCard from "@/components/TodoCard";
-import FloatingActionButton from "@/components/FloatingActionButton";
-import TaskDetailModal from "@/components/TaskDetailModal";
-import TimerModal from "@/components/TimerModal";
-import ProjectPickerModal from "@/components/ProjectPickerModal";
-import ActionModal from "@/components/ActionModal";
-import CircularProgress from "@/components/CircularProgress";
-import { useAuth } from "@/hooks/useAuth";
-import { useScreenGuide } from "@/hooks/useScreenGuide";
-import ScreenGuide from "@/components/ScreenGuide";
-import type { GuideTip } from "@/components/ScreenGuide";
-import { useTaskTimers } from "@/hooks/useTaskTimers";
-import { useDailyReminders } from "@/hooks/useDailyReminders";
 
 import { useTranslation } from "@/utils/i18n";
 
 const Index = () => {
     const { userId, language } = useAuth();
     const { t, isArabic } = useTranslation(language);
-    const todos = useOfflineQuery<any[]>('todos', api.todos.get, userId ? { userId } : "skip");
-    const deleteTodo = useOfflineMutation(api.todos.deleteTodo, "todos:deleteTodo");
+    const { todos, addTodo, updateTodo, deleteTodo, getTodoById, loading, isOnline, sync } = useOfflineFirstTodos(userId);
+    const { isSyncing, lastSync, pendingChanges, triggerSync } = useSyncStatus(userId);
     const router = useRouter();
+    const { colors, isDarkMode } = useTheme();
+
+    // Keep old mutations for backward compatibility during transition
     const setTimerMutation = useOfflineMutation(api.todos.setTimer, "todos:setTimer");
     const linkProject = useOfflineMutation(api.todos.linkProject, "todos:linkProject");
     const linkTask = useOfflineMutation(api.todos.linkTask, "todos:linkTask");
-    const updateTodo = useOfflineMutation(api.todos.updateTodo, "todos:updateTodo");
     const updateStatus = useOfflineMutation(api.todos.updateStatus, "todos:updateStatus");
-    const { colors, isDarkMode } = useTheme();
 
     const [isTimerModalVisible, setTimerModalVisible] = useState(false);
     const [isProjectModalVisible, setProjectModalVisible] = useState(false);
@@ -228,7 +230,6 @@ const Index = () => {
             behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
             keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
         >
-
             <StatusBar barStyle={colors.statusBarStyle} backgroundColor={colors.bg} />
             <SafeAreaView style={homeStyles.safeArea} edges={['top']}>
                 <Header />
@@ -528,7 +529,30 @@ const Index = () => {
                   icon: 'trash-outline',
                   variant: 'destructive',
                   onPress: () => {
-                    todayTodos.filter(t => t.status === 'done').forEach(t => deleteTodo({ id: t._id }));
+                    const completedTasks = todayTodos.filter(t => t.status === 'done');
+                    if (completedTasks.length === 0) {
+                      return;
+                    }
+                    
+                    Alert.alert(
+                      isArabic ? 'مسح المهام المكتملة' : 'Clear Completed Tasks',
+                      isArabic 
+                        ? `هل أنت متأكد من حذف ${completedTasks.length} مهمة مكتملة؟ لا يمكن التراجع عن هذا الإجراء.` 
+                        : `Are you sure you want to delete ${completedTasks.length} completed task${completedTasks.length === 1 ? '' : 's'}? This action cannot be undone.`,
+                      [
+                        {
+                          text: isArabic ? 'إلغاء' : 'Cancel',
+                          style: 'cancel'
+                        },
+                        {
+                          text: isArabic ? 'حذف' : 'Delete',
+                          style: 'destructive',
+                          onPress: () => {
+                            completedTasks.forEach(t => deleteTodo({ id: t._id }));
+                          }
+                        }
+                      ]
+                    );
                   }
                 }
               ]}

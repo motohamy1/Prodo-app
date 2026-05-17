@@ -392,62 +392,73 @@ export default function NoteDetailScreen() {
     </TouchableOpacity>
   ), [title, formattedNoteDate, isArabic, colors, styles, blocks]);
 
-  const renderBlock = useCallback(({ item }: { item: Block }) => (
-    <View style={[
-      styles.checklistContainer, 
-      { paddingHorizontal: 24, alignItems: 'flex-start' },
-      (item.type === 'h1' || item.type === 'h2' || item.type === 'h3') && { marginVertical: 8 }
-    ]}>
-      {item.type === 'todo' && (
-        <TouchableOpacity onPress={() => toggleTodo(item.id)} style={[
-          styles.checkbox,
-          { marginTop: 6 },
-          item.checked && styles.checkboxChecked
-        ]}>
-          {item.checked && <Ionicons name="checkmark" size={16} color="#FFF" />}
-        </TouchableOpacity>
-      )}
+  const renderBlock = useCallback(({ item }: { item: Block }) => {
+    const blockLineHeight = (item.type === 'h1' ? 32 : item.type === 'h2' ? 26 : item.type === 'h3' ? 22 : activeFontSize) * 1.5;
+    
+    return (
+      <View style={[
+        styles.checklistContainer, 
+        { 
+          paddingHorizontal: 24, 
+          alignItems: 'flex-start',
+          flexDirection: isArabic ? 'row-reverse' : 'row'
+        },
+        (item.type === 'h1' || item.type === 'h2' || item.type === 'h3') && { marginVertical: 8 }
+      ]}>
+        {item.type === 'todo' && (
+          <TouchableOpacity onPress={() => toggleTodo(item.id)} style={{ marginTop: 8 }}>
+            <View style={[
+              styles.checkbox,
+              item.checked && styles.checkboxChecked
+            ]}>
+              {item.checked && <Ionicons name="checkmark" size={16} color={colors.surfaceText} />}
+            </View>
+          </TouchableOpacity>
+        )}
 
-      {item.type === 'bullet' && (
-        <View style={{ width: 24, height: 32, justifyContent: 'center', alignItems: 'center' }}>
-          <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: colors.primary, marginTop: 4 }} />
-        </View>
-      )}
-      
-      <TextInput
-        ref={el => { blockRefs.current[item.id] = el; }}
-        style={[
-          styles.bodyInput,
-          { 
-            paddingBottom: 0, 
-            marginVertical: 4,
-            fontSize: item.type === 'h1' ? 32 : item.type === 'h2' ? 26 : item.type === 'h3' ? 22 : activeFontSize,
-            fontWeight: (item.type === 'h1' || item.type === 'h2' || item.type === 'h3') ? '800' : activeFontWeight,
-            fontFamily: activeFontFamily === 'System' ? undefined : activeFontFamily,
-            color: item.color || activeFontColor,
-            fontStyle: activeFontStyle,
-            lineHeight: (item.type === 'h1' ? 32 : item.type === 'h2' ? 26 : item.type === 'h3' ? 22 : activeFontSize) * 1.5,
-            textDecorationLine: (item.type === 'todo' && item.checked) ? 'line-through' : 'none',
-            opacity: (item.type === 'todo' && item.checked) ? 0.6 : 1
-          },
-          isArabic && { textAlign: 'right' }
-        ]}
-        placeholder={item.type.startsWith('h') ? `HEADING ${item.type.charAt(1)}` : "Type away..."}
-        placeholderTextColor={colors.textMuted + '60'}
-        value={item.content}
-        onChangeText={txt => handleBlockTextChange(item.id, txt)}
-        onFocus={() => setActiveBlockId(item.id)}
-        onKeyPress={e => handleKeyPress(e, item.id)}
-        onSubmitEditing={() => {
-          if (item.type !== 'text') {
-            addNewBlock(item.id, 'text');
-          }
-        }}
-        multiline={true}
-        blurOnSubmit={false}
-      />
-    </View>
-  ), [activeFontSize, activeFontWeight, activeFontFamily, activeFontColor, activeFontStyle, isArabic, colors.textMuted, styles.checklistContainer, styles.checkbox, styles.checkboxChecked, styles.bodyInput, toggleTodo, handleBlockTextChange, handleKeyPress, addNewBlock]);
+        {item.type === 'bullet' && (
+          <View style={{ width: 24, paddingTop: 8, alignItems: 'center' }}>
+            <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: colors.primary, marginTop: 11 }} />
+          </View>
+        )}
+        
+        <TextInput
+          ref={el => { blockRefs.current[item.id] = el; }}
+          style={[
+            styles.bodyInput,
+            { 
+              paddingTop: 8,
+              paddingBottom: 8, 
+              marginVertical: 0,
+              fontSize: item.type === 'h1' ? 32 : item.type === 'h2' ? 26 : item.type === 'h3' ? 22 : activeFontSize,
+              fontWeight: (item.type === 'h1' || item.type === 'h2' || item.type === 'h3') ? '800' : activeFontWeight,
+              fontFamily: activeFontFamily === 'System' ? undefined : activeFontFamily,
+              color: item.color || activeFontColor,
+              fontStyle: activeFontStyle,
+              lineHeight: (item.type === 'h1' || item.type === 'h2' || item.type === 'h3') ? blockLineHeight : undefined,
+              textDecorationLine: (item.type === 'todo' && item.checked) ? 'line-through' : 'none',
+              opacity: (item.type === 'todo' && item.checked) ? 0.6 : 1,
+              textAlign: isArabic ? 'right' : 'left'
+            }
+          ]}
+          placeholder={item.type.startsWith('h') ? `HEADING ${item.type.charAt(1)}` : "Type away..."}
+          placeholderTextColor={colors.textMuted + '60'}
+          value={item.content}
+          onChangeText={txt => handleBlockTextChange(item.id, txt)}
+          onFocus={() => setActiveBlockId(item.id)}
+          onKeyPress={e => handleKeyPress(e, item.id)}
+          onSubmitEditing={() => {
+            if (item.type !== 'text') {
+              addNewBlock(item.id, 'text');
+            }
+          }}
+          multiline={true}
+          blurOnSubmit={false}
+          scrollEnabled={false}
+        />
+      </View>
+    );
+  }, [activeFontSize, activeFontWeight, activeFontFamily, activeFontColor, activeFontStyle, isArabic, colors.textMuted, colors.primary, styles.checklistContainer, styles.checkbox, styles.checkboxChecked, styles.bodyInput, toggleTodo, handleBlockTextChange, handleKeyPress, addNewBlock]);
 
   // Calendar Helpers
   const daysInMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0).getDate();
@@ -656,7 +667,7 @@ export default function NoteDetailScreen() {
                       alignItems: 'center',
                     }}
                   >
-                    <Text style={{ color: '#000', fontWeight: '800', fontSize: 15 }}>
+                    <Text style={{ color: colors.text, fontWeight: '800', fontSize: 15 }}>
                       {isArabic ? 'تأكيد الموعد' : 'Confirm Date & Time'}
                     </Text>
                   </TouchableOpacity>
@@ -700,11 +711,11 @@ export default function NoteDetailScreen() {
               left: 0,
               right: 0,
               bottom: keyboardHeight > 0 ? (Platform.OS === 'ios' ? keyboardHeight : 0) : insets.bottom,
-              backgroundColor: '#1A1A1A',
+              backgroundColor: colors.bg,
               paddingVertical: 12,
               paddingHorizontal: 20,
               borderTopWidth: 1,
-              borderColor: 'rgba(255,255,255,0.1)',
+              borderColor: colors.surfaceText + '1A',
               zIndex: 100,
             }
           ]}>
@@ -714,25 +725,25 @@ export default function NoteDetailScreen() {
             ]}>
               <View style={{ flexDirection: 'row', gap: 16, alignItems: 'center' }}>
                 <TouchableOpacity style={styles.toolbarIconBtn} onPress={toggleInteractiveHeading}>
-                  <Ionicons name="text-outline" size={22} color="#FFF" />
+                  <Ionicons name="text-outline" size={22} color={colors.surfaceText} />
                 </TouchableOpacity>
                 <TouchableOpacity style={styles.toolbarIconBtn} onPress={toggleInteractiveCheckbox}>
-                  <Ionicons name="checkbox-outline" size={22} color="#FFF" />
+                  <Ionicons name="checkbox-outline" size={22} color={colors.surfaceText} />
                 </TouchableOpacity>
                 <TouchableOpacity style={styles.toolbarIconBtn} onPress={toggleInteractiveBullet}>
-                  <Ionicons name="list-outline" size={22} color="#FFF" />
+                  <Ionicons name="list-outline" size={22} color={colors.surfaceText} />
                 </TouchableOpacity>
               </View>
 
               <View style={{ flexDirection: 'row', gap: 16, alignItems: 'center' }}>
                 <TouchableOpacity onPress={() => setActiveMenu('fontSize')} style={{ paddingHorizontal: 4 }}>
-                  <Text style={{ color: '#FFF', fontSize: 16, fontWeight: '700' }}>{activeFontSize}pt</Text>
+                  <Text style={{ color: colors.surfaceText, fontSize: 16, fontWeight: '700' }}>{activeFontSize}pt</Text>
                 </TouchableOpacity>
                 <TouchableOpacity onPress={() => setActiveMenu('color')}>
-                  <View style={{ width: 26, height: 26, borderRadius: 13, backgroundColor: activeFontColor, borderWidth: 2, borderColor: '#FFF' }} />
+                  <View style={{ width: 26, height: 26, borderRadius: 13, backgroundColor: activeFontColor, borderWidth: 2, borderColor: colors.surfaceText }} />
                 </TouchableOpacity>
                 <TouchableOpacity onPress={() => setActiveMenu('fontFamily')}>
-                  <Ionicons name="language-outline" size={22} color="#FFF" />
+                  <Ionicons name="language-outline" size={22} color={colors.surfaceText} />
                 </TouchableOpacity>
               </View>
             </View>
@@ -779,7 +790,7 @@ export default function NoteDetailScreen() {
 
               {activeMenu === 'color' && (
                 <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 16, padding: 16, justifyContent: 'space-around' }}>
-                  {[colors.text, colors.primary, colors.danger, colors.success, '#FFAB00', '#A020F0', '#00BCD4'].map(c => (
+                  {[colors.text, colors.primary, colors.danger, colors.success, colors.warning, colors.border, colors.textMuted].map(c => (
                     <TouchableOpacity 
                       key={c} 
                       onPress={() => { changeActiveColor(c); setActiveMenu('none'); }} 
@@ -789,8 +800,8 @@ export default function NoteDetailScreen() {
                         borderRadius: 28, 
                         backgroundColor: c, 
                         borderWidth: 3, 
-                        borderColor: activeFontColor === c ? '#FFF' : 'transparent',
-                        shadowColor: "#000",
+                        borderColor: activeFontColor === c ? colors.surfaceText : 'transparent',
+                        shadowColor: colors.text,
                         shadowOpacity: 0.2,
                         shadowRadius: 4,
                         elevation: 3

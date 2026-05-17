@@ -1,0 +1,619 @@
+{
+  "communities": {
+    "0": [
+      "app_auth_handleauth",
+      "app_auth_tsx",
+      "app_layout_async",
+      "app_layout_tsx",
+      "app_tabs_add_tsx",
+      "app_tabs_layout_tsx",
+      "components_floatingactionbutton_tsx",
+      "components_header_tsx",
+      "components_projectpickermodal_handleback",
+      "components_projectpickermodal_handleclose",
+      "components_projectpickermodal_tsx",
+      "components_subtaskrow_calc",
+      "components_subtaskrow_formatduration",
+      "components_subtaskrow_formattime",
+      "components_subtaskrow_getluminance",
+      "components_subtaskrow_handlesaveedit",
+      "components_subtaskrow_tsx",
+      "components_todoinput_handleaddtodo",
+      "components_todoinput_handleopendetails",
+      "components_todoinput_tsx",
+      "hooks_useauth_authprovider",
+      "hooks_useauth_tsx",
+      "hooks_useauth_useauth",
+      "hooks_useofflinefirstdata_ts",
+      "hooks_useofflinefirstdata_useofflinefirstdata",
+      "hooks_useofflinefirstdata_useofflinefirstprojects",
+      "hooks_useofflinefirstdata_useofflinefirsttodos",
+      "hooks_useofflinefirstdata_usesyncstatus",
+      "hooks_useofflinefirstinit_ts",
+      "hooks_useofflinefirstinit_useofflinefirstinit",
+      "hooks_useofflinequery_isemptysingleresultcache",
+      "hooks_useofflinequery_ts",
+      "hooks_useofflinequery_useofflinequery",
+      "hooks_useonboarding_ts",
+      "hooks_useonboarding_useonboarding",
+      "tabs_add_getrandomcolor",
+      "utils_i18n_ts",
+      "utils_i18n_usetranslation"
+    ],
+    "1": [
+      "app_tabs_index_tsx",
+      "app_tabs_settings_tsx",
+      "hooks_usedailyreminders_ts",
+      "hooks_usedailyreminders_usedailyreminders",
+      "hooks_usenotifications_ts",
+      "hooks_usenotifications_usenotifications",
+      "hooks_usetasktimers_ts",
+      "hooks_usetasktimers_usetasktimers",
+      "tabs_index_handleedittask",
+      "tabs_index_handleopenprojectmodal",
+      "tabs_index_handleopentimermodal",
+      "tabs_index_handlesavetimer",
+      "tabs_index_handleselectproject",
+      "tabs_index_isonline",
+      "tabs_settings_handlepickimage",
+      "tabs_settings_handlesoundchange",
+      "tabs_settings_handletogglelanguage",
+      "tabs_settings_handletogglenotifications",
+      "tabs_settings_handleupdateprofile",
+      "tabs_settings_uploadimage",
+      "utils_notifications_canceltasknotification",
+      "utils_notifications_getalarmsound",
+      "utils_notifications_geteveningnotificationid",
+      "utils_notifications_getmorningnotificationid",
+      "utils_notifications_getnotificationsapi",
+      "utils_notifications_gettimernotificationid",
+      "utils_notifications_requestpermissionsasync",
+      "utils_notifications_scheduleeveningreminder",
+      "utils_notifications_schedulemorningreminder",
+      "utils_notifications_scheduletimercompletion",
+      "utils_notifications_ts",
+      "utils_notifications_updatenotificationsoundpreference",
+      "utils_notifications_updatetimernotificationtext",
+      "utils_soundpreferences_getnotificationsound",
+      "utils_soundpreferences_setnotificationsound",
+      "utils_soundpreferences_ts"
+    ],
+    "2": [
+      "components_taskdetailmodal_handleaddcheckitem",
+      "components_taskdetailmodal_handleaddsubtask",
+      "components_taskdetailmodal_handleback",
+      "components_taskdetailmodal_handleclose",
+      "components_taskdetailmodal_handledeletesub",
+      "components_taskdetailmodal_handlepausesubtask",
+      "components_taskdetailmodal_handlesavecustomtimer",
+      "components_taskdetailmodal_handlesetsubtimer",
+      "components_taskdetailmodal_handlestartsubtask",
+      "components_taskdetailmodal_handletogglesubcomplete",
+      "components_taskdetailmodal_handleupdatepriority",
+      "components_taskdetailmodal_handleupdatesubtext",
+      "components_taskdetailmodal_opensubtaskdetail",
+      "components_taskdetailmodal_performdelete",
+      "components_taskdetailmodal_savedescription",
+      "components_taskdetailmodal_savetext",
+      "components_taskdetailmodal_tick",
+      "components_taskdetailmodal_tsx",
+      "utils_localdatabase_localdatabase",
+      "utils_localdatabase_localdatabase_clearalldata",
+      "utils_localdatabase_localdatabase_deletetodo",
+      "utils_localdatabase_localdatabase_getinstance",
+      "utils_localdatabase_localdatabase_getpendingchanges",
+      "utils_localdatabase_localdatabase_getprojects",
+      "utils_localdatabase_localdatabase_getsyncmetadata",
+      "utils_localdatabase_localdatabase_gettodobyid",
+      "utils_localdatabase_localdatabase_gettodos",
+      "utils_localdatabase_localdatabase_getuserkey",
+      "utils_localdatabase_localdatabase_markassynced",
+      "utils_localdatabase_localdatabase_saveproject",
+      "utils_localdatabase_localdatabase_savetodo",
+      "utils_localdatabase_localdatabase_updatesyncmetadata",
+      "utils_localdatabase_localdatabase_updatetodo",
+      "utils_localdatabase_ts"
+    ],
+    "3": [
+      "app_tabs_planner_tsx",
+      "app_tabs_projects_tsx",
+      "hooks_useofflinemutation_ts",
+      "hooks_useofflinemutation_useofflinemutation",
+      "hooks_usescreenguide_ts",
+      "hooks_usescreenguide_usescreenguide",
+      "tabs_planner_backaction",
+      "tabs_planner_getdaysinmonth",
+      "tabs_planner_gettasksforday",
+      "tabs_planner_gettasksformonth",
+      "tabs_planner_linktaskmutation",
+      "tabs_planner_resetall",
+      "tabs_planner_scrolltobottom",
+      "tabs_projects_getprogress",
+      "tabs_projects_getstatuscolor",
+      "tabs_projects_gettaskstatuscolor",
+      "tabs_projects_gettaskstatusicon",
+      "tabs_projects_gettitle",
+      "tabs_projects_handleadd",
+      "tabs_projects_handleaddcategory",
+      "tabs_projects_handleaddcheckitem",
+      "tabs_projects_handleaddproject",
+      "tabs_projects_handleaddsubcategory",
+      "tabs_projects_handleaddtask",
+      "tabs_projects_handleback",
+      "tabs_projects_handlesavedesc",
+      "tabs_projects_linktodoprojectmutation",
+      "utils_offlinestorage_pushmutationtoqueue"
+    ],
+    "4": [
+      "arch_cascade_delete",
+      "checklist_entity",
+      "fix_concurrent_timer_edits",
+      "fix_keyboard_blocks_confirm",
+      "fix_notification_custom_sound",
+      "fix_notification_undefined_name",
+      "fix_subtask_creation_modal",
+      "fix_timer_edit_resets",
+      "notification_entity",
+      "notification_evening_summary",
+      "notification_morning_summary",
+      "notification_native_actions",
+      "notification_sound_settings",
+      "notification_timer_completion",
+      "project_entity",
+      "projectcategory_entity",
+      "projectresource_entity",
+      "projectsubcategory_entity",
+      "subtask_entity",
+      "timer_auto_complete",
+      "timer_circular_progress",
+      "timer_countdown",
+      "timer_countup",
+      "timer_elapsed_preservation",
+      "timer_entity",
+      "todo_entity",
+      "user_entity"
+    ],
+    "5": [
+      "utils_periodicsyncmanager_periodicsyncmanager",
+      "utils_periodicsyncmanager_periodicsyncmanager_applyconflictresolutions",
+      "utils_periodicsyncmanager_periodicsyncmanager_applyremotechanges",
+      "utils_periodicsyncmanager_periodicsyncmanager_cleanup",
+      "utils_periodicsyncmanager_periodicsyncmanager_fetchremotechanges",
+      "utils_periodicsyncmanager_periodicsyncmanager_getcurrentuserid",
+      "utils_periodicsyncmanager_periodicsyncmanager_getinstance",
+      "utils_periodicsyncmanager_periodicsyncmanager_getsyncstatus",
+      "utils_periodicsyncmanager_periodicsyncmanager_handlebackgroundsync",
+      "utils_periodicsyncmanager_periodicsyncmanager_initialize",
+      "utils_periodicsyncmanager_periodicsyncmanager_performsync",
+      "utils_periodicsyncmanager_periodicsyncmanager_resolveconflicts",
+      "utils_periodicsyncmanager_periodicsyncmanager_syncprojects",
+      "utils_periodicsyncmanager_periodicsyncmanager_syncprojecttoremote",
+      "utils_periodicsyncmanager_periodicsyncmanager_synctodos",
+      "utils_periodicsyncmanager_periodicsyncmanager_synctodotoremote",
+      "utils_periodicsyncmanager_periodicsyncmanager_triggermanualsync",
+      "utils_periodicsyncmanager_periodicsyncmanager_updateconfig",
+      "utils_periodicsyncmanager_ts"
+    ],
+    "6": [
+      "hooks_usesyncmanager_ts",
+      "hooks_usesyncmanager_usesyncmanager",
+      "utils_offlinemigration_offlinemigration",
+      "utils_offlinemigration_offlinemigration_clearoldcache",
+      "utils_offlinemigration_offlinemigration_forceremigration",
+      "utils_offlinemigration_offlinemigration_getinstance",
+      "utils_offlinemigration_offlinemigration_getmigrationstatus",
+      "utils_offlinemigration_offlinemigration_ismigrationneeded",
+      "utils_offlinemigration_offlinemigration_migratefromcache",
+      "utils_offlinemigration_offlinemigration_migrateprojects",
+      "utils_offlinemigration_offlinemigration_migratetodos",
+      "utils_offlinemigration_ts",
+      "utils_offlinestorage_clearmutationqueue",
+      "utils_offlinestorage_getcachedquery",
+      "utils_offlinestorage_getmutationqueue",
+      "utils_offlinestorage_savecachedquery",
+      "utils_offlinestorage_ts",
+      "utils_offlinestorage_updatecachedquery"
+    ],
+    "7": [
+      "design_claymorphism",
+      "design_dualshadow_depth",
+      "design_fab",
+      "design_task_card_clay",
+      "design_typography_system",
+      "design_warm_palette",
+      "fix_done_tasks_in_today",
+      "fix_fab_design",
+      "fix_paused_task_categorization",
+      "product_clarity_over_density",
+      "product_momentum_matters",
+      "product_personality_no_gamification",
+      "taskstatus_done",
+      "taskstatus_inprogress",
+      "taskstatus_notdone",
+      "taskstatus_notstarted",
+      "taskstatus_paused"
+    ],
+    "8": [
+      "components_taskdetailmodal_starttimer",
+      "components_todocard_formatduration",
+      "components_todocard_formattime",
+      "components_todocard_getluminance",
+      "components_todocard_handleaddsubtask",
+      "components_todocard_handlepausetimer",
+      "components_todocard_handleshare",
+      "components_todocard_handlestarttimer",
+      "components_todocard_movetostatus",
+      "components_todocard_opendetail",
+      "components_todocard_tick",
+      "components_todocard_togglesubtasks",
+      "components_todocard_tsx",
+      "utils_notifications_showtaskcompletednotification"
+    ],
+    "9": [
+      "utils_conflictresolution_conflictresolver",
+      "utils_conflictresolution_conflictresolver_autoresolveconflicts",
+      "utils_conflictresolution_conflictresolver_detectconflicts",
+      "utils_conflictresolution_conflictresolver_getchangessummary",
+      "utils_conflictresolution_conflictresolver_getconflictdescription",
+      "utils_conflictresolution_conflictresolver_getconflictsummary",
+      "utils_conflictresolution_conflictresolver_getinstance",
+      "utils_conflictresolution_conflictresolver_getitemtype",
+      "utils_conflictresolution_conflictresolver_hasversionconflict",
+      "utils_conflictresolution_conflictresolver_mergedata",
+      "utils_conflictresolution_conflictresolver_resolvebytimestamp",
+      "utils_conflictresolution_conflictresolver_resolvemanually",
+      "utils_conflictresolution_ts"
+    ],
+    "10": [
+      "utils_offlinefirsttest_offlinefirsttester",
+      "utils_offlinefirsttest_offlinefirsttester_generatetestreport",
+      "utils_offlinefirsttest_offlinefirsttester_getinstance",
+      "utils_offlinefirsttest_offlinefirsttester_runalltests",
+      "utils_offlinefirsttest_offlinefirsttester_testconflictresolution",
+      "utils_offlinefirsttest_offlinefirsttester_testdatapersistence",
+      "utils_offlinefirsttest_offlinefirsttester_testlocaldatabaseoperations",
+      "utils_offlinefirsttest_offlinefirsttester_testmigrationsystem",
+      "utils_offlinefirsttest_offlinefirsttester_testperformance",
+      "utils_offlinefirsttest_offlinefirsttester_testsyncstatus",
+      "utils_offlinefirsttest_ts"
+    ],
+    "11": [
+      "arch_cache_first",
+      "arch_convex_backend",
+      "arch_mutation_system",
+      "arch_offline_first",
+      "arch_optimistic_ui",
+      "concept_conflict_resolution",
+      "concept_local_database",
+      "concept_offline_migration",
+      "concept_periodic_sync",
+      "concept_sync_manager",
+      "fix_internet_required_first_load"
+    ],
+    "12": [
+      "app_note_detail_handledeletenote",
+      "app_note_detail_handlesavenote",
+      "app_note_detail_parsemarkdown",
+      "app_note_detail_scrolltobottom",
+      "app_note_detail_serializeblocks",
+      "app_note_detail_tsx",
+      "components_taskdetailmodal_ondatechange",
+      "utils_notifications_scheduleremindernotification"
+    ],
+    "13": [
+      "arch_localization_i18n",
+      "concept_screen_guide",
+      "design_rtl_support",
+      "onboarding_flow",
+      "onboarding_language_select",
+      "onboarding_welcome_slides",
+      "product_inclusive_design"
+    ],
+    "14": [
+      "components_inlinetimerpicker_decrementhour",
+      "components_inlinetimerpicker_decrementmin",
+      "components_inlinetimerpicker_handlesave",
+      "components_inlinetimerpicker_incrementhour",
+      "components_inlinetimerpicker_incrementmin",
+      "components_inlinetimerpicker_tsx"
+    ],
+    "15": [
+      "components_conflictresolutionmodal_getconflictsummary",
+      "components_conflictresolutionmodal_handlenext",
+      "components_conflictresolutionmodal_handleprevious",
+      "components_conflictresolutionmodal_handleresolutionchoice",
+      "components_conflictresolutionmodal_handleresolveall",
+      "components_conflictresolutionmodal_tsx"
+    ],
+    "16": [
+      "convex_auth_ts",
+      "convex_generated_api_d_ts",
+      "convex_projects_deleteprojectrecursive",
+      "convex_projects_ts",
+      "convex_todos_ts"
+    ],
+    "17": [
+      "components_timermodal_handlesave",
+      "components_timermodal_ondatechange",
+      "components_timermodal_tsx"
+    ],
+    "18": [
+      "test_pause_ts",
+      "to_do_app_test_pause_run"
+    ],
+    "19": [
+      "hooks_usetheme_tsx",
+      "hooks_usetheme_usetheme"
+    ],
+    "20": [
+      "assets_styles_settings_styles_ts",
+      "styles_settings_styles_createsettingsstyles"
+    ],
+    "21": [
+      "assets_styles_planner_styles_ts",
+      "styles_planner_styles_createplannerstyles"
+    ],
+    "22": [
+      "assets_styles_notes_styles_ts",
+      "styles_notes_styles_createnotesstyles"
+    ],
+    "23": [
+      "assets_styles_projects_styles_ts",
+      "styles_projects_styles_createprojectsstyles"
+    ],
+    "24": [
+      "assets_styles_home_styles_ts",
+      "styles_home_styles_createhomestyles"
+    ],
+    "25": [
+      "app_index_index",
+      "app_index_tsx"
+    ],
+    "26": [
+      "convex_generated_datamodel_d_ts",
+      "convex_schema_ts"
+    ],
+    "27": [
+      "components_screenguide_handledismiss",
+      "components_screenguide_tsx"
+    ],
+    "28": [
+      "arch_expo_router",
+      "fix_rename_all_filter"
+    ],
+    "29": [
+      "concept_action_modal",
+      "fix_longpress_unwired"
+    ],
+    "30": [
+      "eslint_config_js"
+    ],
+    "31": [
+      "expo_env_d_ts"
+    ],
+    "32": [
+      "patch_modal_js"
+    ],
+    "33": [
+      "convex_generated_api_js"
+    ],
+    "34": [
+      "convex_generated_server_d_ts"
+    ],
+    "35": [
+      "convex_generated_server_js"
+    ],
+    "36": [
+      "components_actionmodal_tsx"
+    ],
+    "37": [
+      "components_welcomeonboarding_tsx"
+    ],
+    "38": [
+      "components_circularprogress_tsx"
+    ],
+    "39": [
+      "utils_backgroundtask_ts"
+    ],
+    "40": [
+      "notification_channel_management"
+    ],
+    "41": [
+      "product_purpose"
+    ],
+    "42": [
+      "fix_corrupted_cache"
+    ]
+  },
+  "cohesion": {
+    "0": 0.08,
+    "1": 0.08,
+    "2": 0.11,
+    "3": 0.07,
+    "4": 0.08,
+    "5": 0.17,
+    "6": 0.19,
+    "7": 0.15,
+    "8": 0.15,
+    "9": 0.23,
+    "10": 0.29,
+    "11": 0.2,
+    "12": 0.32,
+    "13": 0.29,
+    "14": 0.33,
+    "15": 0.4,
+    "16": 0.4,
+    "17": 0.67,
+    "18": 1.0,
+    "19": 1.0,
+    "20": 1.0,
+    "21": 1.0,
+    "22": 1.0,
+    "23": 1.0,
+    "24": 1.0,
+    "25": 1.0,
+    "26": 1.0,
+    "27": 1.0,
+    "28": 1.0,
+    "29": 1.0,
+    "30": 1.0,
+    "31": 1.0,
+    "32": 1.0,
+    "33": 1.0,
+    "34": 1.0,
+    "35": 1.0,
+    "36": 1.0,
+    "37": 1.0,
+    "38": 1.0,
+    "39": 1.0,
+    "40": 1.0,
+    "41": 1.0,
+    "42": 1.0
+  },
+  "gods": [
+    {
+      "id": "hooks_useauth_useauth",
+      "label": "useAuth()",
+      "degree": 21
+    },
+    {
+      "id": "utils_periodicsyncmanager_periodicsyncmanager",
+      "label": "PeriodicSyncManager",
+      "degree": 18
+    },
+    {
+      "id": "utils_i18n_usetranslation",
+      "label": "useTranslation()",
+      "degree": 16
+    },
+    {
+      "id": "utils_localdatabase_localdatabase",
+      "label": "LocalDatabase",
+      "degree": 15
+    },
+    {
+      "id": "hooks_useofflinequery_useofflinequery",
+      "label": "useOfflineQuery()",
+      "degree": 12
+    },
+    {
+      "id": "utils_conflictresolution_conflictresolver",
+      "label": "ConflictResolver",
+      "degree": 12
+    },
+    {
+      "id": "hooks_useofflinemutation_useofflinemutation",
+      "label": "useOfflineMutation()",
+      "degree": 10
+    },
+    {
+      "id": "utils_offlinefirsttest_offlinefirsttester",
+      "label": "OfflineFirstTester",
+      "degree": 10
+    },
+    {
+      "id": "utils_offlinemigration_offlinemigration",
+      "label": "OfflineMigration",
+      "degree": 9
+    },
+    {
+      "id": "timer_entity",
+      "label": "Timer",
+      "degree": 9
+    }
+  ],
+  "surprises": [
+    {
+      "source": "Offline-First Architecture",
+      "target": "Conflict Resolution",
+      "source_files": [
+        "specs/005-phase-1-fixes/spec.md",
+        "utils/conflictResolution.ts"
+      ],
+      "confidence": "INFERRED",
+      "relation": "requires",
+      "why": "inferred connection - not explicitly stated in source; crosses file types (doc \u2194 code); connects across different repos/directories; peripheral node `Conflict Resolution` unexpectedly reaches hub `Offline-First Architecture`"
+    },
+    {
+      "source": "Offline-First Architecture",
+      "target": "Periodic Background Sync",
+      "source_files": [
+        "specs/005-phase-1-fixes/spec.md",
+        "utils/periodicSyncManager.ts"
+      ],
+      "confidence": "INFERRED",
+      "relation": "requires",
+      "why": "inferred connection - not explicitly stated in source; crosses file types (doc \u2194 code); connects across different repos/directories; peripheral node `Periodic Background Sync` unexpectedly reaches hub `Offline-First Architecture`"
+    },
+    {
+      "source": "Offline-First Architecture",
+      "target": "Offline Data Migration",
+      "source_files": [
+        "specs/005-phase-1-fixes/spec.md",
+        "utils/offlineMigration.ts"
+      ],
+      "confidence": "INFERRED",
+      "relation": "requires",
+      "why": "inferred connection - not explicitly stated in source; crosses file types (doc \u2194 code); connects across different repos/directories; peripheral node `Offline Data Migration` unexpectedly reaches hub `Offline-First Architecture`"
+    },
+    {
+      "source": "Morning Due Tasks Summary (9AM)",
+      "target": "Todo (Task)",
+      "source_files": [
+        "specs/003-phase-2-notification/spec.md",
+        "convex/schema.ts"
+      ],
+      "confidence": "EXTRACTED",
+      "relation": "reminds_about",
+      "why": "crosses file types (code \u2194 doc); connects across different repos/directories; peripheral node `Morning Due Tasks Summary (9AM)` unexpectedly reaches hub `Todo (Task)`"
+    },
+    {
+      "source": "Bug: Keyboard Blocks Confirm Button",
+      "target": "Todo (Task)",
+      "source_files": [
+        "fix02.md",
+        "convex/schema.ts"
+      ],
+      "confidence": "EXTRACTED",
+      "relation": "affects",
+      "why": "crosses file types (code \u2194 doc); connects across different repos/directories; peripheral node `Bug: Keyboard Blocks Confirm Button` unexpectedly reaches hub `Todo (Task)`"
+    }
+  ],
+  "questions": [
+    {
+      "type": "bridge_node",
+      "question": "Why does `useAuth()` connect `Community 0` to `Community 1`, `Community 2`, `Community 3`, `Community 8`, `Community 12`?",
+      "why": "High betweenness centrality (0.072) - this node is a cross-community bridge."
+    },
+    {
+      "type": "bridge_node",
+      "question": "Why does `useOfflineMutation()` connect `Community 3` to `Community 0`, `Community 1`, `Community 2`, `Community 8`, `Community 12`?",
+      "why": "High betweenness centrality (0.059) - this node is a cross-community bridge."
+    },
+    {
+      "type": "bridge_node",
+      "question": "Why does `useTranslation()` connect `Community 0` to `Community 1`, `Community 2`, `Community 3`, `Community 8`, `Community 12`?",
+      "why": "High betweenness centrality (0.046) - this node is a cross-community bridge."
+    },
+    {
+      "type": "verify_inferred",
+      "question": "Are the 2 inferred relationships involving `useAuth()` (e.g. with `useOfflineFirstInit()` and `useOfflineFirstData()`) actually correct?",
+      "why": "`useAuth()` has 2 INFERRED edges - model-reasoned connections that need verification."
+    },
+    {
+      "type": "isolated_nodes",
+      "question": "What connects `Project Resource`, `User`, `Countdown Timer` to the rest of the system?",
+      "why": "41 weakly-connected nodes found - possible documentation gaps or missing edges."
+    },
+    {
+      "type": "low_cohesion",
+      "question": "Should `Community 0` be split into smaller, more focused modules?",
+      "why": "Cohesion score 0.08 - nodes in this community are weakly interconnected."
+    },
+    {
+      "type": "low_cohesion",
+      "question": "Should `Community 1` be split into smaller, more focused modules?",
+      "why": "Cohesion score 0.08 - nodes in this community are weakly interconnected."
+    }
+  ]
+}

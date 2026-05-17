@@ -167,7 +167,7 @@ const ProjectPickerModal: React.FC<ProjectPickerModalProps> = ({ visible, onClos
 
   return (
     <Modal visible={visible} transparent animationType="slide">
-      <View style={styles.overlay}>
+      <View style={[styles.overlay, { backgroundColor: colors.text + '80' }]}>
         <View style={[styles.modalContainer, { backgroundColor: colors.surface }]}>
           <View style={[styles.header, { borderBottomColor: colors.border }]}>
             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
@@ -236,7 +236,7 @@ const ProjectPickerModal: React.FC<ProjectPickerModalProps> = ({ visible, onClos
 };
 
 const styles = StyleSheet.create({
-  overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
+  overlay: { flex: 1, justifyContent: 'flex-end' },
   modalContainer: { borderTopLeftRadius: 28, borderTopRightRadius: 28, paddingTop: 16, maxHeight: '85%', minHeight: '40%' },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 24, paddingVertical: 18, borderBottomWidth: 1 },
   title: { fontSize: 18, fontWeight: '800' },

@@ -58,13 +58,13 @@ export const InlineTimerPicker = ({
       <View style={{ flexDirection: isArabic ? 'row-reverse' : 'row', backgroundColor: colors.bg, borderRadius: 12, padding: 4, elevation: 1 }}>
         <TouchableOpacity 
           onPress={() => setDirection('down')}
-          style={{ flex: 1, paddingVertical: 8, alignItems: 'center', backgroundColor: direction === 'down' ? colors.surface : 'transparent', borderRadius: 8, shadowColor: '#000', shadowOpacity: direction === 'down' ? 0.1 : 0, shadowRadius: 4, shadowOffset: { width: 0, height: 2 } }}
+          style={{ flex: 1, paddingVertical: 8, alignItems: 'center', backgroundColor: direction === 'down' ? colors.surface : 'transparent', borderRadius: 8, shadowColor: colors.text, shadowOpacity: direction === 'down' ? 0.1 : 0, shadowRadius: 4, shadowOffset: { width: 0, height: 2 } }}
         >
           <Text style={{ fontSize: 13, fontWeight: direction === 'down' ? '800' : '600', color: direction === 'down' ? colors.text : colors.textMuted }}>{t.countDown || "Count Down"}</Text>
         </TouchableOpacity>
         <TouchableOpacity 
           onPress={() => setDirection('up')}
-          style={{ flex: 1, paddingVertical: 8, alignItems: 'center', backgroundColor: direction === 'up' ? colors.surface : 'transparent', borderRadius: 8, shadowColor: '#000', shadowOpacity: direction === 'up' ? 0.1 : 0, shadowRadius: 4, shadowOffset: { width: 0, height: 2 } }}
+          style={{ flex: 1, paddingVertical: 8, alignItems: 'center', backgroundColor: direction === 'up' ? colors.surface : 'transparent', borderRadius: 8, shadowColor: colors.text, shadowOpacity: direction === 'up' ? 0.1 : 0, shadowRadius: 4, shadowOffset: { width: 0, height: 2 } }}
         >
           <Text style={{ fontSize: 13, fontWeight: direction === 'up' ? '800' : '600', color: direction === 'up' ? colors.primary : colors.textMuted }}>{t.countUp || "Count Up"}</Text>
         </TouchableOpacity>
@@ -127,7 +127,7 @@ export const InlineTimerPicker = ({
           onPress={handleSave}
           style={[{ flex: 1, backgroundColor: colors.primary, paddingVertical: 14, borderRadius: 14, alignItems: 'center', shadowColor: colors.primary, shadowOpacity: 0.2, shadowRadius: 6, shadowOffset: { width: 0, height: 2 } }, isArabic && { flexDirection: 'row-reverse' }]}
         >
-          <Text style={{ color: isDarkMode ? '#000' : '#FFF', fontWeight: '800', fontSize: 15 }}>✓ {t.setTimer}</Text>
+          <Text style={{ color: colors.surfaceText, fontWeight: '800', fontSize: 15 }}>✓ {t.setTimer}</Text>
         </TouchableOpacity>
         <TouchableOpacity
           onPress={onCancel}

@@ -174,7 +174,7 @@ const TodoInput: React.FC<TodoInputProps> = ({ initialDate, projectId, onFocus }
                   strokeWidth={3}
                   progress={100}
                   color={colors.primary}
-                  unfilledColor={isDarkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)'}
+                  unfilledColor={isDarkMode ? colors.surfaceText + '1A' : colors.text + '0D'}
                 >
                   <Text style={{ fontSize: 10, fontWeight: "700", color: colors.primary, textAlign: 'center' }}>
                     {Math.floor(timerDuration / 60000)}m

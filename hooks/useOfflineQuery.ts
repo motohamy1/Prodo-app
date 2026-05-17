@@ -1,15 +1,29 @@
-import { useState, useEffect } from 'react';
-import { useQuery } from 'convex/react';
+import { saveCachedQuery } from '@/utils/offlineStorage';
 import NetInfo from '@react-native-community/netinfo';
-import { getCachedQuery, saveCachedQuery } from '@/utils/offlineStorage';
+import { useQuery } from 'convex/react';
+import { useEffect, useState } from 'react';
 
 const memoryCache: Record<string, any> = {};
+
+const singleResultQueryKeys = [
+  'auth.getUserSettings',
+  'projects.getCategory',
+  'projects.getProject',
+  'projects.getProjectMetadata',
+  'projects.getSubCategory',
+  'todos.getById',
+];
+
+const isEmptySingleResultCache = (queryKey: string, value: any) =>
+  singleResultQueryKeys.includes(queryKey) && Array.isArray(value) && value.length === 0;
 
 export function useOfflineQuery<T = any>(queryKey: string, queryFn: any, args?: any): T | undefined {
   const convexData = useQuery(queryFn, args);
   const cacheKey = `CACHE_${queryKey}_${JSON.stringify(args || {})}`;
   
-  const [offlineData, setOfflineData] = useState<any>(memoryCache[cacheKey]);
+  const [offlineData, setOfflineData] = useState<any>(
+    isEmptySingleResultCache(queryKey, memoryCache[cacheKey]) ? undefined : memoryCache[cacheKey]
+  );
   const [isOffline, setIsOffline] = useState(false);
 
   useEffect(() => {
@@ -20,34 +34,41 @@ export function useOfflineQuery<T = any>(queryKey: string, queryFn: any, args?: 
 
   useEffect(() => {
     if (memoryCache[cacheKey] !== undefined) {
-      if (offlineData === undefined) {
+      if (isEmptySingleResultCache(queryKey, memoryCache[cacheKey])) {
+        delete memoryCache[cacheKey];
+      } else {
         setOfflineData(memoryCache[cacheKey]);
+        return;
       }
-      return;
     }
+
+    setOfflineData(undefined);
 
     import('@react-native-async-storage/async-storage').then(({ default: AsyncStorage }) => {
       AsyncStorage.getItem(cacheKey).then(value => {
         if (value) {
           try {
             const parsed = JSON.parse(value);
+            if (isEmptySingleResultCache(queryKey, parsed)) {
+              AsyncStorage.removeItem(cacheKey);
+              delete memoryCache[cacheKey];
+              setOfflineData(undefined);
+              return;
+            }
             memoryCache[cacheKey] = parsed;
             setOfflineData(parsed);
           } catch (e) {
             AsyncStorage.removeItem(cacheKey);
-            memoryCache[cacheKey] = [];
-            setOfflineData([]);
+            delete memoryCache[cacheKey];
+            setOfflineData(undefined);
           }
-        } else {
-          memoryCache[cacheKey] = [];
-          setOfflineData([]);
         }
       }).catch(() => {
-        memoryCache[cacheKey] = [];
-        setOfflineData([]);
+        delete memoryCache[cacheKey];
+        setOfflineData(undefined);
       });
     });
-  }, [cacheKey]);
+  }, [cacheKey, queryKey]);
 
   useEffect(() => {
     if (convexData !== undefined) {
@@ -58,11 +79,11 @@ export function useOfflineQuery<T = any>(queryKey: string, queryFn: any, args?: 
   }, [convexData, cacheKey]);
 
   if (isOffline) {
-    return offlineData !== undefined ? offlineData : ([] as unknown as T); 
+    return offlineData;
   }
 
   if (convexData === undefined && offlineData !== undefined) {
-     return offlineData; 
+     return offlineData;
   }
 
   return convexData !== undefined ? convexData : offlineData;
