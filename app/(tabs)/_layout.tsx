@@ -17,6 +17,7 @@ const TabLayout = () => {
 
   return (
     <Tabs
+      sceneContainerStyle={{ backgroundColor: colors.bg }}
       screenOptions={{
         headerShown: false,
         tabBarActiveTintColor: colors.primary,

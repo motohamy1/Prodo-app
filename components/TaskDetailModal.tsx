@@ -1,18 +1,19 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { Modal, View, Text, TouchableOpacity, StyleSheet, TextInput, ScrollView, Platform, LayoutAnimation, ActivityIndicator, KeyboardAvoidingView, Alert, Keyboard, InputAccessoryView } from 'react-native';
-import useTheme from '@/hooks/useTheme';
-import { Ionicons } from '@expo/vector-icons';
-import { useOfflineQuery } from '@/hooks/useOfflineQuery';
-import { useOfflineMutation } from '@/hooks/useOfflineMutation';
 import { api } from '@/convex/_generated/api';
 import { Id } from '@/convex/_generated/dataModel';
 import { useAuth } from '@/hooks/useAuth';
+import { useOfflineMutation } from '@/hooks/useOfflineMutation';
+import { useOfflineQuery } from '@/hooks/useOfflineQuery';
+import useTheme from '@/hooks/useTheme';
 import { useTranslation } from '@/utils/i18n';
+import { scheduleReminderNotification, showTaskCompletedNotification } from '@/utils/notifications';
+import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import Svg, { Circle, Path, G, Text as SvgText } from 'react-native-svg';
-import { SubtaskRow } from './SubtaskRow';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { ActivityIndicator, Alert, Keyboard, KeyboardAvoidingView, LayoutAnimation, Modal, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, TouchableWithoutFeedback, View } from 'react-native';
+import Svg, { Circle, G, Text as SvgText } from 'react-native-svg';
 import { InlineTimerPicker } from './InlineTimerPicker';
-import { showTaskCompletedNotification, scheduleReminderNotification } from '@/utils/notifications';
+import ProjectPickerModal from './ProjectPickerModal';
+import { SubtaskRow } from './SubtaskRow';
 
 
 interface TaskDetailModalProps {
@@ -21,9 +22,13 @@ interface TaskDetailModalProps {
   todoId: Id<"todos"> | null;
   initialDate?: number;
   projectId?: Id<"projects">;
+  initialSection?: 'subtask';
 }
 
-const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ visible, onClose, todoId, initialDate, projectId }) => {
+const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ visible, onClose, todoId, initialDate, projectId, initialSection }) => {
+  const scrollViewRef = useRef<ScrollView>(null);
+  const subtaskSectionY = useRef<number>(0);
+  const subtaskInputRef = useRef<TextInput>(null);
   const { colors, isDarkMode } = useTheme();
   const { userId, language } = useAuth();
   const { t, isArabic } = useTranslation(language);
@@ -35,8 +40,11 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ visible, onClose, tod
   const subtasks = useOfflineQuery<any[]>('todos.getSubtasks', api.todos.getSubtasks, currentTodoId ? { parentId: currentTodoId } : "skip");
   const checklistItems = useOfflineQuery<any[]>('todos.getTaskChecklists', api.todos.getTaskChecklists, currentTodoId ? { todoId: currentTodoId } : "skip");
   const project = useOfflineQuery<any>('projects.getProjectMetadata', api.projects.getProjectMetadata, todo?.projectId ? { id: todo.projectId } : "skip");
+  const linkedCategory = useOfflineQuery<any>('projects.getCategory', api.projects.getCategory, todo?.categoryId ? { id: todo.categoryId } : "skip");
+  const linkedSubCategory = useOfflineQuery<any>('projects.getSubCategory', api.projects.getSubCategory, todo?.subCategoryId ? { id: todo.subCategoryId } : "skip");
 
   const updateTodo = useOfflineMutation(api.todos.updateTodo, "todos:updateTodo");
+  const linkTask = useOfflineMutation(api.todos.linkTask, "todos:linkTask");
   const updateStatus = useOfflineMutation(api.todos.updateStatus, "todos:updateStatus");
   const setTimer = useOfflineMutation(api.todos.setTimer, "todos:setTimer");
   const startTimer = useOfflineMutation(api.todos.startTimer, "todos:startTimer");
@@ -145,6 +153,15 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ visible, onClose, tod
     }
   }, [visible, todoId]);
 
+  useEffect(() => {
+    if (visible && initialSection === 'subtask') {
+      const timer = setTimeout(() => {
+        scrollViewRef.current?.scrollTo({ y: subtaskSectionY.current, animated: true });
+        setTimeout(() => subtaskInputRef.current?.focus(), 150);
+      }, 400);
+      return () => clearTimeout(timer);
+    }
+  }, [visible, initialSection]);
 
   const handleClose = async () => {
     if (todoId) {
@@ -204,6 +221,19 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ visible, onClose, tod
     }
   };
 
+  const handleSelectProject = (selection: { type: string; categoryId?: string; subCategoryId?: string; projectId?: string }) => {
+    if (!currentTodoId) return;
+    if (selection.type === 'none') {
+      linkTask({ id: currentTodoId, categoryId: undefined, subCategoryId: undefined, projectId: undefined });
+    } else if (selection.type === 'category') {
+      linkTask({ id: currentTodoId, categoryId: selection.categoryId as any, subCategoryId: undefined, projectId: undefined });
+    } else if (selection.type === 'subCategory') {
+      linkTask({ id: currentTodoId, categoryId: selection.categoryId as any, subCategoryId: selection.subCategoryId as any, projectId: undefined });
+    } else if (selection.type === 'project') {
+      linkTask({ id: currentTodoId, categoryId: undefined, subCategoryId: undefined, projectId: selection.projectId });
+    }
+  };
+
   const openSubtaskDetail = (id: Id<"todos">) => {
     setTaskStack(prev => [...prev, id]);
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
@@ -244,6 +274,7 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ visible, onClose, tod
   const [newCheckItem, setNewCheckItem] = useState('');
   const [isAddingCheck, setIsAddingCheck] = useState(false);
   const [checklistOpen, setChecklistOpen] = useState(true);
+  const [isProjectModalVisible, setProjectModalVisible] = useState(false);
 
   const computedTimerMs = useMemo(() => {
     const h = parseInt(hours) || 0;
@@ -381,14 +412,17 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ visible, onClose, tod
 
   const hasDeadlineTime = dueDate ? new Date(dueDate).getSeconds() !== 59 : false;
 
-  const projectColor = project?.color || colors.primary;
+  const linkedItem = project || linkedSubCategory || linkedCategory;
+  const projectColor = linkedItem?.color || colors.primary;
+  const linkedItemName = project?.name || linkedSubCategory?.name || linkedCategory?.name;
 
   if (!visible) return null;
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={handleBack}>
-      <View style={styles.overlay}>
-        <View style={[styles.container, { backgroundColor: colors.bg }]}>
+      <TouchableWithoutFeedback onPress={handleBack}>
+        <View style={styles.overlay}>
+          <View style={[styles.container, { backgroundColor: colors.bg }]} onStartShouldSetResponder={() => true}>
           <KeyboardAvoidingView 
             behavior={Platform.OS === 'ios' ? 'padding' : 'height'} 
             style={{ flex: 1 }}
@@ -436,13 +470,13 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ visible, onClose, tod
               <ActivityIndicator size="large" color={projectColor} />
             </View>
           ) : (
-            <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+            <ScrollView ref={scrollViewRef} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
               
-              {/* Project Badge */}
-              {project && (
+              {/* Linked Item Badge */}
+              {linkedItem && (
                 <View style={[styles.projectBadge, { backgroundColor: projectColor + '15', borderColor: projectColor + '30' }]}>
                   <Ionicons name="folder-open-outline" size={14} color={projectColor} />
-                  <Text style={[styles.projectBadgeText, { color: projectColor }]}>{project.name}</Text>
+                  <Text style={[styles.projectBadgeText, { color: projectColor }]}>{linkedItemName}</Text>
                 </View>
               )}
 
@@ -833,6 +867,23 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ visible, onClose, tod
                 />
               </View>
 
+              {/* Link Section */}
+              {currentTodoId && (
+                <View style={[styles.section]}>
+                  <Text style={[styles.sectionLabel, { color: colors.surfaceText }]}>{isArabic ? "الارتباط" : "Link"}</Text>
+                  <TouchableOpacity
+                    style={[styles.deadlineButton, { borderColor: linkedItem ? projectColor : colors.border, backgroundColor: linkedItem ? projectColor + '10' : 'transparent' }]}
+                    onPress={() => setProjectModalVisible(true)}
+                  >
+                    <Ionicons name="link-outline" size={20} color={linkedItem ? projectColor : colors.textMuted} />
+                    <Text style={[styles.deadlineButtonText, { color: linkedItem ? colors.text : colors.textMuted }]}>
+                      {linkedItemName || (isArabic ? 'ربط بمشروع / فئة' : 'Link to Project / Category')}
+                    </Text>
+                    <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+                  </TouchableOpacity>
+                </View>
+              )}
+
               {/* Checklist Section */}
               {currentTodoId && (
               <View style={[styles.section]}>
@@ -891,7 +942,10 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ visible, onClose, tod
               )}
 
               {/* Subtasks Section */}
-              <View style={[styles.section, { marginTop: 24 }]}>
+              <View
+                style={[styles.section, { marginTop: 24 }]}
+                onLayout={(e) => { subtaskSectionY.current = e.nativeEvent.layout.y; }}
+              >
                 <View style={[styles.sectionHeader]}>
                   <Text style={[styles.sectionLabel, { color: colors.surfaceText, marginBottom: 0 }]}>{isArabic ? "المهام الفرعية" : "Subtasks"}</Text>
 
@@ -942,7 +996,8 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ visible, onClose, tod
                         multiline={true}
                         blurOnSubmit={true}
                         scrollEnabled={false}
-                        value={newSubtaskText}
+                        ref={subtaskInputRef}
+                      value={newSubtaskText}
                         onChangeText={setNewSubtaskText}
                         onSubmitEditing={() => {
                           if (newSubtaskText.trim()) {
@@ -1003,8 +1058,15 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ visible, onClose, tod
               <Text style={[styles.doneButtonText, { color: isDarkMode ? '#000' : '#FFF' }]}>{isArabic ? "تم" : "Done"}</Text>
             </TouchableOpacity>
           </View>
+
+          <ProjectPickerModal
+            visible={isProjectModalVisible}
+            onClose={() => setProjectModalVisible(false)}
+            onSelect={handleSelectProject}
+          />
+          </View>
         </View>
-      </View>
+      </TouchableWithoutFeedback>
     </Modal>
   );
 };

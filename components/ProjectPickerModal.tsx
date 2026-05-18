@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Modal, View, Text, TouchableOpacity, StyleSheet, FlatList, ActivityIndicator, SectionList } from 'react-native';
+import { Modal, View, Text, TouchableOpacity, TouchableWithoutFeedback, StyleSheet, FlatList, ActivityIndicator, SectionList } from 'react-native';
 import useTheme from '@/hooks/useTheme';
 import { Ionicons } from '@expo/vector-icons';
 import { useOfflineQuery } from '@/hooks/useOfflineQuery';
@@ -166,9 +166,11 @@ const ProjectPickerModal: React.FC<ProjectPickerModalProps> = ({ visible, onClos
     (currentLevel === 'subCategoryProjects' && subProjects === undefined);
 
   return (
-    <Modal visible={visible} transparent animationType="slide">
-      <View style={[styles.overlay, { backgroundColor: colors.text + '80' }]}>
-        <View style={[styles.modalContainer, { backgroundColor: colors.surface }]}>
+    <Modal visible={visible} transparent animationType="slide" onRequestClose={handleClose}>
+      <TouchableWithoutFeedback onPress={handleClose}>
+        <View style={[styles.overlay, { backgroundColor: colors.text + '80' }]}>
+          <TouchableWithoutFeedback>
+            <View style={[styles.modalContainer, { backgroundColor: colors.surface }]}>
           <View style={[styles.header, { borderBottomColor: colors.border }]}>
             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
               {currentLevel !== 'categories' && (
@@ -217,10 +219,38 @@ const ProjectPickerModal: React.FC<ProjectPickerModalProps> = ({ visible, onClos
                   <Text style={[styles.sectionTitle, { color: colors.textMuted }]}>{title}</Text>
                 </View>
               ) : null}
+              ListHeaderComponent={(
+                <TouchableOpacity
+                  style={[styles.item, { borderBottomColor: colors.border, backgroundColor: colors.primary + '08' }]}
+                  onPress={() => {
+                    onSelect({ type: 'category', categoryId: selectedCatId! });
+                    handleClose();
+                  }}
+                >
+                  <View style={[styles.iconContainer, { backgroundColor: colors.primary + '20' }]}>
+                    <Ionicons name="link-outline" size={20} color={colors.primary} />
+                  </View>
+                  <Text style={[styles.label, { color: colors.primary }]}>Link to "{selectedCatName}"</Text>
+                </TouchableOpacity>
+              )}
               contentContainerStyle={styles.listContent}
             />
           ) : (
-            <FlatList data={subProjects} keyExtractor={(item) => item._id} renderItem={renderProjectItem} contentContainerStyle={styles.listContent} />
+            <>
+              <TouchableOpacity
+                style={[styles.item, { borderBottomColor: colors.border, backgroundColor: colors.primary + '08' }]}
+                onPress={() => {
+                  onSelect({ type: 'subCategory', categoryId: selectedCatId!, subCategoryId: selectedSubId! });
+                  handleClose();
+                }}
+              >
+                <View style={[styles.iconContainer, { backgroundColor: colors.primary + '20' }]}>
+                  <Ionicons name="link-outline" size={20} color={colors.primary} />
+                </View>
+                <Text style={[styles.label, { color: colors.primary }]}>Link to this Sub-Category</Text>
+              </TouchableOpacity>
+              <FlatList data={subProjects} keyExtractor={(item) => item._id} renderItem={renderProjectItem} contentContainerStyle={styles.listContent} />
+            </>
           )}
 
           {!isLoading && currentLevel === 'categories' && categories?.length === 0 && (
@@ -229,8 +259,10 @@ const ProjectPickerModal: React.FC<ProjectPickerModalProps> = ({ visible, onClos
                 <Text style={{ color: colors.textMuted, marginTop: 16 }}>No categories found</Text>
              </View>
           )}
-        </View>
+          </View>
+        </TouchableWithoutFeedback>
       </View>
+    </TouchableWithoutFeedback>
     </Modal>
   );
 };

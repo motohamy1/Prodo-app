@@ -103,4 +103,36 @@ export default defineSchema({
     text: v.string(),
     isCompleted: v.boolean(),
   }).index("by_todo", ["todoId"]),
+
+  yearlyGoals: defineTable({
+    userId: v.id("users"),
+    year: v.number(),
+    text: v.string(),
+    description: v.optional(v.string()),
+    isCompleted: v.optional(v.boolean()),
+    createdAt: v.optional(v.number()),
+  }).index("by_user_year", ["userId", "year"]),
+
+  yearlyAchievements: defineTable({
+    userId: v.id("users"),
+    year: v.number(),
+    text: v.string(),
+    description: v.optional(v.string()),
+    createdAt: v.optional(v.number()),
+  }).index("by_user_year", ["userId", "year"]),
+
+  categoryItems: defineTable({
+    userId: v.optional(v.id("users")),
+    categoryId: v.optional(v.id("projectCategories")),
+    subCategoryId: v.optional(v.id("projectSubCategories")),
+    date: v.optional(v.number()), // For planner day-specific items
+    listType: v.string(), // 'checklist' | 'bullet' | 'toggle'
+    text: v.string(),
+    content: v.optional(v.string()), // For toggle expanded content
+    isCompleted: v.optional(v.boolean()),
+    isExpanded: v.optional(v.boolean()),
+    order: v.optional(v.number()),
+  }).index("by_category_type", ["categoryId", "listType"])
+    .index("by_subCategory_type", ["subCategoryId", "listType"])
+    .index("by_date_type", ["date", "listType"]),
 });

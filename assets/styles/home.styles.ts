@@ -77,12 +77,12 @@ export const createHomeStyles = (colors: ColorScheme, isArabic: boolean = false)
     todaysPlanTitle: {
       fontSize: isArabic ? 22 : 20,
       fontWeight: '800',
-      color: colors.surfaceText,
+      color: colors.primaryText,
       marginBottom: 4,
     },
     todaysPlanSubtitle: {
       fontSize: isArabic ? 14 : 14,
-      color: colors.surfaceText + '99',
+      color: colors.primaryText + 'CC',
       fontWeight: '700',
     },
 

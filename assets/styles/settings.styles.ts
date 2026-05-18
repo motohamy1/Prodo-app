@@ -223,7 +223,7 @@ export const createSettingsStyles = (colors: ColorScheme, isArabic: boolean = fa
       marginTop: 24,
     },
     saveButtonText: {
-      color: colors.bg === '#0F0F12' ? colors.text : colors.surfaceText,
+      color: colors.primaryText,
       fontSize: 16,
       fontWeight: '800',
     },

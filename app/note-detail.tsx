@@ -1,30 +1,36 @@
-import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { 
-  View,
-  Text, 
-  TextInput, 
-  TouchableOpacity, 
-  Modal, 
-  KeyboardAvoidingView, 
-  Platform, 
-  ScrollView,
-  Keyboard,
-  TouchableWithoutFeedback,
-  FlatList,
-  KeyboardEvent,
-} from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { createNotesStyles } from '@/assets/styles/notes.styles';
+import { api } from '@/convex/_generated/api';
+import { useAuth } from '@/hooks/useAuth';
+import { useOfflineMutation } from '@/hooks/useOfflineMutation';
+import { useOfflineQuery } from '@/hooks/useOfflineQuery';
+import useTheme from '@/hooks/useTheme';
+import { useTranslation } from '@/utils/i18n';
+import { scheduleReminderNotification } from '@/utils/notifications';
 import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import { useRouter, useLocalSearchParams } from 'expo-router';
-import { useOfflineQuery } from '@/hooks/useOfflineQuery';
-import { useOfflineMutation } from '@/hooks/useOfflineMutation';
-import { api } from '@/convex/_generated/api';
-import useTheme from '@/hooks/useTheme';
-import { useAuth } from '@/hooks/useAuth';
-import { useTranslation } from '@/utils/i18n';
-import { createNotesStyles } from '@/assets/styles/notes.styles';
-import { scheduleReminderNotification } from '@/utils/notifications';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  Keyboard,
+  KeyboardAvoidingView,
+  KeyboardEvent,
+  Modal,
+  Platform,
+  ScrollView,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View
+} from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+
+interface Block {
+  id: string;
+  type: 'text' | 'todo' | 'h1' | 'h2' | 'h3' | 'bullet';
+  content: string;
+  checked?: boolean;
+  color?: string;
+}
 
 const NoteHeader = React.memo(({ 
   title, 
@@ -57,6 +63,124 @@ const NoteHeader = React.memo(({
 ));
 NoteHeader.displayName = 'NoteHeader';
 
+interface BlockItemProps {
+  item: Block;
+  activeFontSize: number;
+  activeFontWeight: 'normal' | '200' | '600' | 'bold';
+  activeFontFamily: string;
+  activeFontColor: string;
+  activeFontStyle: 'normal' | 'italic';
+  isArabic: boolean;
+  colors: any;
+  styles: any;
+  blockRefs: React.MutableRefObject<{ [key: string]: TextInput | null }>;
+  blockYPositions: React.MutableRefObject<{ [key: string]: number }>;
+  onContentChange: (blockId: string, newContent: string) => void;
+  onKeyPress: (e: any, blockId: string) => void;
+  onToggleTodo: (blockId: string) => void;
+  onAddNewBlock: (afterBlockId: string, type: Block['type']) => void;
+  onFocus: (blockId: string) => void;
+}
+
+const BlockItem = React.memo(({
+  item,
+  activeFontSize,
+  activeFontWeight,
+  activeFontFamily,
+  activeFontColor,
+  activeFontStyle,
+  isArabic,
+  colors,
+  styles,
+  blockRefs,
+  blockYPositions,
+  onContentChange,
+  onKeyPress,
+  onToggleTodo,
+  onAddNewBlock,
+  onFocus,
+}: BlockItemProps) => {
+  const [localText, setLocalText] = useState(item.content);
+
+  useEffect(() => {
+    setLocalText(item.content);
+  }, [item.content]);
+
+  const handleTextChange = useCallback((txt: string) => {
+    setLocalText(txt);
+    onContentChange(item.id, txt);
+  }, [item.id, onContentChange]);
+
+  const blockLineHeight = (item.type === 'h1' ? 32 : item.type === 'h2' ? 26 : item.type === 'h3' ? 22 : activeFontSize) * 1.5;
+
+  return (
+    <View
+      onLayout={(e) => { blockYPositions.current[item.id] = e.nativeEvent.layout.y; }}
+      style={[
+        styles.checklistContainer,
+        {
+          paddingHorizontal: 24,
+          alignItems: 'flex-start',
+          flexDirection: isArabic ? 'row-reverse' : 'row'
+        },
+        (item.type === 'h1' || item.type === 'h2' || item.type === 'h3') && { marginVertical: 8 }
+      ]}>
+      {item.type === 'todo' && (
+        <TouchableOpacity onPress={() => onToggleTodo(item.id)} style={{ marginTop: 8 }}>
+          <View style={[
+            styles.checkbox,
+            item.checked && styles.checkboxChecked
+          ]}>
+            {item.checked && <Ionicons name="checkmark" size={16} color={colors.primaryText} />}
+          </View>
+        </TouchableOpacity>
+      )}
+
+      {item.type === 'bullet' && (
+        <View style={{ width: 24, paddingTop: 8, alignItems: 'center' }}>
+          <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: colors.primary, marginTop: 11 }} />
+        </View>
+      )}
+
+      <TextInput
+        ref={el => { blockRefs.current[item.id] = el; }}
+        style={[
+          styles.bodyInput,
+          {
+            paddingTop: 8,
+            paddingBottom: 8,
+            marginVertical: 0,
+            fontSize: item.type === 'h1' ? 32 : item.type === 'h2' ? 26 : item.type === 'h3' ? 22 : activeFontSize,
+            fontWeight: (item.type === 'h1' || item.type === 'h2' || item.type === 'h3') ? '800' : activeFontWeight,
+            fontFamily: activeFontFamily === 'System' ? undefined : activeFontFamily,
+            color: item.color || activeFontColor,
+            fontStyle: activeFontStyle,
+            lineHeight: (item.type === 'h1' || item.type === 'h2' || item.type === 'h3') ? blockLineHeight : undefined,
+            textDecorationLine: (item.type === 'todo' && item.checked) ? 'line-through' : 'none',
+            opacity: (item.type === 'todo' && item.checked) ? 0.6 : 1,
+            textAlign: isArabic ? 'right' : 'left'
+          }
+        ]}
+        placeholder={item.type.startsWith('h') ? `HEADING ${item.type.charAt(1)}` : "Type away..."}
+        placeholderTextColor={colors.textMuted + '60'}
+        value={localText}
+        onChangeText={handleTextChange}
+        onFocus={() => onFocus(item.id)}
+        onKeyPress={e => onKeyPress(e, item.id)}
+        onSubmitEditing={() => {
+          if (item.type !== 'text') {
+            onAddNewBlock(item.id, 'text');
+          }
+        }}
+        multiline={true}
+        blurOnSubmit={false}
+        scrollEnabled={false}
+      />
+    </View>
+  );
+});
+BlockItem.displayName = 'BlockItem';
+
 export default function NoteDetailScreen() {
   const router = useRouter();
   const { id, isReminder } = useLocalSearchParams<{ id: string, isReminder: string }>();
@@ -73,22 +197,30 @@ export default function NoteDetailScreen() {
   const [dateTimeConfirmed, setDateTimeConfirmed] = useState(false);
   const [activeBlockId, setActiveBlockId] = useState<string | null>(null);
 
-  interface Block {
-    id: string;
-    type: 'text' | 'todo' | 'h1' | 'h2' | 'h3' | 'bullet';
-    content: string;
-    checked?: boolean;
-    color?: string;
-  }
   const [blocks, setBlocks] = useState<Block[]>([{ id: 'first', type: 'text', content: '' }]);
   const blockRefs = useRef<{ [key: string]: TextInput | null }>({});
-  const scrollViewRef = useRef<FlatList | null>(null);
+  const scrollViewRef = useRef<ScrollView | null>(null);
+  const blockYPositions = useRef<{ [key: string]: number }>({});
 
   const scrollToBottom = () => {
     setTimeout(() => {
-      scrollViewRef.current?.scrollToEnd({ animated: true });
+      (scrollViewRef.current as any)?.scrollToEnd?.({ animated: true });
     }, 100);
   };
+
+  const scrollToBlock = useCallback((blockId: string) => {
+    setTimeout(() => {
+      const y = blockYPositions.current[blockId];
+      if (y !== undefined) {
+        scrollViewRef.current?.scrollTo({ y: Math.max(0, y - 80), animated: true });
+      }
+    }, 150);
+  }, []);
+
+  const handleBlockFocus = useCallback((blockId: string) => {
+    setActiveBlockId(blockId);
+    scrollToBlock(blockId);
+  }, [scrollToBlock]);
 
   // Typography State
   const [activeFontSize, setActiveFontSize] = useState(18);
@@ -392,73 +524,6 @@ export default function NoteDetailScreen() {
     </TouchableOpacity>
   ), [title, formattedNoteDate, isArabic, colors, styles, blocks]);
 
-  const renderBlock = useCallback(({ item }: { item: Block }) => {
-    const blockLineHeight = (item.type === 'h1' ? 32 : item.type === 'h2' ? 26 : item.type === 'h3' ? 22 : activeFontSize) * 1.5;
-    
-    return (
-      <View style={[
-        styles.checklistContainer, 
-        { 
-          paddingHorizontal: 24, 
-          alignItems: 'flex-start',
-          flexDirection: isArabic ? 'row-reverse' : 'row'
-        },
-        (item.type === 'h1' || item.type === 'h2' || item.type === 'h3') && { marginVertical: 8 }
-      ]}>
-        {item.type === 'todo' && (
-          <TouchableOpacity onPress={() => toggleTodo(item.id)} style={{ marginTop: 8 }}>
-            <View style={[
-              styles.checkbox,
-              item.checked && styles.checkboxChecked
-            ]}>
-              {item.checked && <Ionicons name="checkmark" size={16} color={colors.surfaceText} />}
-            </View>
-          </TouchableOpacity>
-        )}
-
-        {item.type === 'bullet' && (
-          <View style={{ width: 24, paddingTop: 8, alignItems: 'center' }}>
-            <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: colors.primary, marginTop: 11 }} />
-          </View>
-        )}
-        
-        <TextInput
-          ref={el => { blockRefs.current[item.id] = el; }}
-          style={[
-            styles.bodyInput,
-            { 
-              paddingTop: 8,
-              paddingBottom: 8, 
-              marginVertical: 0,
-              fontSize: item.type === 'h1' ? 32 : item.type === 'h2' ? 26 : item.type === 'h3' ? 22 : activeFontSize,
-              fontWeight: (item.type === 'h1' || item.type === 'h2' || item.type === 'h3') ? '800' : activeFontWeight,
-              fontFamily: activeFontFamily === 'System' ? undefined : activeFontFamily,
-              color: item.color || activeFontColor,
-              fontStyle: activeFontStyle,
-              lineHeight: (item.type === 'h1' || item.type === 'h2' || item.type === 'h3') ? blockLineHeight : undefined,
-              textDecorationLine: (item.type === 'todo' && item.checked) ? 'line-through' : 'none',
-              opacity: (item.type === 'todo' && item.checked) ? 0.6 : 1,
-              textAlign: isArabic ? 'right' : 'left'
-            }
-          ]}
-          placeholder={item.type.startsWith('h') ? `HEADING ${item.type.charAt(1)}` : "Type away..."}
-          placeholderTextColor={colors.textMuted + '60'}
-          value={item.content}
-          onChangeText={txt => handleBlockTextChange(item.id, txt)}
-          onFocus={() => setActiveBlockId(item.id)}
-          onKeyPress={e => handleKeyPress(e, item.id)}
-          onSubmitEditing={() => {
-            if (item.type !== 'text') {
-              addNewBlock(item.id, 'text');
-            }
-          }}
-          multiline={true}
-          blurOnSubmit={false}
-          scrollEnabled={false}
-        />
-      </View>
-    );
-  }, [activeFontSize, activeFontWeight, activeFontFamily, activeFontColor, activeFontStyle, isArabic, colors.textMuted, colors.primary, styles.checklistContainer, styles.checkbox, styles.checkboxChecked, styles.bodyInput, toggleTodo, handleBlockTextChange, handleKeyPress, addNewBlock]);
 
   // Calendar Helpers
   const daysInMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0).getDate();
@@ -490,14 +555,13 @@ export default function NoteDetailScreen() {
   };
 
   return (
-    <SafeAreaView style={[styles.detailSafeArea, { flex: 1 }]} edges={['top', 'left', 'right', 'bottom']}>
+    <SafeAreaView style={[styles.detailSafeArea, { flex: 1 }]} edges={['top', 'left', 'right']}>
       <KeyboardAvoidingView 
         style={{ flex: 1 }}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
+        keyboardVerticalOffset={0}
       >
-        <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-          <View style={{ flex: 1 }}>
+        <View style={{ flex: 1 }}>
             <View style={[styles.detailHeader, isArabic && { flexDirection: 'row-reverse' }]}>
           <TouchableOpacity style={styles.detailHeaderBtn} onPress={handleSaveNote}>
             <Ionicons name="chevron-back" size={24} style={styles.detailHeaderBtnIcon} />
@@ -535,11 +599,12 @@ export default function NoteDetailScreen() {
         </View>
 
         <ScrollView 
-          ref={scrollViewRef as any}
+          ref={scrollViewRef}
           style={{ flex: 1 }}
-          contentContainerStyle={{ paddingBottom: keyboardHeight > 0 ? keyboardHeight + 60 : 80 }}
+          contentContainerStyle={{ paddingBottom: 24 }}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
+          keyboardDismissMode="interactive"
         >
           {renderHeader()}
           
@@ -677,9 +742,25 @@ export default function NoteDetailScreen() {
           )}
 
           {blocks.map((item) => (
-            <React.Fragment key={item.id}>
-              {renderBlock({ item })}
-            </React.Fragment>
+            <BlockItem
+              key={item.id}
+              item={item}
+              activeFontSize={activeFontSize}
+              activeFontWeight={activeFontWeight}
+              activeFontFamily={activeFontFamily}
+              activeFontColor={activeFontColor}
+              activeFontStyle={activeFontStyle}
+              isArabic={isArabic}
+              colors={colors}
+              styles={styles}
+              blockRefs={blockRefs}
+              blockYPositions={blockYPositions}
+              onContentChange={handleBlockTextChange}
+              onKeyPress={handleKeyPress}
+              onToggleTodo={toggleTodo}
+              onAddNewBlock={addNewBlock}
+              onFocus={handleBlockFocus}
+            />
           ))}
 
           <TouchableOpacity 
@@ -701,22 +782,17 @@ export default function NoteDetailScreen() {
             </Text>
           </TouchableOpacity>
         </ScrollView>
-          </View>
-        </TouchableWithoutFeedback>
-          {/* Toolbar — always anchored above keyboard */}
+
+          {/* Toolbar — natural flow, KAV pushes it above keyboard automatically */}
           <View style={[
             styles.toolbarWrapper,
             {
-              position: 'absolute',
-              left: 0,
-              right: 0,
-              bottom: keyboardHeight > 0 ? (Platform.OS === 'ios' ? keyboardHeight : 0) : insets.bottom,
               backgroundColor: colors.bg,
               paddingVertical: 12,
               paddingHorizontal: 20,
+              paddingBottom: keyboardHeight > 0 ? 12 : insets.bottom + 12,
               borderTopWidth: 1,
               borderColor: colors.surfaceText + '1A',
-              zIndex: 100,
             }
           ]}>
             <View style={[
@@ -748,6 +824,7 @@ export default function NoteDetailScreen() {
               </View>
             </View>
           </View>
+        </View>
       </KeyboardAvoidingView>
 
       {/* Action Menu Bottom Sheet */}

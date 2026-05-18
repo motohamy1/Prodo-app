@@ -14,9 +14,12 @@ import {
   KeyboardAvoidingView,
   Platform,
   Share,
+  TouchableWithoutFeedback,
+  StyleSheet,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import useTheme from '@/hooks/useTheme';
 import { useAuth } from '@/hooks/useAuth';
 import { useTranslation } from '@/utils/i18n';
@@ -30,6 +33,7 @@ import TodoCard from '@/components/TodoCard';
 import ActionModal from '@/components/ActionModal';
 import TimerModal from '@/components/TimerModal';
 import ProjectPickerModal from '@/components/ProjectPickerModal';
+import CategoryListModal from '@/components/CategoryListModal';
 import { createHomeStyles } from '@/assets/styles/home.styles';
 import { useScreenGuide } from '@/hooks/useScreenGuide';
 import ScreenGuide from '@/components/ScreenGuide';
@@ -124,10 +128,15 @@ const AddSubCategoryModal = ({ visible, onClose, colors, styles, onAdd, initialD
 
   const handleAdd = () => { if (!name.trim()) return; onAdd(name.trim(), icon, color); setName(''); onClose(); };
   return (
-    <Modal visible={visible} transparent animationType="slide">
-      <KeyboardAvoidingView style={styles.modalOverlay} behavior="padding">
-        <ScrollView style={{ flex: 1 }} contentContainerStyle={{ justifyContent: 'flex-end', flexGrow: 1 }} keyboardShouldPersistTaps="handled">
-          <View style={styles.modalSheet}>
+    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
+      <View style={{ flex: 1 }}>
+        <TouchableWithoutFeedback onPress={onClose}>
+          <View style={[StyleSheet.absoluteFill, { backgroundColor: colors.text + '99' }]} />
+        </TouchableWithoutFeedback>
+        <View pointerEvents="box-none" style={StyleSheet.absoluteFill}>
+          <KeyboardAvoidingView style={{ flex: 1, justifyContent: 'flex-end' }} behavior="padding">
+            <ScrollView style={{ maxHeight: '90%' }} contentContainerStyle={{ justifyContent: 'flex-end', flexGrow: 1 }} keyboardShouldPersistTaps="handled">
+              <View style={styles.modalSheet}>
             <View style={styles.modalHandle} />
             <Text style={styles.modalTitle}>{initialData ? 'Edit Sub-Category' : 'New Sub-Category'}</Text>
             <Text style={styles.modalLabel}>Name</Text>
@@ -148,9 +157,11 @@ const AddSubCategoryModal = ({ visible, onClose, colors, styles, onAdd, initialD
             </ScrollView>
             <TouchableOpacity style={styles.modalPrimaryBtn} onPress={handleAdd}><Text style={styles.modalPrimaryBtnText}>{initialData ? 'Save Changes' : 'Create Sub-Category'}</Text></TouchableOpacity>
             <TouchableOpacity style={styles.modalSecondaryBtn} onPress={onClose}><Text style={styles.modalSecondaryBtnText}>Cancel</Text></TouchableOpacity>
-          </View>
-        </ScrollView>
-      </KeyboardAvoidingView>
+              </View>
+            </ScrollView>
+          </KeyboardAvoidingView>
+        </View>
+      </View>
     </Modal>
   );
 };
@@ -178,10 +189,15 @@ const AddCategoryModal = ({ visible, onClose, colors, styles, onAdd, initialData
 
   const handleAdd = () => { if (!name.trim()) return; onAdd(name.trim(), icon, color); setName(''); onClose(); };
   return (
-    <Modal visible={visible} transparent animationType="slide">
-      <KeyboardAvoidingView style={styles.modalOverlay} behavior="padding">
-        <ScrollView style={{ flex: 1 }} contentContainerStyle={{ justifyContent: 'flex-end', flexGrow: 1 }} keyboardShouldPersistTaps="handled">
-          <View style={styles.modalSheet}>
+    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
+      <View style={{ flex: 1 }}>
+        <TouchableWithoutFeedback onPress={onClose}>
+          <View style={[StyleSheet.absoluteFill, { backgroundColor: colors.text + '99' }]} />
+        </TouchableWithoutFeedback>
+        <View pointerEvents="box-none" style={StyleSheet.absoluteFill}>
+          <KeyboardAvoidingView style={{ flex: 1, justifyContent: 'flex-end' }} behavior="padding">
+            <ScrollView style={{ maxHeight: '90%' }} contentContainerStyle={{ justifyContent: 'flex-end', flexGrow: 1 }} keyboardShouldPersistTaps="handled">
+              <View style={styles.modalSheet}>
             <View style={styles.modalHandle} />
             <Text style={styles.modalTitle}>{initialData ? 'Edit Category' : 'New Category'}</Text>
             <Text style={styles.modalLabel}>Name</Text>
@@ -202,9 +218,11 @@ const AddCategoryModal = ({ visible, onClose, colors, styles, onAdd, initialData
             </ScrollView>
             <TouchableOpacity style={styles.modalPrimaryBtn} onPress={handleAdd}><Text style={styles.modalPrimaryBtnText}>{initialData ? 'Save Changes' : 'Create Category'}</Text></TouchableOpacity>
             <TouchableOpacity style={styles.modalSecondaryBtn} onPress={onClose}><Text style={styles.modalSecondaryBtnText}>Cancel</Text></TouchableOpacity>
-          </View>
-        </ScrollView>
-      </KeyboardAvoidingView>
+              </View>
+            </ScrollView>
+          </KeyboardAvoidingView>
+        </View>
+      </View>
     </Modal>
   );
 };
@@ -235,10 +253,15 @@ const AddProjectModal = ({ visible, onClose, colors, styles, onAdd, initialData 
 
   const handleAdd = () => { if (!name.trim()) return; onAdd(name.trim(), desc.trim(), icon, color); setName(''); setDesc(''); onClose(); };
   return (
-    <Modal visible={visible} transparent animationType="slide">
-      <KeyboardAvoidingView style={styles.modalOverlay} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-        <ScrollView style={{ flex: 1 }} contentContainerStyle={{ justifyContent: 'flex-end', flexGrow: 1 }} keyboardShouldPersistTaps="handled">
-          <View style={styles.modalSheet}>
+    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
+      <View style={{ flex: 1 }}>
+        <TouchableWithoutFeedback onPress={onClose}>
+          <View style={[StyleSheet.absoluteFill, { backgroundColor: colors.text + '99' }]} />
+        </TouchableWithoutFeedback>
+        <View pointerEvents="box-none" style={StyleSheet.absoluteFill}>
+          <KeyboardAvoidingView style={{ flex: 1, justifyContent: 'flex-end' }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+            <ScrollView style={{ maxHeight: '90%' }} contentContainerStyle={{ justifyContent: 'flex-end', flexGrow: 1 }} keyboardShouldPersistTaps="handled">
+              <View style={styles.modalSheet}>
             <View style={styles.modalHandle} />
             <Text style={styles.modalTitle}>{initialData ? 'Edit Project' : 'New Project'}</Text>
             <Text style={styles.modalLabel}>Project Name</Text>
@@ -253,9 +276,11 @@ const AddProjectModal = ({ visible, onClose, colors, styles, onAdd, initialData 
             </ScrollView>
             <TouchableOpacity style={[styles.modalPrimaryBtn, { backgroundColor: color }]} onPress={handleAdd}><Text style={styles.modalPrimaryBtnText}>{initialData ? 'Save Changes' : 'Create Project'}</Text></TouchableOpacity>
             <TouchableOpacity style={styles.modalSecondaryBtn} onPress={onClose}><Text style={styles.modalSecondaryBtnText}>Cancel</Text></TouchableOpacity>
-          </View>
-        </ScrollView>
-      </KeyboardAvoidingView>
+              </View>
+            </ScrollView>
+          </KeyboardAvoidingView>
+        </View>
+      </View>
     </Modal>
   );
 };
@@ -270,10 +295,15 @@ const AddResourceModal = ({ visible, onClose, colors, styles, onAdd }: {
   const [note, setNote] = useState('');
   const handleAdd = () => { if (!title.trim()) return; onAdd(resType, title.trim(), url.trim() || undefined, note.trim() || undefined); setTitle(''); onClose(); };
   return (
-    <Modal visible={visible} transparent animationType="slide">
-      <KeyboardAvoidingView style={styles.modalOverlay} behavior="padding">
-        <ScrollView style={{ flex: 1 }} contentContainerStyle={{ justifyContent: 'flex-end', flexGrow: 1 }} keyboardShouldPersistTaps="handled">
-          <View style={styles.modalSheet}>
+    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
+      <View style={{ flex: 1 }}>
+        <TouchableWithoutFeedback onPress={onClose}>
+          <View style={[StyleSheet.absoluteFill, { backgroundColor: colors.text + '99' }]} />
+        </TouchableWithoutFeedback>
+        <View pointerEvents="box-none" style={StyleSheet.absoluteFill}>
+          <KeyboardAvoidingView style={{ flex: 1, justifyContent: 'flex-end' }} behavior="padding">
+            <ScrollView style={{ maxHeight: '90%' }} contentContainerStyle={{ justifyContent: 'flex-end', flexGrow: 1 }} keyboardShouldPersistTaps="handled">
+              <View style={styles.modalSheet}>
             <View style={styles.modalHandle} />
             <Text style={styles.modalTitle}>Add Resource</Text>
             <Text style={styles.modalLabel}>Type</Text>
@@ -289,9 +319,11 @@ const AddResourceModal = ({ visible, onClose, colors, styles, onAdd }: {
             <TextInput style={[styles.modalInput, { minHeight: 40, paddingVertical: Platform.OS === 'ios' ? 8 : 4 }]} placeholder="Resource title…" placeholderTextColor={colors.textMuted} value={title} onChangeText={setTitle} multiline={true} blurOnSubmit={true} scrollEnabled={false} />
             <TouchableOpacity style={styles.modalPrimaryBtn} onPress={handleAdd}><Text style={styles.modalPrimaryBtnText}>Add Resource</Text></TouchableOpacity>
             <TouchableOpacity style={styles.modalSecondaryBtn} onPress={onClose}><Text style={styles.modalSecondaryBtnText}>Cancel</Text></TouchableOpacity>
-          </View>
-        </ScrollView>
-      </KeyboardAvoidingView>
+              </View>
+            </ScrollView>
+          </KeyboardAvoidingView>
+        </View>
+      </View>
     </Modal>
   );
 };
@@ -370,13 +402,20 @@ const CategoriesView = ({ styles, colors, onSelectCategory, onAddCategory, onEdi
 
 // ─── Layer 2: Category Detail View (Sub-categories & Direct Projects) ────────
 
-const CategoryDetailView = ({ 
-  styles, colors, categoryId, categoryName, userId, onSelectSubCategory, onSelectProject, onAddSubCategory, onAddProject, onEditCategory, onEditSubCategory, onEditProject, onDeleteCategory, onDeleteSubCategory, onDeleteProject, onOpenAction 
-}: { 
-  styles: any; 
-  colors: any; 
-  categoryId: Id<'projectCategories'>; 
-  categoryName: string; 
+const LIST_TYPE_CARDS = [
+  { key: 'checklist', label: 'Checklists', icon: 'checkbox-outline', color: '#4ECDC4' },
+  { key: 'todo', label: 'To-Do Tasks', icon: 'list-outline', color: '#7C5CFF' },
+  { key: 'bullet', label: 'Bullet Points', icon: 'ellipse', color: '#FF6B6B' },
+  { key: 'toggle', label: 'Toggle Lists', icon: 'albums-outline', color: '#FFD93D' },
+];
+
+const CategoryDetailView = ({
+  styles, colors, categoryId, categoryName, userId, onSelectSubCategory, onSelectProject, onAddSubCategory, onAddProject, onEditCategory, onEditSubCategory, onEditProject, onDeleteCategory, onDeleteSubCategory, onDeleteProject, onOpenAction
+}: {
+  styles: any;
+  colors: any;
+  categoryId: Id<'projectCategories'>;
+  categoryName: string;
   onSelectSubCategory: (id: Id<'projectSubCategories'>, name: string) => void;
   onSelectProject: (id: Id<'projects'>) => void;
   onAddSubCategory: () => void;
@@ -394,6 +433,12 @@ const CategoryDetailView = ({
   const subCategories = useOfflineQuery<any[]>('projects.getSubCategories', api.projects.getSubCategories, { categoryId });
   const directProjects = useOfflineQuery<any[]>('projects.getProjectsByCategory', api.projects.getProjectsByCategory, { categoryId });
   const allTodos = useOfflineQuery<any[]>('todos', api.todos.get, userId ? { userId } : 'skip');
+  const checklistItems = useOfflineQuery<any[]>('categoryItems_checklist', api.projects.getCategoryItems, { categoryId, listType: 'checklist' });
+  const bulletItems = useOfflineQuery<any[]>('categoryItems_bullet', api.projects.getCategoryItems, { categoryId, listType: 'bullet' });
+  const toggleItems = useOfflineQuery<any[]>('categoryItems_toggle', api.projects.getCategoryItems, { categoryId, listType: 'toggle' });
+
+  const [listModalVisible, setListModalVisible] = useState(false);
+  const [activeListType, setActiveListType] = useState<string>('checklist');
 
   const getProgress = (projectId: string) => {
     if (!allTodos) return { done: 0, total: 0, pct: 0 };
@@ -403,161 +448,214 @@ const CategoryDetailView = ({
     return { done, total, pct: total > 0 ? Math.round((done / total) * 100) : 0 };
   };
 
+  const getListCount = (key: string) => {
+    if (key === 'todo') {
+      return allTodos?.filter((t: any) => t.categoryId === categoryId && !t.projectId && !t.subCategoryId).length || 0;
+    }
+    if (key === 'checklist') return checklistItems?.length || 0;
+    if (key === 'bullet') return bulletItems?.length || 0;
+    if (key === 'toggle') return toggleItems?.length || 0;
+    return 0;
+  };
+
+  const openListModal = (listType: string) => {
+    setActiveListType(listType);
+    setListModalVisible(true);
+  };
+
   if (!subCategories || !directProjects) return <View style={styles.emptyContainer}><Ionicons name="hourglass-outline" size={40} color={colors.border} /></View>;
 
   return (
-    <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 40 }}>
-      {/* Category Header Actions */}
-      <View style={{ paddingHorizontal: 24, paddingVertical: 12, flexDirection: 'row', justifyContent: 'flex-end', gap: 12 }}>
-         <TouchableOpacity 
-           style={[styles.headerBtn, { borderColor: colors.border }]} 
-           onPress={() => onOpenAction({
-             title: categoryName,
-             options: [
-               {
-                 label: 'Edit Category',
-                 icon: 'create-outline',
-                 onPress: () => onEditCategory({ _id: categoryId, name: categoryName })
-               },
-               {
-                 label: 'Share Category',
-                 icon: 'share-social-outline',
-                 onPress: () => Share.share({ message: `Category: ${categoryName}` })
-               },
-               {
-                 label: t.delete || 'Delete Category',
-                 icon: 'trash-outline',
-                 variant: 'destructive',
-                 onPress: () => {
-                   Alert.alert(
-                     t.confirmDeleteTitle || "Confirm Delete", 
-                     "Are you sure you want to delete this category and all its contents?", 
-                     [
-                       { text: t.cancel || "Cancel", style: "cancel" },
-                       { text: t.delete || "Delete", style: "destructive", onPress: () => onDeleteCategory(categoryId) }
-                     ]
-                   );
+    <>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 120 }}>
+        {/* Category Header Actions */}
+        <View style={{ paddingHorizontal: 24, paddingVertical: 12, flexDirection: 'row', justifyContent: 'flex-end', gap: 12 }}>
+           <TouchableOpacity
+             style={[styles.headerBtn, { borderColor: colors.border }]}
+             onPress={() => onOpenAction({
+               title: categoryName,
+               options: [
+                 {
+                   label: 'Edit Category',
+                   icon: 'create-outline',
+                   onPress: () => onEditCategory({ _id: categoryId, name: categoryName })
+                 },
+                 {
+                   label: 'Share Category',
+                   icon: 'share-social-outline',
+                   onPress: () => Share.share({ message: `Category: ${categoryName}` })
+                 },
+                 {
+                   label: t.delete || 'Delete Category',
+                   icon: 'trash-outline',
+                   variant: 'destructive',
+                   onPress: () => {
+                     Alert.alert(
+                       t.confirmDeleteTitle || "Confirm Delete",
+                       "Are you sure you want to delete this category and all its contents?",
+                       [
+                         { text: t.cancel || "Cancel", style: "cancel" },
+                         { text: t.delete || "Delete", style: "destructive", onPress: () => onDeleteCategory(categoryId) }
+                       ]
+                     );
+                   }
                  }
-               }
-             ]
-           })}
-         >
-           <Ionicons name="ellipsis-vertical" size={20} color={colors.textMuted} />
-         </TouchableOpacity>
-      </View>
-      {/* Sub-categories Section */}
-      <View style={styles.subCategoriesList}>
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-          <Text style={[styles.sectionLabel, { paddingHorizontal: 0, marginBottom: 0 }]}>Sub-Categories</Text>
+               ]
+             })}
+           >
+             <Ionicons name="ellipsis-vertical" size={20} color={colors.textMuted} />
+           </TouchableOpacity>
         </View>
-        
-        {subCategories.length === 0 && (
-          <View style={[styles.emptyContainer, { paddingVertical: 20 }]}>
-            <Text style={{ color: colors.textMuted, fontSize: 13 }}>No sub-categories</Text>
+        {/* Sub-categories Section */}
+        <View style={styles.subCategoriesList}>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+            <Text style={[styles.sectionLabel, { paddingHorizontal: 0, marginBottom: 0 }]}>Sub-Categories</Text>
           </View>
-        )}
 
-        {subCategories.map(sub => (
-          <TouchableOpacity 
-            key={sub._id} style={styles.subCategoryCard} 
-            onPress={() => onSelectSubCategory(sub._id, sub.name)}
-            onLongPress={() => onOpenAction({
-              title: sub.name,
-              options: [
-                { label: t.edit || 'Edit', icon: 'create-outline', onPress: () => onEditSubCategory(sub) },
-                { 
-                  label: t.delete || 'Delete', 
-                  icon: 'trash-outline', 
-                  variant: 'destructive', 
-                  onPress: () => {
-                    Alert.alert(
-                      t.confirmDeleteTitle || "Confirm Delete", 
-                      t.confirmDeleteSubCategory || "Are you sure you want to delete this sub-category and all its child projects?", 
-                      [
-                        { text: t.cancel || "Cancel", style: "cancel" },
-                        { text: t.delete || "Delete", style: "destructive", onPress: () => onDeleteSubCategory(sub._id) }
-                      ]
-                    );
-                  } 
-                }
-              ]
-            })}
-          >
-            <View style={[styles.subCategoryIconWrap, { backgroundColor: sub.color + '20' }]}><Ionicons name={sub.icon as any} size={18} color={sub.color} /></View>
-            <Text style={styles.subCategoryName}>{sub.name}</Text>
-          </TouchableOpacity>
-        ))}
-        <TouchableOpacity 
-          style={[styles.subCategoryCard, { borderStyle: 'dashed', backgroundColor: 'transparent', shadowOpacity: 0, elevation: 0, justifyContent: 'center', alignItems: 'center', flexDirection: 'column', paddingVertical: 24 }]} 
-          onPress={onAddSubCategory}
-        >
-          <Ionicons name="add-circle-outline" size={32} color={colors.textMuted} />
-          <Text style={{ marginTop: 8, fontSize: 13, fontWeight: '600', color: colors.textMuted }}>Add Sub-Category</Text>
-        </TouchableOpacity>
-      </View>
-
-      {/* Direct Projects Section */}
-      <View style={{ paddingHorizontal: 20, marginTop: 20 }}>
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-          <Text style={[styles.sectionLabel, { paddingHorizontal: 0, marginBottom: 0 }]}>Direct Projects</Text>
-        </View>
-
-        <View style={[styles.projectsGrid, { paddingHorizontal: 0 }]}>
-          {directProjects.length === 0 && (
-            <View style={[styles.emptyContainer, { width: '100%', paddingVertical: 40 }]}>
-               <Text style={{ color: colors.textMuted, fontSize: 13 }}>No direct projects</Text>
+          {subCategories.length === 0 && (
+            <View style={[styles.emptyContainer, { paddingVertical: 20 }]}>
+              <Text style={{ color: colors.textMuted, fontSize: 13 }}>No sub-categories</Text>
             </View>
           )}
 
-          {directProjects.map(project => {
-            const { pct } = getProgress(project._id);
-            return (
-              <TouchableOpacity 
-                key={project._id} style={[styles.projectGridCard, { shadowColor: project.color }]} 
-                onPress={() => onSelectProject(project._id)}
-                onLongPress={() => onOpenAction({
-                  title: project.name,
-                  options: [
-                    { label: t.edit || 'Edit', icon: 'create-outline', onPress: () => onEditProject(project) },
-                    { label: t.share || 'Share', icon: 'share-social-outline', onPress: () => Share.share({ message: `Project: ${project.name}` }) },
-                    { 
-                      label: t.delete || 'Delete', 
-                      icon: 'trash-outline', 
-                      variant: 'destructive', 
-                      onPress: () => {
-                        Alert.alert(
-                          t.confirmDeleteTitle || "Confirm Delete", 
-                          t.confirmDeleteProject || "Are you sure you want to delete this project and unlink all its tasks?", 
-                          [
-                            { text: t.cancel || "Cancel", style: "cancel" },
-                            { text: t.delete || "Delete", style: "destructive", onPress: () => onDeleteProject(project._id) }
-                          ]
-                        );
-                      } 
+          {subCategories.map(sub => (
+            <TouchableOpacity
+              key={sub._id} style={styles.subCategoryCard}
+              onPress={() => onSelectSubCategory(sub._id, sub.name)}
+              onLongPress={() => onOpenAction({
+                title: sub.name,
+                options: [
+                  { label: t.edit || 'Edit', icon: 'create-outline', onPress: () => onEditSubCategory(sub) },
+                  {
+                    label: t.delete || 'Delete',
+                    icon: 'trash-outline',
+                    variant: 'destructive',
+                    onPress: () => {
+                      Alert.alert(
+                        t.confirmDeleteTitle || "Confirm Delete",
+                        t.confirmDeleteSubCategory || "Are you sure you want to delete this sub-category and all its child projects?",
+                        [
+                          { text: t.cancel || "Cancel", style: "cancel" },
+                          { text: t.delete || "Delete", style: "destructive", onPress: () => onDeleteSubCategory(sub._id) }
+                        ]
+                      );
                     }
-                  ]
-                })}
-              >
-                <View style={[styles.projectGridIcon, { backgroundColor: project.color + '20' }]}><Ionicons name={project.icon as any} size={28} color={project.color} /></View>
-                <Text style={styles.projectGridName} numberOfLines={1}>{project.name}</Text>
-                <View style={styles.projectGridFooter}>
-                   <View style={styles.gridProgressBarTrack}><View style={[styles.gridProgressBarFill, { width: `${pct}%`, backgroundColor: project.color }]} /></View>
-                   <Text style={styles.gridProgressText}>{pct}%</Text>
-                </View>
-              </TouchableOpacity>
-            );
-          })}
-
+                  }
+                ]
+              })}
+            >
+              <View style={[styles.subCategoryIconWrap, { backgroundColor: sub.color + '20' }]}><Ionicons name={sub.icon as any} size={18} color={sub.color} /></View>
+              <Text style={styles.subCategoryName}>{sub.name}</Text>
+            </TouchableOpacity>
+          ))}
           <TouchableOpacity
-            style={[styles.projectGridCard, { borderStyle: 'dashed', backgroundColor: 'transparent', shadowOpacity: 0, elevation: 0, justifyContent: 'center', alignItems: 'center' }]}
-            onPress={onAddProject}
+            style={[styles.subCategoryCard, { borderStyle: 'dashed', backgroundColor: 'transparent', shadowOpacity: 0, elevation: 0, justifyContent: 'center', alignItems: 'center', flexDirection: 'column', paddingVertical: 24 }]}
+            onPress={onAddSubCategory}
           >
-            <Ionicons name="add" size={28} color={colors.textMuted} />
-            <Text style={{ marginTop: 4, fontSize: 12, fontWeight: '600', color: colors.textMuted }}>Add Project</Text>
+            <Ionicons name="add-circle-outline" size={32} color={colors.textMuted} />
+            <Text style={{ marginTop: 8, fontSize: 13, fontWeight: '600', color: colors.textMuted }}>Add Sub-Category</Text>
           </TouchableOpacity>
         </View>
-      </View>
-    </ScrollView>
+
+        {/* Direct Projects Section */}
+        <View style={{ paddingHorizontal: 20, marginTop: 20 }}>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+            <Text style={[styles.sectionLabel, { paddingHorizontal: 0, marginBottom: 0 }]}>Direct Projects</Text>
+          </View>
+
+          <View style={[styles.projectsGrid, { paddingHorizontal: 0 }]}>
+            {directProjects.length === 0 && (
+              <View style={[styles.emptyContainer, { width: '100%', paddingVertical: 40 }]}>
+                 <Text style={{ color: colors.textMuted, fontSize: 13 }}>No direct projects</Text>
+              </View>
+            )}
+
+            {directProjects.map(project => {
+              const { pct } = getProgress(project._id);
+              return (
+                <TouchableOpacity
+                  key={project._id} style={[styles.projectGridCard, { shadowColor: project.color }]}
+                  onPress={() => onSelectProject(project._id)}
+                  onLongPress={() => onOpenAction({
+                    title: project.name,
+                    options: [
+                      { label: t.edit || 'Edit', icon: 'create-outline', onPress: () => onEditProject(project) },
+                      { label: t.share || 'Share', icon: 'share-social-outline', onPress: () => Share.share({ message: `Project: ${project.name}` }) },
+                      {
+                        label: t.delete || 'Delete',
+                        icon: 'trash-outline',
+                        variant: 'destructive',
+                        onPress: () => {
+                          Alert.alert(
+                            t.confirmDeleteTitle || "Confirm Delete",
+                            t.confirmDeleteProject || "Are you sure you want to delete this project and unlink all its tasks?",
+                            [
+                              { text: t.cancel || "Cancel", style: "cancel" },
+                              { text: t.delete || "Delete", style: "destructive", onPress: () => onDeleteProject(project._id) }
+                            ]
+                          );
+                        }
+                      }
+                    ]
+                  })}
+                >
+                  <View style={[styles.projectGridIcon, { backgroundColor: project.color + '20' }]}><Ionicons name={project.icon as any} size={28} color={project.color} /></View>
+                  <Text style={styles.projectGridName} numberOfLines={1}>{project.name}</Text>
+                  <View style={styles.projectGridFooter}>
+                     <View style={styles.gridProgressBarTrack}><View style={[styles.gridProgressBarFill, { width: `${pct}%`, backgroundColor: project.color }]} /></View>
+                     <Text style={styles.gridProgressText}>{pct}%</Text>
+                  </View>
+                </TouchableOpacity>
+              );
+            })}
+
+            <TouchableOpacity
+              style={[styles.projectGridCard, { borderStyle: 'dashed', backgroundColor: 'transparent', shadowOpacity: 0, elevation: 0, justifyContent: 'center', alignItems: 'center' }]}
+              onPress={onAddProject}
+            >
+              <Ionicons name="add" size={28} color={colors.textMuted} />
+              <Text style={{ marginTop: 4, fontSize: 12, fontWeight: '600', color: colors.textMuted }}>Add Project</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        {/* Category Lists Section */}
+        <View style={styles.categoryListsSection}>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+            <Text style={[styles.sectionLabel, { paddingHorizontal: 0, marginBottom: 0 }]}>Lists</Text>
+          </View>
+          <View style={styles.categoryListsGrid}>
+            {LIST_TYPE_CARDS.map(card => {
+              const count = getListCount(card.key);
+              return (
+                <TouchableOpacity
+                  key={card.key}
+                  style={styles.categoryListCard}
+                  onPress={() => openListModal(card.key)}
+                  activeOpacity={0.82}
+                >
+                  <View style={[styles.categoryListCardIconWrap, { backgroundColor: card.color + '20' }]}>
+                    <Ionicons name={card.icon as any} size={24} color={card.color} />
+                  </View>
+                  <Text style={styles.categoryListCardTitle}>{card.label}</Text>
+                  <Text style={styles.categoryListCardCount}>{count} item{count !== 1 ? 's' : ''}</Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        </View>
+      </ScrollView>
+
+      <CategoryListModal
+        visible={listModalVisible}
+        onClose={() => setListModalVisible(false)}
+        categoryId={categoryId}
+        listType={activeListType}
+        colors={colors}
+        styles={styles}
+        userId={userId}
+      />
+    </>
   );
 };
 
@@ -582,6 +680,12 @@ const SubCategoryProjectsView = ({
   const projects = useOfflineQuery<any[]>('projects.getProjectsBySubCategory', api.projects.getProjectsBySubCategory, { subCategoryId });
   const allTodos = useOfflineQuery<any[]>('todos', api.todos.get, userId ? { userId } : 'skip');
   const sub = useOfflineQuery<any>('projects.getSubCategory', api.projects.getSubCategory, { id: subCategoryId });
+  const checklistItems = useOfflineQuery<any[]>('subCategoryItems_checklist', api.projects.getCategoryItems, { subCategoryId, listType: 'checklist' });
+  const bulletItems = useOfflineQuery<any[]>('subCategoryItems_bullet', api.projects.getCategoryItems, { subCategoryId, listType: 'bullet' });
+  const toggleItems = useOfflineQuery<any[]>('subCategoryItems_toggle', api.projects.getCategoryItems, { subCategoryId, listType: 'toggle' });
+
+  const [listModalVisible, setListModalVisible] = useState(false);
+  const [activeListType, setActiveListType] = useState<string>('checklist');
 
   const getProgress = (projectId: string) => {
     if (!allTodos) return { pct: 0 };
@@ -591,98 +695,151 @@ const SubCategoryProjectsView = ({
     return { pct: total > 0 ? Math.round((done / total) * 100) : 0 };
   };
 
+  const getListCount = (key: string) => {
+    if (key === 'todo') {
+      return allTodos?.filter((t: any) => t.subCategoryId === subCategoryId && !t.projectId).length || 0;
+    }
+    if (key === 'checklist') return checklistItems?.length || 0;
+    if (key === 'bullet') return bulletItems?.length || 0;
+    if (key === 'toggle') return toggleItems?.length || 0;
+    return 0;
+  };
+
+  const openListModal = (listType: string) => {
+    setActiveListType(listType);
+    setListModalVisible(true);
+  };
+
   if (!projects) return <View style={styles.emptyContainer}><Ionicons name="hourglass-outline" size={40} color={colors.border} /></View>;
 
   return (
-    <ScrollView contentContainerStyle={styles.projectsGrid} showsVerticalScrollIndicator={false}>
-      <View style={{ width: '100%', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 6, marginBottom: 8 }}>
-        <Text style={[styles.sectionLabel, { paddingHorizontal: 0, marginBottom: 0 }]}>Projects in {subCategoryName}</Text>
-        <TouchableOpacity 
-           onPress={() => onOpenAction({
-             title: subCategoryName,
-             options: [
-               {
-                 label: t.edit || 'Edit',
-                 icon: 'create-outline',
-                 onPress: () => sub && onEditSubCategory(sub)
-               },
-               {
-                 label: t.share || 'Share',
-                 icon: 'share-social-outline',
-                 onPress: () => Share.share({ message: `Sub-Category: ${subCategoryName}` })
-               },
-               {
-                 label: t.delete || 'Delete',
-                 icon: 'trash-outline',
-                 variant: 'destructive',
-                 onPress: () => {
-                   Alert.alert(
-                     t.confirmDeleteTitle || "Confirm Delete", 
-                     t.confirmDeleteSubCategory || "Are you sure you want to delete this sub-category and all its child projects?", 
-                     [
-                       { text: t.cancel || "Cancel", style: "cancel" },
-                       { text: t.delete || "Delete", style: "destructive", onPress: () => onDeleteSubCategory(subCategoryId) }
-                     ]
-                   );
-                 }
-               }
-             ]
-           })}
-        >
-          <Ionicons name="ellipsis-vertical" size={18} color={colors.textMuted} />
-        </TouchableOpacity>
-      </View>
-      {projects.map(project => {
-        const { pct } = getProgress(project._id);
-        return (
-          <TouchableOpacity 
-            key={project._id} 
-            style={[styles.projectGridCard, { shadowColor: project.color }]} 
-            onPress={() => onSelectProject(project._id)}
-            onLongPress={() => onOpenAction({
-              title: project.name,
-              options: [
-                {
-                  label: t.edit || 'Edit',
-                  icon: 'create-outline',
-                  onPress: () => onEditProject(project)
-                },
-                {
-                  label: t.share || 'Share',
-                  icon: 'share-social-outline',
-                  onPress: () => Share.share({ message: `Project: ${project.name}` })
-                },
-                {
+    <>
+      <ScrollView contentContainerStyle={[styles.projectsGrid, { paddingBottom: 120 }]} showsVerticalScrollIndicator={false}>
+        <View style={{ width: '100%', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 6, marginBottom: 8 }}>
+          <Text style={[styles.sectionLabel, { paddingHorizontal: 0, marginBottom: 0 }]}>Projects in {subCategoryName}</Text>
+          <TouchableOpacity
+             onPress={() => onOpenAction({
+               title: subCategoryName,
+               options: [
+                 {
+                   label: t.edit || 'Edit',
+                   icon: 'create-outline',
+                   onPress: () => sub && onEditSubCategory(sub)
+                 },
+                 {
+                   label: t.share || 'Share',
+                   icon: 'share-social-outline',
+                   onPress: () => Share.share({ message: `Sub-Category: ${subCategoryName}` })
+                 },
+                 {
                    label: t.delete || 'Delete',
                    icon: 'trash-outline',
                    variant: 'destructive',
                    onPress: () => {
                      Alert.alert(
-                       t.confirmDeleteTitle || "Confirm Delete", 
-                       t.confirmDeleteProject || "Are you sure you want to delete this project and unlink all its tasks?", 
+                       t.confirmDeleteTitle || "Confirm Delete",
+                       t.confirmDeleteSubCategory || "Are you sure you want to delete this sub-category and all its child projects?",
                        [
                          { text: t.cancel || "Cancel", style: "cancel" },
-                         { text: t.delete || "Delete", style: "destructive", onPress: () => onDeleteProject(project._id) }
+                         { text: t.delete || "Delete", style: "destructive", onPress: () => onDeleteSubCategory(subCategoryId) }
                        ]
                      );
                    }
-                }
-              ]
-            })}
+                 }
+               ]
+             })}
           >
-            <View style={[styles.projectGridIcon, { backgroundColor: project.color + '20' }]}><Ionicons name={project.icon as any} size={28} color={project.color} /></View>
-            <Text style={styles.projectGridName} numberOfLines={2}>{project.name}</Text>
-            <View style={styles.projectGridFooter}>
-               <View style={styles.gridProgressBarTrack}><View style={[styles.gridProgressBarFill, { width: `${pct}%`, backgroundColor: project.color }]} /></View>
-               <Text style={styles.gridProgressText}>{pct}% Complete</Text>
-            </View>
+            <Ionicons name="ellipsis-vertical" size={18} color={colors.textMuted} />
           </TouchableOpacity>
-        );
-      })}
-      <TouchableOpacity style={[styles.projectGridCard, { borderStyle: 'dashed', backgroundColor: 'transparent', shadowOpacity: 0, elevation: 0, justifyContent: 'center', alignItems: 'center' }]} onPress={onAddProject}>
-        <Ionicons name="add-circle-outline" size={32} color={colors.textMuted} /><Text style={{ marginTop: 8, fontSize: 13, fontWeight: '600', color: colors.textMuted }}>Add Project</Text>
-      </TouchableOpacity>
-    </ScrollView>
+        </View>
+        {projects.map(project => {
+          const { pct } = getProgress(project._id);
+          return (
+            <TouchableOpacity
+              key={project._id}
+              style={[styles.projectGridCard, { shadowColor: project.color }]}
+              onPress={() => onSelectProject(project._id)}
+              onLongPress={() => onOpenAction({
+                title: project.name,
+                options: [
+                  {
+                    label: t.edit || 'Edit',
+                    icon: 'create-outline',
+                    onPress: () => onEditProject(project)
+                  },
+                  {
+                    label: t.share || 'Share',
+                    icon: 'share-social-outline',
+                    onPress: () => Share.share({ message: `Project: ${project.name}` })
+                  },
+                  {
+                     label: t.delete || 'Delete',
+                     icon: 'trash-outline',
+                     variant: 'destructive',
+                     onPress: () => {
+                       Alert.alert(
+                         t.confirmDeleteTitle || "Confirm Delete",
+                         t.confirmDeleteProject || "Are you sure you want to delete this project and unlink all its tasks?",
+                         [
+                           { text: t.cancel || "Cancel", style: "cancel" },
+                           { text: t.delete || "Delete", style: "destructive", onPress: () => onDeleteProject(project._id) }
+                         ]
+                       );
+                     }
+                  }
+                ]
+              })}
+            >
+              <View style={[styles.projectGridIcon, { backgroundColor: project.color + '20' }]}><Ionicons name={project.icon as any} size={28} color={project.color} /></View>
+              <Text style={styles.projectGridName} numberOfLines={2}>{project.name}</Text>
+              <View style={styles.projectGridFooter}>
+                 <View style={styles.gridProgressBarTrack}><View style={[styles.gridProgressBarFill, { width: `${pct}%`, backgroundColor: project.color }]} /></View>
+                 <Text style={styles.gridProgressText}>{pct}% Complete</Text>
+              </View>
+            </TouchableOpacity>
+          );
+        })}
+        <TouchableOpacity style={[styles.projectGridCard, { borderStyle: 'dashed', backgroundColor: 'transparent', shadowOpacity: 0, elevation: 0, justifyContent: 'center', alignItems: 'center' }]} onPress={onAddProject}>
+          <Ionicons name="add-circle-outline" size={32} color={colors.textMuted} /><Text style={{ marginTop: 8, fontSize: 13, fontWeight: '600', color: colors.textMuted }}>Add Project</Text>
+        </TouchableOpacity>
+
+        {/* Category Lists Section */}
+        <View style={{ width: '100%', marginTop: 20 }}>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, paddingHorizontal: 6 }}>
+            <Text style={[styles.sectionLabel, { paddingHorizontal: 0, marginBottom: 0 }]}>Lists</Text>
+          </View>
+          <View style={styles.categoryListsGrid}>
+            {LIST_TYPE_CARDS.map(card => {
+              const count = getListCount(card.key);
+              return (
+                <TouchableOpacity
+                  key={card.key}
+                  style={styles.categoryListCard}
+                  onPress={() => openListModal(card.key)}
+                  activeOpacity={0.82}
+                >
+                  <View style={[styles.categoryListCardIconWrap, { backgroundColor: card.color + '20' }]}>
+                    <Ionicons name={card.icon as any} size={24} color={card.color} />
+                  </View>
+                  <Text style={styles.categoryListCardTitle}>{card.label}</Text>
+                  <Text style={styles.categoryListCardCount}>{count} item{count !== 1 ? 's' : ''}</Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        </View>
+      </ScrollView>
+
+      <CategoryListModal
+        visible={listModalVisible}
+        onClose={() => setListModalVisible(false)}
+        subCategoryId={subCategoryId}
+        listType={activeListType}
+        colors={colors}
+        styles={styles}
+        userId={userId}
+      />
+    </>
   );
 };
 
@@ -713,12 +870,12 @@ const ProjectDetailView = ({ styles, colors, projectId, onDeleteProject, userId,
   const [showAddResource, setShowAddResource] = useState(false);
   const [editingDesc, setEditingDesc] = useState(false);
   const [descText, setDescText] = useState('');
-  
+
   const [newCheckItem, setNewCheckItem] = useState('');
   const [isAddingCheck, setIsAddingCheck] = useState(false);
   const [newTaskText, setNewTaskText] = useState('');
   const [isAddingTask, setIsAddingTask] = useState(false);
-  
+
   const [isTimerModalVisible, setTimerModalVisible] = useState(false);
   const [isProjectModalVisible, setProjectModalVisible] = useState(false);
   const [selectedTodoId, setSelectedTodoId] = useState<Id<"todos"> | null>(null);
@@ -726,13 +883,43 @@ const ProjectDetailView = ({ styles, colors, projectId, onDeleteProject, userId,
   const [expandedTodoId, setExpandedTodoId] = useState<Id<"todos"> | null>(null);
 
   const [isActionModalVisible, setActionModalVisible] = useState(false);
-  const [actionConfig, setActionConfig] = useState<{ 
-    title: string, 
-    options: any[], 
-    type?: 'project' | 'task' | 'resource' 
+  const [actionConfig, setActionConfig] = useState<{
+    title: string,
+    options: any[],
+    type?: 'project' | 'task' | 'resource'
   } | null>(null);
 
   const homeStyles = createHomeStyles(colors);
+
+  // Persist and restore checklist/tasks open state per project
+  useEffect(() => {
+    if (!projectId) return;
+    const loadStates = async () => {
+      try {
+        const tasksKey = `project_${projectId}_tasksOpen`;
+        const checklistKey = `project_${projectId}_checklistOpen`;
+        const [tasksVal, checklistVal] = await Promise.all([
+          AsyncStorage.getItem(tasksKey),
+          AsyncStorage.getItem(checklistKey),
+        ]);
+        if (tasksVal !== null) setTasksOpen(JSON.parse(tasksVal));
+        if (checklistVal !== null) setChecklistOpen(JSON.parse(checklistVal));
+      } catch {
+        // ignore storage errors, keep defaults (closed)
+      }
+    };
+    loadStates();
+  }, [projectId]);
+
+  useEffect(() => {
+    if (!projectId) return;
+    AsyncStorage.setItem(`project_${projectId}_tasksOpen`, JSON.stringify(tasksOpen)).catch(() => {});
+  }, [tasksOpen, projectId]);
+
+  useEffect(() => {
+    if (!projectId) return;
+    AsyncStorage.setItem(`project_${projectId}_checklistOpen`, JSON.stringify(checklistOpen)).catch(() => {});
+  }, [checklistOpen, projectId]);
 
   useEffect(() => {
     if (project?.description) setDescText(project.description);
@@ -1201,9 +1388,16 @@ const Projects: React.FC = () => {
       <StatusBar barStyle={colors.statusBarStyle} backgroundColor={colors.bg} />
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.header}>
-          <View style={styles.headerLeft}>
-            <Text style={styles.headerTitle} numberOfLines={1}>{getTitle()}</Text>
-            <Text style={styles.headerSubtitle}>{layer === 'categories' ? 'Manage your workspaces' : 'Exploring paths'}</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
+            {layer !== 'categories' && (
+              <TouchableOpacity onPress={handleBack} style={{ marginRight: isArabic ? 0 : 10, marginLeft: isArabic ? 10 : 0 }}>
+                <Ionicons name={isArabic ? "arrow-forward" : "arrow-back"} size={24} color={colors.primary} />
+              </TouchableOpacity>
+            )}
+            <View style={styles.headerLeft}>
+              <Text style={styles.headerTitle} numberOfLines={1}>{getTitle()}</Text>
+              <Text style={styles.headerSubtitle}>{layer === 'categories' ? 'Manage your workspaces' : 'Exploring paths'}</Text>
+            </View>
           </View>
           <View style={styles.headerActions}>
             {layer === 'categories' && <TouchableOpacity style={styles.headerBtn} onPress={() => setIsAddingCategory(true)}><Ionicons name="add" size={24} color={colors.primary} /></TouchableOpacity>}

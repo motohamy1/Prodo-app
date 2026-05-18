@@ -211,7 +211,7 @@ export const SubtaskRow = ({
             style={{ flex: 1, backgroundColor: sub.status === 'in_progress' ? colors.warning : colors.primary, paddingVertical: 10, borderRadius: 10, alignItems: 'center' }}
             onPress={handleSaveEdit}
           >
-            <Text style={{ color: (sub.status === 'in_progress' || colors.primary === colors.warning) ? colors.surfaceText : (isDarkMode ? colors.text : colors.surfaceText), fontWeight: '800', fontSize: 14 }}>{t.save}</Text>
+            <Text style={{ color: sub.status === 'in_progress' ? colors.surfaceText : colors.primaryText, fontWeight: '800', fontSize: 14 }}>{t.save}</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={{ flex: 1, backgroundColor: isBrightBg ? colors.text + '15' : colors.border, paddingVertical: 10, borderRadius: 10, alignItems: 'center' }}

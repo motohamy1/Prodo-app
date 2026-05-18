@@ -377,7 +377,7 @@ export const createNotesStyles = (colors: ColorScheme, isArabic: boolean = false
     createReminderText: {
       fontSize: 18,
       fontWeight: '800',
-      color: colors.text, 
+      color: colors.primaryText,
     },
     // Checklist Styles
     checklistContainer: {

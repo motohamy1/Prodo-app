@@ -8,10 +8,9 @@ import { useTranslation } from '@/utils/i18n';
 import { showTaskCompletedNotification } from '@/utils/notifications';
 import { Ionicons } from '@expo/vector-icons';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Alert, LayoutAnimation, Share, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Alert, LayoutAnimation, Share, Text, TouchableOpacity, View } from 'react-native';
 import ActionModal from './ActionModal';
 import CircularProgress from './CircularProgress';
-import { InlineTimerPicker } from './InlineTimerPicker';
 import { SubtaskRow } from './SubtaskRow';
 import TaskDetailModal from './TaskDetailModal';
 
@@ -46,7 +45,7 @@ interface TodoCardProps {
   depth?: number;
   isTimelineMode?: boolean;
   initialShowDetails?: boolean;
-  onOpenDetail?: (id: Id<"todos">) => void;
+  onOpenDetail?: (id: Id<"todos">, section?: 'subtask') => void;
 }
 
 // ─── Formatting & Color Helpers ──────────────────────────────────────────
@@ -100,7 +99,6 @@ const TodoCard: React.FC<TodoCardProps> = ({ todo, onSetTimer, onLongPress, onLi
   const deleteTodo = useOfflineMutation(api.todos.deleteTodo, "todos:deleteTodo");
   const updateTodo = useOfflineMutation(api.todos.updateTodo, "todos:updateTodo");
   const setTimer = useOfflineMutation(api.todos.setTimer, "todos:setTimer");
-  const addTodo = useOfflineMutation(api.todos.addTodo, "todos:addTodo");
 
 
   const project = useOfflineQuery<any>('projects.getProjectMetadata', api.projects.getProjectMetadata, todo.projectId ? { id: todo.projectId } : "skip");
@@ -153,18 +151,15 @@ const TodoCard: React.FC<TodoCardProps> = ({ todo, onSetTimer, onLongPress, onLi
   }, [todo.status]);
 
   const [showSubtasks, setShowSubtasks] = useState(false);
-  const [isAddingSub, setIsAddingSub] = useState(false);
-  const [newSubText, setNewSubText] = useState("");
-  const [newSubDuration, setNewSubDuration] = useState<number | undefined>(undefined);
-  const [newSubDirection, setNewSubDirection] = useState<string>('down');
-  const [showNewSubTimerPicker, setShowNewSubTimerPicker] = useState(false);
   const [isDetailModalVisible, setIsDetailModalVisible] = useState(initialShowDetails);
+  const [detailModalSection, setDetailModalSection] = useState<'subtask' | undefined>(undefined);
   const [isActionModalVisible, setIsActionModalVisible] = useState(false);
 
-  const openDetail = () => {
+  const openDetail = (section?: 'subtask') => {
     if (onOpenDetail) {
-      onOpenDetail(todo._id);
+      onOpenDetail(todo._id, section);
     } else {
+      setDetailModalSection(section);
       setIsDetailModalVisible(true);
     }
   };
@@ -232,19 +227,6 @@ const TodoCard: React.FC<TodoCardProps> = ({ todo, onSetTimer, onLongPress, onLi
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [subtasks?.map((s: any) => s.status).join(','), todo.status, todo._id]);
 
-  useEffect(() => {
-    if (todo.status === 'not_started' && todo.dueDate) {
-      // Only mark as not_done if the due date's entire day has passed
-      // (i.e. it's now past midnight of the day AFTER the due date)
-      const dueDateEndOfDay = new Date(todo.dueDate);
-      dueDateEndOfDay.setHours(23, 59, 59, 999);
-      if (dueDateEndOfDay.getTime() < Date.now()) {
-        updateStatus({ id: todo._id, status: 'not_done' });
-      }
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [todo.status, todo.dueDate, todo._id]);
-
   const stats = {
     done: subtasks?.filter((s: any) => s.status === 'done').length || 0,
     total: subtasks?.length || 0,
@@ -289,48 +271,6 @@ const TodoCard: React.FC<TodoCardProps> = ({ todo, onSetTimer, onLongPress, onLi
     updateStatus({ id: todo._id, status });
     if (status === 'done') {
       showTaskCompletedNotification(todo.text, isArabic ? 'ar' : 'en');
-    }
-  };
-
-  const newSubBudget = useMemo(() => {
-    if (!todo.timerDuration || !subtasks) return undefined;
-    const usedDuration = subtasks.reduce((sum: number, s: any) => sum + (s.timerDuration || 0), 0);
-    return Math.max(0, todo.timerDuration - usedDuration);
-  }, [todo.timerDuration, subtasks]);
-
-  const handleAddSubtask = () => {
-    if (newSubText.trim() && userId) {
-      if (newSubDuration && todo.timerDuration) {
-        const usedDuration = subtasks ? subtasks.reduce((sum: number, s: any) => sum + (s.timerDuration || 0), 0) : 0;
-        const available = Math.max(0, todo.timerDuration - usedDuration);
-        if (newSubDuration > available) {
-          const availH = Math.floor(available / 3600000);
-          const availM = Math.floor((available % 3600000) / 60000);
-          Alert.alert(
-            isArabic ? 'الوقت غير كافٍ' : 'Time Budget Exceeded',
-            isArabic
-              ? `المتاح: ${availH > 0 ? availH + 'س ' : ''}${availM}د`
-              : `Available: ${availH > 0 ? availH + 'h ' : ''}${availM}m`
-          );
-          return;
-        }
-      }
-      addTodo({
-        userId,
-        text: newSubText.trim(),
-        parentId: todo._id,
-        status: "not_started",
-        projectId: todo.projectId,
-        ...(newSubDuration && { timerDuration: newSubDuration }),
-        ...(newSubDirection === 'up' && { timerDirection: 'up' })
-      });
-      setNewSubText("");
-      setNewSubDuration(undefined);
-      setNewSubDirection('down');
-      setShowNewSubTimerPicker(false);
-      setIsAddingSub(false);
-      LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-      setShowSubtasks(true);
     }
   };
 
@@ -640,7 +580,7 @@ const TodoCard: React.FC<TodoCardProps> = ({ todo, onSetTimer, onLongPress, onLi
                   borderColor: isBrightBg ? colors.text + '1A' : colors.primary + '40',
                   borderStyle: 'dashed',
                 }]}
-                onPress={() => { LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut); setIsAddingSub(true); }}
+                onPress={() => openDetail('subtask')}
               >
                 <Ionicons name="add-circle-outline" size={16} color={contentMutedColor} />
                 {!hasSubtasks && (
@@ -671,7 +611,7 @@ const TodoCard: React.FC<TodoCardProps> = ({ todo, onSetTimer, onLongPress, onLi
             </View>
           </View>
 
-          <TouchableOpacity style={[homeStyles.projectRow, { marginBottom: 12 }]} onPress={() => onLinkProject(todo._id)}>
+          <TouchableOpacity style={[homeStyles.projectRow, { marginBottom: 12 }]} onPress={() => openDetail()}>
             <Ionicons name="link-outline" size={16} color={(todo.projectId || todo.subCategoryId || todo.categoryId) ? (isBrightBg ? colors.text : colors.primary) : contentMutedColor} />
             <Text style={[homeStyles.projectText, { color: contentMutedColor }, (todo.projectId || todo.subCategoryId || todo.categoryId) && { color: contentColor, fontStyle: 'normal', fontWeight: '700' }, isArabic && { textAlign: 'right' }]}>
               {project?.name || linkedSubCategory?.name || linkedCategory?.name || todo.projectId || t.noProject}
@@ -695,72 +635,22 @@ const TodoCard: React.FC<TodoCardProps> = ({ todo, onSetTimer, onLongPress, onLi
             </TouchableOpacity>
           </View>
 
-          {(isAddingSub || (showSubtasks && hasSubtasks)) && (
-            <View style={{ marginTop: 12, paddingTop: 8 }}>
-              {showSubtasks && hasSubtasks && (
-                <View style={{ gap: 8, marginBottom: isAddingSub ? 16 : 0 }}>
-                  {subtasks.map((sub: any) => (
-                    <SubtaskRow
-                      key={sub._id}
-                      sub={sub}
-                      parentTimerDuration={todo.timerDuration}
-                      onStartSubtask={handleStartSubtask}
-                      onPauseSubtask={handlePauseSubtask}
-                      onToggleComplete={handleToggleSubComplete}
-                      onDelete={handleDeleteSub}
-                      onSetTimer={handleSetSubTimer}
-                      onUpdateText={handleUpdateSubText}
-                      onUpdateStatus={(id, status) => updateStatus({ id, status })}
-                    />
-                  ))}
-                </View>
-              )}
-              {isAddingSub && (
-                <View style={{ marginBottom: 12 }}>
-                  <View style={[{ flexDirection: 'row', alignItems: 'center', padding: 10, backgroundColor: colors.surfaceText + '08', borderRadius: 10, borderWidth: 1, borderColor: colors.primary + '30' }]}>
-                    <Ionicons name={isArabic ? "return-down-back" : "return-down-forward"} size={18} color={colors.surfaceText + '60'} style={isArabic ? { marginLeft: 8 } : { marginRight: 8 }} />
-                    <TextInput
-                      style={[{ flex: 1, color: colors.surfaceText, fontSize: 14, padding: 0 }, isArabic && { textAlign: 'right' }]}
-                      placeholder={isArabic ? "...ما هي الخطوة الفرعية؟" : "What's a sub-step?"}
-                      placeholderTextColor={colors.surfaceText + '50'}
-                      value={newSubText}
-                      onChangeText={setNewSubText}
-                      autoFocus
-                      onSubmitEditing={handleAddSubtask}
-                      onBlur={() => { if (!newSubText.trim() && !newSubDuration) { LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut); setIsAddingSub(false); } }}
-                    />
-                    <View style={[{ flexDirection: 'row', alignItems: 'center', gap: 10 }]}>
-                      <TouchableOpacity 
-                         onPress={() => setShowNewSubTimerPicker(!showNewSubTimerPicker)}
-                         style={newSubDuration ? { backgroundColor: colors.primary + '15', padding: 4, borderRadius: 6 } : {}}
-                      >
-                        <Ionicons name="timer-outline" size={20} color={newSubDuration ? colors.primary : colors.surfaceText + '40'} />
-                      </TouchableOpacity>
-                      <TouchableOpacity onPress={handleAddSubtask}>
-                        <Ionicons name={isArabic ? "arrow-back-circle" : "arrow-up-circle"} size={24} color={newSubText.trim() ? colors.primary : colors.surfaceText + '30'} />
-                      </TouchableOpacity>
-                    </View>
-                  </View>
-                  {showNewSubTimerPicker && (
-                    <View style={{ marginTop: 8 }}>
-                      <InlineTimerPicker
-                        initialMs={newSubDuration}
-                        initialDirection={newSubDirection}
-                        maxMs={newSubBudget}
-                        colors={colors}
-                        t={t}
-                        isArabic={isArabic}
-                        onSave={(ms: number, direction: string) => {
-                          setNewSubDuration(ms);
-                          setNewSubDirection(direction);
-                          setShowNewSubTimerPicker(false);
-                        }}
-                        onCancel={() => setShowNewSubTimerPicker(false)}
-                      />
-                    </View>
-                  )}
-                </View>
-              )}
+          {showSubtasks && hasSubtasks && (
+            <View style={{ marginTop: 12, paddingTop: 8, gap: 8 }}>
+              {subtasks.map((sub: any) => (
+                <SubtaskRow
+                  key={sub._id}
+                  sub={sub}
+                  parentTimerDuration={todo.timerDuration}
+                  onStartSubtask={handleStartSubtask}
+                  onPauseSubtask={handlePauseSubtask}
+                  onToggleComplete={handleToggleSubComplete}
+                  onDelete={handleDeleteSub}
+                  onSetTimer={handleSetSubTimer}
+                  onUpdateText={handleUpdateSubText}
+                  onUpdateStatus={(id, status) => updateStatus({ id, status })}
+                />
+              ))}
             </View>
           )}
         </View>
@@ -852,8 +742,9 @@ const TodoCard: React.FC<TodoCardProps> = ({ todo, onSetTimer, onLongPress, onLi
         {!onOpenDetail && (
         <TaskDetailModal 
           visible={isDetailModalVisible}
-          onClose={() => setIsDetailModalVisible(false)}
+          onClose={() => { setIsDetailModalVisible(false); setDetailModalSection(undefined); }}
           todoId={todo._id}
+          initialSection={detailModalSection}
         />
         )}
         {actionModal}
@@ -867,8 +758,9 @@ const TodoCard: React.FC<TodoCardProps> = ({ todo, onSetTimer, onLongPress, onLi
       {!onOpenDetail && (
       <TaskDetailModal 
         visible={isDetailModalVisible}
-        onClose={() => setIsDetailModalVisible(false)}
+        onClose={() => { setIsDetailModalVisible(false); setDetailModalSection(undefined); }}
         todoId={todo._id}
+        initialSection={detailModalSection}
       />
       )}
       {actionModal}

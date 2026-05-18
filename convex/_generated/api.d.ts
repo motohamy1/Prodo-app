@@ -11,6 +11,7 @@
 import type * as auth from "../auth.js";
 import type * as projects from "../projects.js";
 import type * as todos from "../todos.js";
+import type * as yearlyGoals from "../yearlyGoals.js";
 
 import type {
   ApiFromModules,
@@ -22,6 +23,7 @@ declare const fullApi: ApiFromModules<{
   auth: typeof auth;
   projects: typeof projects;
   todos: typeof todos;
+  yearlyGoals: typeof yearlyGoals;
 }>;
 
 /**

@@ -70,6 +70,15 @@ export const deleteCategory = mutation({
       await deleteProjectRecursive(ctx, project._id);
     }
 
+    // Delete all category items (checklists, bullets, toggles)
+    const categoryItems = await ctx.db
+      .query("categoryItems")
+      .withIndex("by_category_type", (q) => q.eq("categoryId", args.id))
+      .collect();
+    for (const item of categoryItems) {
+      await ctx.db.delete(item._id);
+    }
+
     // Delete all subcategories and their contents
     const subs = await ctx.db
       .query("projectSubCategories")
@@ -81,13 +90,13 @@ export const deleteCategory = mutation({
         .query("projects")
         .filter((q) => q.eq(q.field("subCategoryId"), sub._id))
         .collect();
-      
+
       for (const project of subProjects) {
         await deleteProjectRecursive(ctx, project._id);
       }
       await ctx.db.delete(sub._id);
     }
-    
+
     await ctx.db.delete(args.id);
   },
 });
@@ -147,6 +156,16 @@ export const deleteSubCategory = mutation({
     for (const project of projects) {
       await deleteProjectRecursive(ctx, project._id);
     }
+
+    // Delete all category items linked to this sub-category
+    const subCategoryItems = await ctx.db
+      .query("categoryItems")
+      .withIndex("by_subCategory_type", (q) => q.eq("subCategoryId", args.id))
+      .collect();
+    for (const item of subCategoryItems) {
+      await ctx.db.delete(item._id);
+    }
+
     await ctx.db.delete(args.id);
   },
 });
@@ -364,5 +383,150 @@ export const getTodosByProject = query({
       .filter((q) => q.eq(q.field("projectId"), args.projectId))
       .order("desc")
       .collect();
+  },
+});
+
+// ─── Category Items (Checklists, Bullets, Toggles) ────────────────────────────
+
+export const getCategoryItems = query({
+  args: {
+    categoryId: v.optional(v.id("projectCategories")),
+    subCategoryId: v.optional(v.id("projectSubCategories")),
+    listType: v.string(),
+  },
+  handler: async (ctx, args) => {
+    if (args.subCategoryId) {
+      return await ctx.db
+        .query("categoryItems")
+        .withIndex("by_subCategory_type", (q) =>
+          q.eq("subCategoryId", args.subCategoryId).eq("listType", args.listType)
+        )
+        .order("asc")
+        .collect();
+    }
+    return await ctx.db
+      .query("categoryItems")
+      .withIndex("by_category_type", (q) =>
+        q.eq("categoryId", args.categoryId).eq("listType", args.listType)
+      )
+      .order("asc")
+      .collect();
+  },
+});
+
+export const addCategoryItem = mutation({
+  args: {
+    userId: v.id("users"),
+    categoryId: v.optional(v.id("projectCategories")),
+    subCategoryId: v.optional(v.id("projectSubCategories")),
+    listType: v.string(),
+    text: v.string(),
+    content: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    return await ctx.db.insert("categoryItems", {
+      userId: args.userId,
+      categoryId: args.categoryId,
+      subCategoryId: args.subCategoryId,
+      listType: args.listType,
+      text: args.text,
+      content: args.content,
+      isCompleted: false,
+      isExpanded: args.listType === "toggle" ? false : undefined,
+      order: Date.now(),
+    });
+  },
+});
+
+export const updateCategoryItem = mutation({
+  args: {
+    id: v.id("categoryItems"),
+    text: v.optional(v.string()),
+    content: v.optional(v.string()),
+    isCompleted: v.optional(v.boolean()),
+    isExpanded: v.optional(v.boolean()),
+  },
+  handler: async (ctx, args) => {
+    const { id, ...fields } = args;
+    const patch: Record<string, any> = {};
+    if (fields.text !== undefined) patch.text = fields.text;
+    if (fields.content !== undefined) patch.content = fields.content;
+    if (fields.isCompleted !== undefined) patch.isCompleted = fields.isCompleted;
+    if (fields.isExpanded !== undefined) patch.isExpanded = fields.isExpanded;
+    await ctx.db.patch(id, patch);
+  },
+});
+
+export const deleteCategoryItem = mutation({
+  args: { id: v.id("categoryItems") },
+  handler: async (ctx, args) => {
+    await ctx.db.delete(args.id);
+  },
+});
+
+// ─── Planner List Items ───────────────────────────────────────────────────────
+
+export const getPlannerItems = query({
+  args: {
+    userId: v.id("users"),
+    date: v.number(),
+    listType: v.string(),
+  },
+  handler: async (ctx, args) => {
+    return await ctx.db
+      .query("categoryItems")
+      .withIndex("by_date_type", (q) =>
+        q.eq("date", args.date).eq("listType", args.listType)
+      )
+      .order("asc")
+      .collect();
+  },
+});
+
+export const addPlannerItem = mutation({
+  args: {
+    userId: v.id("users"),
+    date: v.number(),
+    listType: v.string(),
+    text: v.string(),
+    content: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    return await ctx.db.insert("categoryItems", {
+      userId: args.userId,
+      date: args.date,
+      listType: args.listType,
+      text: args.text,
+      content: args.content,
+      isCompleted: false,
+      isExpanded: args.listType === "toggle" ? false : undefined,
+      order: Date.now(),
+    });
+  },
+});
+
+export const updatePlannerItem = mutation({
+  args: {
+    id: v.id("categoryItems"),
+    text: v.optional(v.string()),
+    content: v.optional(v.string()),
+    isCompleted: v.optional(v.boolean()),
+    isExpanded: v.optional(v.boolean()),
+  },
+  handler: async (ctx, args) => {
+    const { id, ...fields } = args;
+    const patch: Record<string, any> = {};
+    if (fields.text !== undefined) patch.text = fields.text;
+    if (fields.content !== undefined) patch.content = fields.content;
+    if (fields.isCompleted !== undefined) patch.isCompleted = fields.isCompleted;
+    if (fields.isExpanded !== undefined) patch.isExpanded = fields.isExpanded;
+    await ctx.db.patch(id, patch);
+  },
+});
+
+export const deletePlannerItem = mutation({
+  args: { id: v.id("categoryItems") },
+  handler: async (ctx, args) => {
+    await ctx.db.delete(args.id);
   },
 });

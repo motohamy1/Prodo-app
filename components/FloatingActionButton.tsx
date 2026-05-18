@@ -35,7 +35,7 @@ export default function FloatingActionButton({ onPress, style }: FloatingActionB
       <Text style={[
         styles.text, 
         { 
-          color: colors.surfaceText,
+          color: colors.primaryText,
           fontSize: 12,
           fontWeight: '800',
           fontFamily: Platform.OS === 'ios' ? 'Inter' : 'sans-serif-medium'

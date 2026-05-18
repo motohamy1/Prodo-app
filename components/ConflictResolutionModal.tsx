@@ -261,7 +261,7 @@ const ConflictResolutionModal: React.FC<ConflictResolutionModalProps> = ({
                 ]}
                 onPress={handleNext}
               >
-                <Text style={[styles.nextButtonText, { color: colors.surfaceText }]}>
+                <Text style={[styles.nextButtonText, { color: colors.primaryText }]}>
                   {currentConflictIndex === conflicts.length - 1 
                     ? (isArabic ? 'حل الكل' : 'Resolve All')
                     : (isArabic ? 'التالي' : 'Next')
@@ -270,7 +270,7 @@ const ConflictResolutionModal: React.FC<ConflictResolutionModalProps> = ({
                 <Ionicons 
                   name={isArabic ? "chevron-back" : "chevron-forward"} 
                   size={20} 
-                  color={colors.surfaceText} 
+                  color={colors.primaryText} 
                 />
               </TouchableOpacity>
             </View>

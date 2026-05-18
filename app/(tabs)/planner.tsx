@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, StatusBar, Animated, StyleSheet, BackHandler, KeyboardAvoidingView, Platform, FlatList, Share } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, StatusBar, Animated, StyleSheet, BackHandler, KeyboardAvoidingView, Platform, FlatList, Share, TextInput, Dimensions } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -14,6 +14,7 @@ import TodoCard from '@/components/TodoCard';
 import TimerModal from '@/components/TimerModal';
 import ProjectPickerModal from '@/components/ProjectPickerModal';
 import ActionModal from '@/components/ActionModal';
+import PlannerListModal from '@/components/PlannerListModal';
 import { createHomeStyles } from '@/assets/styles/home.styles';
 import { Id } from '@/convex/_generated/dataModel';
 
@@ -32,6 +33,12 @@ const months_ar = [
   'يناير', 'فبراير', 'مارس', 'أبريل',
   'مايو', 'يونيو', 'يوليو', 'أغسطس',
   'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'
+];
+
+const LIST_TYPE_CARDS = [
+  { key: 'checklist', label: 'Checklists', icon: 'checkbox-outline', color: '#4ECDC4' },
+  { key: 'bullet', label: 'Bullet Points', icon: 'ellipse', color: '#FF6B6B' },
+  { key: 'toggle', label: 'Toggle Lists', icon: 'albums-outline', color: '#FFD93D' },
 ];
 
 const Planner = () => {
@@ -65,12 +72,27 @@ const Planner = () => {
   const [isActionModalVisible, setActionModalVisible] = useState(false);
   const [selectedItemForAction, setSelectedItemForAction] = useState<any>(null);
 
+  const [plannerListModalVisible, setPlannerListModalVisible] = useState(false);
+  const [activePlannerListType, setActivePlannerListType] = useState<string>('checklist');
+
   const updateTodoStatus = useOfflineMutation(api.todos.updateStatus, "todos:updateStatus");
   const deleteTodoMutation = useOfflineMutation(api.todos.deleteTodo, "todos:deleteTodo");
   const setTimerMutation = useOfflineMutation(api.todos.setTimer, "todos:setTimer");
   const linkProjectMutation = useOfflineMutation(api.todos.linkProject, "todos:linkProject");
   const linkTaskMutation = useOfflineMutation(api.todos.linkTask, "todos:linkTask");
   const scrollViewRef = useRef<ScrollView>(null);
+  const yearScrollRef = useRef<ScrollView>(null);
+
+  // Scroll year carousel to current year on mount
+  useEffect(() => {
+    const years = [currentYear - 1, currentYear, currentYear + 1, currentYear + 2];
+    const currentIndex = years.indexOf(currentYear);
+    if (currentIndex !== -1 && yearScrollRef.current) {
+      setTimeout(() => {
+        yearScrollRef.current?.scrollTo({ x: currentIndex * screenWidth, animated: false });
+      }, 100);
+    }
+  }, []);
 
   const scrollToBottom = () => {
     setTimeout(() => {
@@ -106,7 +128,20 @@ const Planner = () => {
   
   const todos = useOfflineQuery<any[]>('todos', api.todos.get, userId ? { userId } : "skip") || [];
 
+  const { width: screenWidth } = Dimensions.get('window');
   const currentYear = new Date().getFullYear();
+  const [activeYear, setActiveYear] = useState(currentYear);
+
+  const selectedDateTs = selectedDay !== null && selectedMonth !== null
+    ? new Date(currentYear, selectedMonth, selectedDay).getTime()
+    : null;
+
+  const plannerChecklistItems = useOfflineQuery<any[]>('plannerItems_checklist', api.projects.getPlannerItems, selectedDateTs && userId ? { userId, date: selectedDateTs, listType: 'checklist' } : "skip");
+  const plannerBulletItems = useOfflineQuery<any[]>('plannerItems_bullet', api.projects.getPlannerItems, selectedDateTs && userId ? { userId, date: selectedDateTs, listType: 'bullet' } : "skip");
+  const plannerToggleItems = useOfflineQuery<any[]>('plannerItems_toggle', api.projects.getPlannerItems, selectedDateTs && userId ? { userId, date: selectedDateTs, listType: 'toggle' } : "skip");
+
+  const allGoals = useOfflineQuery<any[]>('yearlyGoals', api.yearlyGoals.getAllGoals, userId ? { userId } : "skip") || [];
+  const allAchievements = useOfflineQuery<any[]>('yearlyAchievements', api.yearlyGoals.getAllAchievements, userId ? { userId } : "skip") || [];
 
   const getDaysInMonth = (month: number, year: number) => {
     return new Date(year, month + 1, 0).getDate();
@@ -137,35 +172,195 @@ const Planner = () => {
     });
   };
 
-  const renderMonthGrid = () => (
-    <ScrollView 
-      showsVerticalScrollIndicator={false} 
-      contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', paddingBottom: 80 }}
-    >
-      <View style={[styles.monthGrid, isArabic && { flexDirection: 'row-reverse' }]}>
-        {months.map((month, index) => {
-          const tasks = getTasksForMonth(index);
-          const isSelected = selectedMonth === index;
-          return (
-            <TouchableOpacity 
-              key={month} 
-              style={[styles.monthCard, isSelected && styles.selectedMonthCard]}
-              onPress={() => setSelectedMonth(index)}
-              activeOpacity={0.7}
-            >
-              {tasks.length > 0 && !isSelected && <View style={styles.monthIndicator} />}
-              <Text style={[styles.monthName, isSelected && styles.selectedMonthName]}>
-                {isArabic ? month : month.substring(0, 3)}
-              </Text>
-              <Text style={[styles.monthStats, isSelected && styles.selectedMonthStats]}>
-                {tasks.length > 0 ? `${tasks.length} ${tasks.length === 1 ? t.task : t.tasks}` : t.empty}
-              </Text>
-            </TouchableOpacity>
-          );
-        })}
-      </View>
-    </ScrollView>
-  );
+  // Helper: parse checklist stats from description
+  const getChecklistStats = (description?: string) => {
+    if (!description) return { total: 0, completed: 0 };
+    const lines = description.split('\n');
+    const todos = lines.filter(l => l.startsWith('☐ ') || l.startsWith('☑ '));
+    const completed = lines.filter(l => l.startsWith('☑ ')).length;
+    return { total: todos.length, completed };
+  };
+
+  const renderMonthGrid = () => {
+    const years = [currentYear - 1, currentYear, currentYear + 1, currentYear + 2];
+
+    return (
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ flexGrow: 1, paddingBottom: 100 }}
+      >
+        {/* ─── Goals of the Year ─── */}
+        <View style={styles.yearSectionHeader}>
+          <Text style={styles.yearSectionTitle}>{t.goalsOfTheYear}</Text>
+          <Text style={styles.yearSectionSubtitle}>{t.year} {activeYear}</Text>
+        </View>
+
+        <ScrollView
+          ref={yearScrollRef}
+          horizontal
+          pagingEnabled
+          showsHorizontalScrollIndicator={false}
+          onMomentumScrollEnd={(e) => {
+            const pageIndex = Math.round(e.nativeEvent.contentOffset.x / screenWidth);
+            if (pageIndex >= 0 && pageIndex < years.length) {
+              setActiveYear(years[pageIndex]);
+            }
+          }}
+          contentContainerStyle={styles.yearScrollContainer}
+          style={{ height: 220 }}
+        >
+          {years.map((year) => {
+            const yearGoalDocs = allGoals.filter((g: any) => g.year === year);
+            const yearAchievementDocs = allAchievements.filter((a: any) => a.year === year);
+            const isCurrent = year === currentYear;
+
+            // Aggregate checklist stats across all goal docs for this year
+            let totalGoals = 0;
+            let completedGoals = 0;
+            yearGoalDocs.forEach((doc: any) => {
+              const stats = getChecklistStats(doc.description);
+              totalGoals += stats.total;
+              completedGoals += stats.completed;
+            });
+            // Fallback: if no checklists parsed but docs exist, count docs as items
+            if (totalGoals === 0 && yearGoalDocs.length > 0) {
+              totalGoals = yearGoalDocs.length;
+              completedGoals = yearGoalDocs.filter((d: any) => d.isCompleted).length;
+            }
+
+            const goalProgress = totalGoals > 0 ? completedGoals / totalGoals : 0;
+            const achievementCount = yearAchievementDocs.length;
+
+            return (
+              <TouchableOpacity
+                key={year}
+                style={[styles.yearCard, isCurrent && styles.yearCardActive]}
+                onPress={() => router.push({ pathname: '/year-detail', params: { year: year.toString() } })}
+                activeOpacity={0.85}
+              >
+                <View style={styles.yearCardHeader}>
+                  <Text style={styles.yearCardTitle}>{year}</Text>
+                  <View style={{ flexDirection: isArabic ? 'row-reverse' : 'row', alignItems: 'center', gap: 8 }}>
+                    {isCurrent && (
+                      <Text style={styles.yearCardBadge}>{t.current}</Text>
+                    )}
+                    <Ionicons name="create-outline" size={18} color={colors.textMuted} />
+                  </View>
+                </View>
+
+                {/* Stats Row */}
+                <View style={{
+                  flexDirection: isArabic ? 'row-reverse' : 'row',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  marginTop: 12,
+                  gap: 12,
+                }}>
+                  {/* Goals stat */}
+                  <View style={{
+                    flex: 1,
+                    backgroundColor: colors.bg,
+                    borderRadius: 16,
+                    padding: 12,
+                    alignItems: 'center',
+                  }}>
+                    <Ionicons name="flag-outline" size={20} color={colors.primary} />
+                    <Text style={{ fontSize: 13, fontWeight: '700', color: colors.textMuted, marginTop: 4 }}>
+                      {totalGoals > 0 ? `${completedGoals}/${totalGoals}` : '—'}
+                    </Text>
+                    <Text style={{ fontSize: 11, fontWeight: '600', color: colors.textMuted }}>
+                      {t.goalsOfTheYear}
+                    </Text>
+                  </View>
+
+                  {/* Achievements stat */}
+                  <View style={{
+                    flex: 1,
+                    backgroundColor: colors.bg,
+                    borderRadius: 16,
+                    padding: 12,
+                    alignItems: 'center',
+                  }}>
+                    <Ionicons name="trophy-outline" size={20} color={colors.success} />
+                    <Text style={{ fontSize: 13, fontWeight: '700', color: colors.textMuted, marginTop: 4 }}>
+                      {achievementCount}
+                    </Text>
+                    <Text style={{ fontSize: 11, fontWeight: '600', color: colors.textMuted }}>
+                      {t.achievementsOfTheYear}
+                    </Text>
+                  </View>
+                </View>
+
+                {/* Progress bar */}
+                {totalGoals > 0 && (
+                  <View style={{ marginTop: 14 }}>
+                    <View style={{
+                      height: 6,
+                      backgroundColor: colors.border + '40',
+                      borderRadius: 3,
+                      overflow: 'hidden',
+                    }}>
+                      <View style={{
+                        height: '100%',
+                        width: `${goalProgress * 100}%`,
+                        backgroundColor: colors.primary,
+                        borderRadius: 3,
+                      }} />
+                    </View>
+                    <Text style={{
+                      fontSize: 11,
+                      fontWeight: '700',
+                      color: colors.primary,
+                      marginTop: 6,
+                      textAlign: isArabic ? 'right' : 'left',
+                    }}>
+                      {Math.round(goalProgress * 100)}% {t.goalCompleted}
+                    </Text>
+                  </View>
+                )}
+
+                {totalGoals === 0 && (
+                  <Text style={{
+                    textAlign: 'center',
+                    color: colors.textMuted,
+                    fontSize: 13,
+                    fontWeight: '500',
+                    marginTop: 14,
+                  }}>
+                    {t.tapToPlan}
+                  </Text>
+                )}
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
+
+        {/* ─── Month Grid ─── */}
+        <View style={[styles.monthGrid, isArabic && { flexDirection: 'row-reverse' }]}>
+          {months.map((month, index) => {
+            const tasks = getTasksForMonth(index);
+            const isSelected = selectedMonth === index;
+            return (
+              <TouchableOpacity
+                key={month}
+                style={[styles.monthCard, isSelected && styles.selectedMonthCard]}
+                onPress={() => setSelectedMonth(index)}
+                activeOpacity={0.7}
+              >
+                {tasks.length > 0 && !isSelected && <View style={styles.monthIndicator} />}
+                <Text style={[styles.monthName, isSelected && styles.selectedMonthName]}>
+                  {isArabic ? month : month.substring(0, 3)}
+                </Text>
+                <Text style={[styles.monthStats, isSelected && styles.selectedMonthStats]}>
+                  {tasks.length > 0 ? `${tasks.length} ${tasks.length === 1 ? t.task : t.tasks}` : t.empty}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+      </ScrollView>
+    );
+  };
 
   const renderDayGrid = (monthIndex: number) => {
     const daysInMonth = getDaysInMonth(monthIndex, currentYear);
@@ -224,6 +419,18 @@ const Planner = () => {
     );
   };
 
+  const getPlannerListCount = (key: string) => {
+    if (key === 'checklist') return plannerChecklistItems?.length || 0;
+    if (key === 'bullet') return plannerBulletItems?.length || 0;
+    if (key === 'toggle') return plannerToggleItems?.length || 0;
+    return 0;
+  };
+
+  const openPlannerListModal = (listType: string) => {
+    setActivePlannerListType(listType);
+    setPlannerListModalVisible(true);
+  };
+
   const renderSpecificDayView = (day: number, month: number, year: number) => {
     const tasks = getTasksForDay(day, month, year);
     const selectedDateTs = new Date(year, month, day).getTime();
@@ -242,6 +449,35 @@ const Planner = () => {
                 <Text style={[styles.specificDaySubtitle, isArabic && { textAlign: 'right' }]}>
                     {tasks.length === 0 ? t.startPlanning : `${tasks.length} ${t.tasksScheduled}`}
                 </Text>
+            </View>
+
+            {/* Day Lists Section */}
+            <View style={styles.dayListsSection}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+                <Text style={[{ fontSize: 20, fontWeight: '800', color: colors.text }, isArabic && { textAlign: 'right' }]}>{t.lists || 'Lists'}</Text>
+              </View>
+              <View style={styles.dayListsGrid}>
+                {LIST_TYPE_CARDS.map(card => {
+                  const count = getPlannerListCount(card.key);
+                  const label = isArabic
+                    ? (card.key === 'checklist' ? t.checklists : card.key === 'bullet' ? t.bulletPoints : t.toggleLists)
+                    : card.label;
+                  return (
+                    <TouchableOpacity
+                      key={card.key}
+                      style={styles.dayListCard}
+                      onPress={() => openPlannerListModal(card.key)}
+                      activeOpacity={0.82}
+                    >
+                      <View style={[styles.dayListCardIconWrap, { backgroundColor: card.color + '20' }]}>
+                        <Ionicons name={card.icon as any} size={24} color={card.color} />
+                      </View>
+                      <Text style={styles.dayListCardTitle}>{label}</Text>
+                      <Text style={styles.dayListCardCount}>{count} {count === 1 ? (isArabic ? 'عنصر' : 'item') : (isArabic ? 'عناصر' : 'items')}</Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
             </View>
 
             {tasks.filter(t => t.type === 'reminder').length > 0 && (
@@ -462,6 +698,18 @@ const Planner = () => {
                     linkTaskMutation({ id: selectedTodoId, categoryId: undefined, subCategoryId: undefined, projectId: selection.projectId });
                   }
                 }}
+            />
+
+            <PlannerListModal
+                visible={plannerListModalVisible}
+                onClose={() => setPlannerListModalVisible(false)}
+                date={selectedDateTs || 0}
+                listType={activePlannerListType}
+                colors={colors}
+                styles={styles}
+                userId={userId}
+                isArabic={isArabic}
+                t={t}
             />
 
             <ActionModal 

@@ -127,7 +127,7 @@ export const InlineTimerPicker = ({
           onPress={handleSave}
           style={[{ flex: 1, backgroundColor: colors.primary, paddingVertical: 14, borderRadius: 14, alignItems: 'center', shadowColor: colors.primary, shadowOpacity: 0.2, shadowRadius: 6, shadowOffset: { width: 0, height: 2 } }, isArabic && { flexDirection: 'row-reverse' }]}
         >
-          <Text style={{ color: colors.surfaceText, fontWeight: '800', fontSize: 15 }}>✓ {t.setTimer}</Text>
+          <Text style={{ color: colors.primaryText, fontWeight: '800', fontSize: 15 }}>✓ {t.setTimer}</Text>
         </TouchableOpacity>
         <TouchableOpacity
           onPress={onCancel}

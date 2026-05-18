@@ -18,7 +18,8 @@ const mutationMap: Record<string, any> = {
   "todos:startSubtaskTimer": apiAny.todos.startSubtaskTimer,
   "todos:pauseSubtaskTimer": apiAny.todos.pauseSubtaskTimer,
   "todos:linkProject": apiAny.todos.linkProject,
-  
+  "todos:linkTask": apiAny.todos.linkTask,
+   
   // Projects
   "projects:addProject": apiAny.projects.addProject || apiAny.projects?.add,
   "projects:deleteProject": apiAny.projects.deleteProject,

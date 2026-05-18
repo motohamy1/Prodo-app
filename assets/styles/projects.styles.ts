@@ -569,7 +569,7 @@ export const createProjectsStyles = (colors: ColorScheme) => {
     modalPrimaryBtnText: {
       fontSize: 16,
       fontWeight: "800",
-      color: colors.bg === '#0F0F12' ? colors.text : colors.surfaceText,
+      color: colors.primaryText,
     },
     modalSecondaryBtn: {
       alignItems: "center",
@@ -662,12 +662,162 @@ export const createProjectsStyles = (colors: ColorScheme) => {
        elevation: 3,
     },
      checklistInput: {
-        flex: 1,
-        fontSize: 16, // Match TodoInput text size
-        color: colors.text,
-        marginLeft: 12, // Match TodoInput margin
-        fontWeight: "500",
-        padding: 0,
-     },
+         flex: 1,
+         fontSize: 16, // Match TodoInput text size
+         color: colors.text,
+         marginLeft: 12, // Match TodoInput margin
+         fontWeight: "500",
+         padding: 0,
+      },
+
+    // ── Category List Type Cards ────────────────────────────────────────────
+    categoryListsSection: {
+      paddingHorizontal: 20,
+      marginTop: 20,
+      marginBottom: 20,
+    },
+    categoryListsGrid: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: 12,
+    },
+    categoryListCard: {
+      width: (width - 40 - 12) / 2,
+      borderRadius: 22,
+      padding: 16,
+      backgroundColor: raised.backgroundColor,
+      shadowColor: colors.shadow,
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.06,
+      shadowRadius: 12,
+      elevation: 3,
+    },
+    categoryListCardIconWrap: {
+      width: 44,
+      height: 44,
+      borderRadius: 16,
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginBottom: 10,
+    },
+    categoryListCardTitle: {
+      fontSize: 14,
+      fontWeight: '800',
+      color: colors.text,
+      marginBottom: 4,
+    },
+    categoryListCardCount: {
+      fontSize: 12,
+      fontWeight: '600',
+      color: colors.textMuted,
+    },
+
+    // ── Category List Modal ───────────────────────────────────────────────────
+    listModalSheet: {
+      backgroundColor: raised.backgroundColor,
+      borderTopLeftRadius: 32,
+      borderTopRightRadius: 32,
+      paddingTop: 12,
+      paddingHorizontal: 24,
+      paddingBottom: 40,
+      maxHeight: '90%',
+    },
+    listModalTitle: {
+      fontSize: 20,
+      fontWeight: '800',
+      color: colors.text,
+      marginBottom: 4,
+    },
+    listModalSubtitle: {
+      fontSize: 13,
+      color: colors.textMuted,
+      marginBottom: 20,
+    },
+    listItemRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: colors.primary + '0C',
+      borderRadius: 16,
+      paddingHorizontal: 16,
+      paddingVertical: 14,
+      gap: 12,
+      width: '100%',
+      marginBottom: 8,
+    },
+    listItemText: {
+      flex: 1,
+      fontSize: 14,
+      fontWeight: '500',
+      color: colors.text,
+    },
+    bulletDot: {
+      width: 8,
+      height: 8,
+      borderRadius: 4,
+      backgroundColor: colors.primary,
+    },
+    toggleHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 12,
+      flex: 1,
+    },
+    toggleContent: {
+      marginTop: 8,
+      marginLeft: 34,
+      padding: 12,
+      backgroundColor: colors.bg,
+      borderRadius: 12,
+    },
+    toggleContentText: {
+      fontSize: 13,
+      color: colors.textMuted,
+      lineHeight: 20,
+    },
+    listAddRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: raised.backgroundColor,
+      borderRadius: 20,
+      paddingHorizontal: 16,
+      paddingVertical: 12,
+      marginTop: 8,
+      shadowColor: colors.shadow,
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.06,
+      shadowRadius: 12,
+      elevation: 3,
+    },
+    listInput: {
+      flex: 1,
+      fontSize: 16,
+      color: colors.text,
+      marginLeft: 12,
+      fontWeight: '500',
+      padding: 0,
+    },
+    listAddButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingVertical: 14,
+      paddingHorizontal: 16,
+      gap: 12,
+      width: '100%',
+    },
+    listAddButtonText: {
+      fontSize: 16,
+      fontWeight: '500',
+      color: colors.primary,
+    },
+    emptyListContainer: {
+      paddingVertical: 40,
+      alignItems: 'center',
+      gap: 8,
+    },
+    emptyListText: {
+      fontSize: 14,
+      color: colors.textMuted,
+      fontWeight: '500',
+    },
   });
 };

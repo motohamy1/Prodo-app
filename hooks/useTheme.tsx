@@ -87,6 +87,7 @@ export interface ColorScheme {
   textMuted: string;
   border: string;
   primary: string;
+  primaryText: string;
   success: string;
   warning: string;
   danger: string;
@@ -162,6 +163,7 @@ const lightColors: ColorScheme = {
   border: "#D0D0D0",
   // Single accent: darkest gray on the page, reserved for CTAs
   primary: "#4A4A4A",
+  primaryText: "#FFFFFF",
   // Semantic tones — all monochrome, distinguished by lightness
   success: "#555555",
   warning: "#666666",
@@ -256,44 +258,45 @@ const lightColors: ColorScheme = {
 // Dark shadow recedes, light highlight rises.
 
 const darkColors: ColorScheme = {
-  bg: "#2D2D30",
-  surface: "#2D2D30",
+  bg: "#000000",
+  surface: "#000000",
   surfaceText: "#FFFFFF",
   text: "#FFFFFF",
-  textMuted: "#A0A0A0",
-  border: "#404045",
+  textMuted: "#98989F",
+  border: "#1C1C1E",
   // Single accent: lightest gray on the dark surface
   primary: "#CCCCCC",
+  primaryText: "#000000",
   // Semantic tones — monochrome light-dark reversal
   success: "#AAAAAA",
   warning: "#999999",
   danger: "#888888",
   info: "#777777",
   // Alert/status backgrounds — tonal, no hue
-  infoBg: "#3D3D40",
-  successBg: "#28282C",
-  warningBg: "#323236",
-  dangerBg: "#303034",
+  infoBg: "#1C1C1E",
+  successBg: "#111111",
+  warningBg: "#161616",
+  dangerBg: "#141414",
   // Task status backgrounds — extrusion depth
-  taskInProgressBg: "#36363A",   // Maximum extrusion
-  taskNotStartedBg: "#2D2D30",   // Flush with background
-  taskDoneBg: "#28282C",         // Inset
-  taskPausedBg: "#323236",       // Moderate extrusion
-  taskNotDoneBg: "#303034",      // Slightly lighter than not-started
-  shadow: "#1A1A1C",
+  taskInProgressBg: "#1C1C1E",   // Maximum extrusion
+  taskNotStartedBg: "#000000",   // Flush with background
+  taskDoneBg: "#111111",         // Inset
+  taskPausedBg: "#161616",       // Moderate extrusion
+  taskNotDoneBg: "#141414",      // Slightly lighter than not-started
+  shadow: "#000000",
   gradients: {
-    background: ["#2D2D30", "#2D2D30"],
-    surface: ["#3D3D40", "#2D2D30"],
+    background: ["#000000", "#000000"],
+    surface: ["#0A0A0A", "#000000"],
     primary: ["#DDDDDD", "#CCCCCC"],
     success: ["#BBBBBB", "#AAAAAA"],
     warning: ["#AAAAAA", "#999999"],
     danger: ["#999999", "#888888"],
-    muted: ["#3D3D40", "#2D2D30"],
-    empty: ["#2D2D30", "#3D3D40"],
+    muted: ["#0A0A0A", "#000000"],
+    empty: ["#000000", "#0A0A0A"],
   },
   backgrounds: {
-    input: "#242428",     // Inset surface — darker than background
-    editInput: "#3D3D40",
+    input: "#111111",     // Inset surface — darker than background
+    editInput: "#1C1C1E",
   },
   statusBarStyle: "light-content" as const,
   radii: {
@@ -307,46 +310,46 @@ const darkColors: ColorScheme = {
   neomorphic: {
     raised: {
       shadow: {
-        shadowColor: "#1A1A1C",
+        shadowColor: "#000000",
         shadowOffset: { width: 6, height: 6 },
-        shadowOpacity: 0.35,
+        shadowOpacity: 0.45,
         shadowRadius: 12,
         elevation: 8,
       },
-      backgroundColor: "#36363A",
+      backgroundColor: "#1C1C1E",
     },
     raisedLg: {
       shadow: {
-        shadowColor: "#1A1A1C",
+        shadowColor: "#000000",
         shadowOffset: { width: 8, height: 8 },
-        shadowOpacity: 0.4,
+        shadowOpacity: 0.5,
         shadowRadius: 16,
         elevation: 10,
       },
-      backgroundColor: "#36363A",
+      backgroundColor: "#1C1C1E",
     },
     pressed: {
       shadow: {
-        shadowColor: "#1A1A1C",
+        shadowColor: "#000000",
         shadowOffset: { width: 4, height: 4 },
-        shadowOpacity: 0.25,
+        shadowOpacity: 0.35,
         shadowRadius: 8,
         elevation: 4,
       },
-      backgroundColor: "#242428",
+      backgroundColor: "#111111",
     },
     inset: {
       shadow: {
-        shadowColor: "#1A1A1C",
+        shadowColor: "#000000",
         shadowOffset: { width: 4, height: 4 },
-        shadowOpacity: 0.2,
+        shadowOpacity: 0.3,
         shadowRadius: 8,
         elevation: 2,
       },
-      backgroundColor: "#242428",
+      backgroundColor: "#111111",
     },
     flat: {
-      backgroundColor: "#2D2D30",
+      backgroundColor: "#000000",
     },
   },
 };

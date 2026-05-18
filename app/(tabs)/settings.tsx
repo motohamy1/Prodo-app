@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, ScrollView, TouchableOpacity, StatusBar, Switch, Platform, Modal, TextInput, Alert, Image, ActivityIndicator, KeyboardAvoidingView } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, TouchableWithoutFeedback, StatusBar, Switch, Platform, Modal, TextInput, Alert, Image, ActivityIndicator, KeyboardAvoidingView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import useTheme from '@/hooks/useTheme';
@@ -231,8 +231,9 @@ const Settings = () => {
 
           {/* Profile Edit Modal */}
           <Modal visible={isEditModalVisible} transparent animationType="slide" onRequestClose={() => setIsEditModalVisible(false)}>
-            <KeyboardAvoidingView style={styles.modalOverlay} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-              <View style={styles.modalContent}>
+            <TouchableWithoutFeedback onPress={() => setIsEditModalVisible(false)}>
+              <KeyboardAvoidingView style={styles.modalOverlay} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+                <View style={styles.modalContent} onStartShouldSetResponder={() => true}>
                 <View style={styles.modalHeader}>
                   <Text style={styles.modalTitle}>Edit Profile</Text>
                   <TouchableOpacity onPress={() => setIsEditModalVisible(false)}>
@@ -265,28 +266,30 @@ const Settings = () => {
                     <Text style={styles.saveButtonText}>Save Changes</Text>
                   </TouchableOpacity>
                 </View>
-              </View>
-            </KeyboardAvoidingView>
+                </View>
+              </KeyboardAvoidingView>
+            </TouchableWithoutFeedback>
           </Modal>
 
           {/* Sound Selection Modal */}
-          <Modal visible={isSoundModalVisible} animationType="slide" transparent>
-            <View style={styles.modalOverlay}>
-              <View style={styles.modalContent}>
+          <Modal visible={isSoundModalVisible} animationType="slide" transparent onRequestClose={() => setIsSoundModalVisible(false)}>
+            <TouchableWithoutFeedback onPress={() => setIsSoundModalVisible(false)}>
+              <View style={styles.modalOverlay}>
+                <View style={styles.modalContent} onStartShouldSetResponder={() => true}>
                 <Text style={styles.modalTitle}>{isArabic ? 'اختر النغمة' : 'Select Sound'}</Text>
                 
                 <TouchableOpacity 
                   style={[styles.saveButton, { marginBottom: 12, backgroundColor: notificationSound === 'default' ? colors.primary : colors.surface }]}
                   onPress={() => handleSoundChange('default')}
                 >
-                  <Text style={[styles.saveButtonText, { color: colors.text }]}>{isArabic ? 'النغمة الافتراضية' : 'Default'}</Text>
+                  <Text style={[styles.saveButtonText, { color: notificationSound === 'default' ? colors.primaryText : colors.text }]}>{isArabic ? 'النغمة الافتراضية' : 'Default'}</Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity 
                   style={[styles.saveButton, { marginBottom: 24, backgroundColor: notificationSound === 'alarm_tone.wav' ? colors.primary : colors.surface }]}
                   onPress={() => handleSoundChange('alarm_tone.wav')}
                 >
-                  <Text style={[styles.saveButtonText, { color: colors.text }]}>{isArabic ? 'نغمة مخصصة' : 'Custom Sound'}</Text>
+                  <Text style={[styles.saveButtonText, { color: notificationSound === 'alarm_tone.wav' ? colors.primaryText : colors.text }]}>{isArabic ? 'نغمة مخصصة' : 'Custom Sound'}</Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity style={[styles.saveButton, { backgroundColor: colors.danger }]} onPress={() => setIsSoundModalVisible(false)}>
@@ -294,6 +297,7 @@ const Settings = () => {
                 </TouchableOpacity>
               </View>
             </View>
+          </TouchableWithoutFeedback>
           </Modal>
 
           {/* Preferences */}

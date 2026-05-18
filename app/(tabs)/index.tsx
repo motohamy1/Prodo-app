@@ -1,6 +1,6 @@
 import { createHomeStyles } from "@/assets/styles/home.styles";
-import { useOfflineFirstTodos, useSyncStatus } from "@/hooks/useOfflineFirstData";
 import { useOfflineMutation } from "@/hooks/useOfflineMutation";
+import { useOfflineQuery } from "@/hooks/useOfflineQuery";
 import useTheme from "@/hooks/useTheme";
 import { Ionicons } from '@expo/vector-icons';
 import React, { useMemo, useRef, useState } from 'react';
@@ -31,8 +31,8 @@ import { useTranslation } from "@/utils/i18n";
 const Index = () => {
     const { userId, language } = useAuth();
     const { t, isArabic } = useTranslation(language);
-    const { todos, addTodo, updateTodo, deleteTodo, getTodoById, loading, isOnline, sync } = useOfflineFirstTodos(userId);
-    const { isSyncing, lastSync, pendingChanges, triggerSync } = useSyncStatus(userId);
+    const todos = useOfflineQuery<any[]>('todos', api.todos.get, userId ? { userId } : 'skip');
+    const deleteTodo = useOfflineMutation(api.todos.deleteTodo, "todos:deleteTodo");
     const router = useRouter();
     const { colors, isDarkMode } = useTheme();
 
@@ -49,6 +49,7 @@ const Index = () => {
     
     const [isGlobalActionModalVisible, setGlobalActionModalVisible] = useState(false);
     const [editingTaskId, setEditingTaskId] = useState<Id<"todos"> | null>(null);
+    const [editingTaskSection, setEditingTaskSection] = useState<'subtask' | undefined>(undefined);
     const [showOverdue, setShowOverdue] = useState(true);
     const [sortActive, setSortActive] = useState('');
     const [isTaskModalVisible, setIsTaskModalVisible] = useState(false);
@@ -171,7 +172,7 @@ const Index = () => {
       };
     }, [normalizedTodos, sortActive]);
     const inProgressCount = todayTodos.filter(t => t.status === 'in_progress').length;
-    const totalCount = todayTodos.filter(t => t.status !== 'done' && t.status !== 'in_progress').length;
+    const totalCount = todayTodos.filter(t => t.status !== 'done' && t.status !== 'not_done').length;
     
     const totalDoneCount = groupedDoneTodos.reduce((sum, group) => sum + group.tasks.length, 0);
 
@@ -195,8 +196,9 @@ const Index = () => {
       setProjectModalVisible(true);
     };
 
-    const handleEditTask = (id: Id<"todos">) => {
+    const handleEditTask = (id: Id<"todos">, section?: 'subtask') => {
       setEditingTaskId(id);
+      setEditingTaskSection(section);
     };
 
     const handleSelectProject = (selection: { type: string; categoryId?: string; subCategoryId?: string; projectId?: string }) => {
@@ -213,7 +215,7 @@ const Index = () => {
     };
 
     const displayedTodos = useMemo(() => {
-        if (activeFilter === 'All') return todayTodos.filter(t => t.status !== 'done' && t.status !== 'in_progress');
+        if (activeFilter === 'All') return todayTodos.filter(t => t.status !== 'done' && t.status !== 'not_done');
         if (activeFilter === 'In Progress') return todayTodos.filter(t => t.status === 'in_progress');
         if (activeFilter === 'Done' || activeFilter === 'Not Done') return [];
         return todayTodos;
@@ -252,15 +254,15 @@ const Index = () => {
                                <Text style={homeStyles.todaysPlanTitle}>{t.todaysPlan}</Text>
                                <Text style={homeStyles.todaysPlanSubtitle}>{todayDoneForProgress}/{todayAllForProgress} {t.tasksCompleted}</Text>
                            </View>
-                           <CircularProgress 
-                               size={64} 
-                               strokeWidth={6} 
-                               progress={progressPercent} 
-                              color="#000000" 
-                              unfilledColor="rgba(0,0,0,0.1)"
-                          >
-                              <Text style={{ fontSize: 16, fontWeight: "800", color: "#000000" }}>{progressPercent}%</Text>
-                          </CircularProgress>
+                            <CircularProgress
+                                size={64}
+                                strokeWidth={6}
+                                progress={progressPercent}
+                                color={colors.primaryText}
+                                unfilledColor={colors.primaryText + '30'}
+                            >
+                                <Text style={{ fontSize: 16, fontWeight: "800", color: colors.primaryText }}>{progressPercent}%</Text>
+                            </CircularProgress>
                       </View>
 
                       {/* Filter Pills */}
@@ -311,12 +313,12 @@ const Index = () => {
                           </View>
                        )}
 
-                       {activeFilter === 'All' && todayTodos.length === 0 && (
-                         <View style={homeStyles.emptyContainer}>
-                            <Ionicons name="clipboard-outline" size={48} color={colors.border} />
-                            <Text style={homeStyles.emptyText}>{t.noTasksFound}</Text>
-                         </View>
-                       )}
+                        {activeFilter === 'All' && displayedTodos.length === 0 && (
+                          <View style={homeStyles.emptyContainer}>
+                             <Ionicons name="clipboard-outline" size={48} color={colors.border} />
+                             <Text style={homeStyles.emptyText}>{t.noTasksFound}</Text>
+                          </View>
+                        )}
 
                        {activeFilter === 'In Progress' && displayedTodos.length === 0 && (
                          <View style={homeStyles.emptyContainer}>
@@ -432,10 +434,10 @@ const Index = () => {
                            </TouchableOpacity>
                            
                            {showOverdue && overdueByDay.map(({ dayTimestamp, tasks: dayTasks }) => {
-                             const filteredDayTasks = activeFilter === 'Done' ? dayTasks.filter(t => t.status === 'done')
-                               : activeFilter === 'In Progress' ? dayTasks.filter(t => t.status === 'in_progress')
-                               : activeFilter === 'All' ? dayTasks.filter(t => t.status !== 'done' && t.status !== 'in_progress')
-                               : dayTasks;
+                              const filteredDayTasks = activeFilter === 'Done' ? dayTasks.filter(t => t.status === 'done')
+                                : activeFilter === 'In Progress' ? dayTasks.filter(t => t.status === 'in_progress')
+                                : activeFilter === 'All' ? dayTasks.filter(t => t.status !== 'done' && t.status !== 'not_done')
+                                : dayTasks;
                              if (filteredDayTasks.length === 0) return null;
 
                              const dayLabel = new Date(dayTimestamp).toLocaleDateString(
@@ -477,8 +479,9 @@ const Index = () => {
                 />
                 <TaskDetailModal 
                     visible={editingTaskId !== null}
-                    onClose={() => setEditingTaskId(null)}
+                    onClose={() => { setEditingTaskId(null); setEditingTaskSection(undefined); }}
                     todoId={editingTaskId}
+                    initialSection={editingTaskSection}
                 />
             </SafeAreaView>
 
