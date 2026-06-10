@@ -75,6 +75,7 @@ const BlockItem = React.memo(({
   onFocus: (blockId: string) => void;
 }) => {
   const [localText, setLocalText] = useState(item.content);
+  const [blockHeight, setBlockHeight] = React.useState(0);
   useEffect(() => { setLocalText(item.content); }, [item.content]);
 
   const handleTextChange = useCallback((txt: string) => {
@@ -124,6 +125,8 @@ const BlockItem = React.memo(({
           opacity: (item.type === 'todo' && item.checked) ? 0.5 : 1,
           textAlign: isArabic ? 'right' : 'left',
           lineHeight: item.type === 'h1' ? 38 : item.type === 'h2' ? 30 : 24,
+          minHeight: 40,
+          height: Math.max(40, blockHeight + 16),
         }}
         placeholder={item.type.startsWith('h') ? `Heading ${item.type.charAt(1)}` : "Type..."}
         placeholderTextColor={colors.textMuted + '60'}
@@ -135,6 +138,7 @@ const BlockItem = React.memo(({
         multiline={true}
         blurOnSubmit={false}
         scrollEnabled={false}
+        onContentSizeChange={(e) => setBlockHeight(e.nativeEvent.contentSize.height)}
       />
     </View>
   );

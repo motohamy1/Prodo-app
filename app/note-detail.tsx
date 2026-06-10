@@ -46,21 +46,25 @@ const NoteHeader = React.memo(({
   isArabic: boolean; 
   colors: any; 
   styles: any;
-}) => (
-  <View style={{ paddingHorizontal: 24, paddingTop: 16 }}>
-    <TextInput
-      style={[styles.titleInput, isArabic && { textAlign: 'right' }]}
-      placeholder="Note Title"
-      placeholderTextColor={colors.textMuted}
-      value={title}
-      onChangeText={setTitle}
-      blurOnSubmit={true}
-      multiline={true}
-      scrollEnabled={false}
-    />
-    <Text style={[styles.dateSubtitle, isArabic && { textAlign: 'right' }]}>{formattedNoteDate}</Text>
-  </View>
-));
+}) => {
+  const [titleHeight, setTitleHeight] = React.useState(0);
+  return (
+    <View style={{ paddingHorizontal: 24, paddingTop: 16 }}>
+      <TextInput
+        style={[styles.titleInput, isArabic && { textAlign: 'right' }, { height: Math.max(44, titleHeight) }]}
+        placeholder="Note Title"
+        placeholderTextColor={colors.textMuted}
+        value={title}
+        onChangeText={setTitle}
+        blurOnSubmit={true}
+        multiline={true}
+        scrollEnabled={false}
+        onContentSizeChange={(e) => setTitleHeight(e.nativeEvent.contentSize.height)}
+      />
+      <Text style={[styles.dateSubtitle, isArabic && { textAlign: 'right' }]}>{formattedNoteDate}</Text>
+    </View>
+  );
+});
 NoteHeader.displayName = 'NoteHeader';
 
 interface BlockItemProps {
@@ -101,6 +105,7 @@ const BlockItem = React.memo(({
   onFocus,
 }: BlockItemProps) => {
   const [localText, setLocalText] = useState(item.content);
+  const [blockHeight, setBlockHeight] = React.useState(0);
 
   useEffect(() => {
     setLocalText(item.content);
@@ -158,7 +163,8 @@ const BlockItem = React.memo(({
             lineHeight: (item.type === 'h1' || item.type === 'h2' || item.type === 'h3') ? blockLineHeight : undefined,
             textDecorationLine: (item.type === 'todo' && item.checked) ? 'line-through' : 'none',
             opacity: (item.type === 'todo' && item.checked) ? 0.6 : 1,
-            textAlign: isArabic ? 'right' : 'left'
+            textAlign: isArabic ? 'right' : 'left',
+            height: Math.max(40, blockHeight + 16),
           }
         ]}
         placeholder={item.type.startsWith('h') ? `HEADING ${item.type.charAt(1)}` : "Type away..."}
@@ -175,6 +181,7 @@ const BlockItem = React.memo(({
         multiline={true}
         blurOnSubmit={false}
         scrollEnabled={false}
+        onContentSizeChange={(e) => setBlockHeight(e.nativeEvent.contentSize.height)}
       />
     </View>
   );

@@ -106,7 +106,7 @@ const Index = () => {
             todayDoneCount++;
             todayTotalCount++;
           }
-        } else if (t.status === 'not_done' && isScheduledForToday) {
+        } else if (t.status === 'not_done') {
           // Separate not_done tasks into their own list
           todayNotDoneList.push(t);
           todayTotalCount++;

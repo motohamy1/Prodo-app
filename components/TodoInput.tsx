@@ -181,11 +181,11 @@ const TodoInput: React.FC<TodoInputProps> = ({ initialDate, projectId, onFocus }
                   </Text>
                 </CircularProgress>
               ) : (
-                <Ionicons name="timer-outline" size={28} color={colors.surfaceText + '80'} />
+                <Ionicons name="timer-outline" size={28} color={colors.text} />
               )}
             </TouchableOpacity>
             <TouchableOpacity onPress={handleAddTodo}>
-              <Ionicons name={isArabic ? "arrow-back-circle" : "arrow-up-circle"} size={28} color={newTodo.trim() ? colors.primary : colors.surfaceText + 'a0'} />
+              <Ionicons name={isArabic ? "arrow-back-circle" : "arrow-up-circle"} size={28} color={newTodo.trim() ? colors.primary : colors.text} />
 
             </TouchableOpacity>
           </View>
@@ -259,7 +259,7 @@ const TodoInput: React.FC<TodoInputProps> = ({ initialDate, projectId, onFocus }
                 setNewSubtaskText("");
               }
             }}>
-              <Ionicons name="add-circle" size={24} color={newSubtaskText.trim() ? colors.primary : colors.surfaceText + 'a0'} />
+              <Ionicons name="add-circle" size={24} color={newSubtaskText.trim() ? colors.primary : colors.text} />
 
             </TouchableOpacity>
           </View>

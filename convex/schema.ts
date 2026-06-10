@@ -107,19 +107,30 @@ export default defineSchema({
   yearlyGoals: defineTable({
     userId: v.id("users"),
     year: v.number(),
+    month: v.optional(v.number()),
+    day: v.optional(v.number()),
     text: v.string(),
     description: v.optional(v.string()),
     isCompleted: v.optional(v.boolean()),
     createdAt: v.optional(v.number()),
-  }).index("by_user_year", ["userId", "year"]),
+  })
+    .index("by_user_year", ["userId", "year"])
+    .index("by_user_year_month", ["userId", "year", "month"])
+    .index("by_user_year_month_day", ["userId", "year", "month", "day"]),
 
   yearlyAchievements: defineTable({
     userId: v.id("users"),
     year: v.number(),
+    month: v.optional(v.number()),
+    day: v.optional(v.number()),
     text: v.string(),
     description: v.optional(v.string()),
+    isCompleted: v.optional(v.boolean()),
     createdAt: v.optional(v.number()),
-  }).index("by_user_year", ["userId", "year"]),
+  })
+    .index("by_user_year", ["userId", "year"])
+    .index("by_user_year_month", ["userId", "year", "month"])
+    .index("by_user_year_month_day", ["userId", "year", "month", "day"]),
 
   categoryItems: defineTable({
     userId: v.optional(v.id("users")),

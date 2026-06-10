@@ -61,7 +61,8 @@
         }
       ],
       "expo-task-manager",
-      "expo-localization"
+      "expo-localization",
+      "expo-status-bar"
     ],
     "experiments": {
       "typedRoutes": true

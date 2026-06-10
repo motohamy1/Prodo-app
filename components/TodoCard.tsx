@@ -496,8 +496,8 @@ const TodoCard: React.FC<TodoCardProps> = ({ todo, onSetTimer, onLongPress, onLi
                         </TouchableOpacity>
                       ) : (
                         <TouchableOpacity style={[homeStyles.actionBtn, { backgroundColor: isBrightBg ? colors.text : colors.primary }]} onPress={handleStartTimer}>
-                          <Ionicons name="play" size={16} color={isBrightBg ? colors.surfaceText : (isDarkMode ? colors.text : colors.surfaceText)} />
-                          <Text style={[homeStyles.actionBtnText, { color: isBrightBg ? colors.surfaceText : (isDarkMode ? colors.text : colors.surfaceText) }]}>{t.startTask}</Text>
+                          <Ionicons name="play" size={16} color={isBrightBg ? "#FFFFFF" : (isDarkMode ? colors.text : colors.surfaceText)} />
+                          <Text style={[homeStyles.actionBtnText, { color: isBrightBg ? "#FFFFFF" : (isDarkMode ? colors.text : colors.surfaceText) }]}>{t.startTask}</Text>
                         </TouchableOpacity>
                       )}
                     </View>
@@ -505,7 +505,7 @@ const TodoCard: React.FC<TodoCardProps> = ({ todo, onSetTimer, onLongPress, onLi
                   {optimisticStatus === 'in_progress' && (
                     <View style={[{ flexDirection: 'row', alignItems: 'center', gap: 8 }]}>
                       <TouchableOpacity style={[homeStyles.iconBtn, { backgroundColor: isBrightBg ? colors.surfaceText + '66' : colors.surface, borderColor: isBrightBg ? colors.text + '1A' : colors.border, borderWidth: 1 }]} onPress={handlePauseTimer}>
-                        <Ionicons name="pause" size={16} color={contentColor} />
+                        <Ionicons name="pause" size={16} color={isBrightBg ? "#FFFFFF" : contentColor} />
                       </TouchableOpacity>
                       {todo.timerDirection === 'up' && (
                         <TouchableOpacity style={[homeStyles.iconBtn, { backgroundColor: isBrightBg ? colors.success + '4D' : colors.success + '26', borderColor: isBrightBg ? colors.text + '1A' : colors.success + '40', borderWidth: 1 }]} onPress={() => { updateStatus({ id: todo._id, status: 'done' }); showTaskCompletedNotification(todo.text, isArabic ? 'ar' : 'en'); }}>
@@ -517,7 +517,7 @@ const TodoCard: React.FC<TodoCardProps> = ({ todo, onSetTimer, onLongPress, onLi
                   {optimisticStatus === 'paused' && (
                     <View style={[{ flexDirection: 'row', alignItems: 'center', gap: 8 }]}>
                       <TouchableOpacity style={[homeStyles.iconBtn, { backgroundColor: isBrightBg ? colors.text : colors.primary }]} onPress={handleStartTimer}>
-                        <Ionicons name="play" size={16} color={isBrightBg ? colors.surfaceText : (isDarkMode ? colors.text : colors.surfaceText)} />
+                        <Ionicons name="play" size={16} color={isBrightBg ? "#FFFFFF" : (isDarkMode ? colors.text : colors.surfaceText)} />
                       </TouchableOpacity>
                       {todo.timerDirection === 'up' && (
                         <TouchableOpacity style={[homeStyles.iconBtn, { backgroundColor: isBrightBg ? colors.success + '4D' : colors.success + '26', borderColor: isBrightBg ? colors.text + '1A' : colors.success + '40', borderWidth: 1 }]} onPress={() => { updateStatus({ id: todo._id, status: 'done' }); showTaskCompletedNotification(todo.text, isArabic ? 'ar' : 'en'); }}>

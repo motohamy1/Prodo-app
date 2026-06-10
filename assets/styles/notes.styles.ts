@@ -152,6 +152,7 @@ export const createNotesStyles = (colors: ColorScheme, isArabic: boolean = false
       fontFamily: Platform.OS === 'ios' ? 'Baskerville' : 'serif',
       color: colors.text,
       marginBottom: 8,
+      minHeight: 44,
     },
     dateSubtitle: {
       fontSize: 16,
@@ -166,6 +167,7 @@ export const createNotesStyles = (colors: ColorScheme, isArabic: boolean = false
       textAlignVertical: 'top',
       lineHeight: 28,
       paddingBottom: 100, // space for toolbar
+      minHeight: 40,
     },
     
     // Rich Toolbar
