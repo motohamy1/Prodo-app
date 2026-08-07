@@ -32,7 +32,7 @@ const Header = () => {
             </View>
 
             <TouchableOpacity
-                activeOpacity={0.85}
+                activeOpacity={0.97}
                 style={homeStyles.headerRight}
                 onPress={() => {
                   import('@/utils/notifications').then(({ requestPermissionsAsync }) => {

@@ -39,33 +39,36 @@ function RootLayoutContent() {
   const { isFirstLaunch, completeOnboarding } = useOnboarding();
 
   useEffect(() => {
-    Notifications?.setNotificationCategoryAsync(NOTIFICATION_CATEGORIES.TIMER_ACTIVE, [
-      {
-        identifier: TIMER_ACTIONS.PAUSE,
-        buttonTitle: t.pause || 'Pause',
-      },
-      {
-        identifier: TIMER_ACTIONS.RESUME,
-        buttonTitle: t.resume || 'Resume',
-      },
-      {
-        identifier: TIMER_ACTIONS.RESET,
-        buttonTitle: t.reset || 'Reset',
-        options: {
-          isDestructive: true,
-        }
-      },
-    ]);
+    if (Platform.OS !== 'web' && Notifications?.setNotificationCategoryAsync) {
+      Notifications.setNotificationCategoryAsync(NOTIFICATION_CATEGORIES.TIMER_ACTIVE, [
+        {
+          identifier: TIMER_ACTIONS.PAUSE,
+          buttonTitle: t.pause || 'Pause',
+        },
+        {
+          identifier: TIMER_ACTIONS.RESUME,
+          buttonTitle: t.resume || 'Resume',
+        },
+        {
+          identifier: TIMER_ACTIONS.RESET,
+          buttonTitle: t.reset || 'Reset',
+          options: {
+            isDestructive: true,
+          }
+        },
+      ]);
 
-    Notifications?.setNotificationCategoryAsync(NOTIFICATION_CATEGORIES.TIMER_COMPLETED, [
-      {
-        identifier: TIMER_ACTIONS.RESET,
-        buttonTitle: t.reset || 'Reset',
-        options: {
-          isDestructive: true,
-        }
-      },
-    ]);
+      Notifications.setNotificationCategoryAsync(NOTIFICATION_CATEGORIES.TIMER_COMPLETED, [
+        {
+          identifier: TIMER_ACTIONS.RESET,
+          buttonTitle: t.reset || 'Reset',
+          options: {
+            isDestructive: true,
+          }
+        },
+      ]);
+    }
+
     
     // Hide splash screen once loading and onboarding check are complete
     if (!isLoading && isFirstLaunch !== null) {

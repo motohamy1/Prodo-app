@@ -201,7 +201,7 @@ export default function GoalsDetailScreen() {
               borderRadius: 14,
               backgroundColor: addType === 'goal' ? colors.surface : 'transparent',
               alignItems: 'center',
-              shadowColor: addType === 'goal' ? '#000' : 'transparent',
+              shadowColor: addType === 'goal' ? colors.shadow : 'transparent',
               shadowOffset: { width: 0, height: 2 },
               shadowOpacity: 0.1,
               shadowRadius: 4,
@@ -350,7 +350,7 @@ export default function GoalsDetailScreen() {
                 alignItems: 'center',
               }}
             >
-              <Ionicons name="add" size={20} color="#FFF" />
+              <Ionicons name="add" size={20} color={colors.primaryText} />
             </TouchableOpacity>
           </View>
         </ScrollView>

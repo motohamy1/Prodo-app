@@ -1,4 +1,4 @@
-import { NeoShadow, NeoDepth } from '@/hooks/useTheme';
+import { ShadowPreset } from '@/hooks/useTheme';
 
 export interface NeomorphismTestResult {
   testName: string;
@@ -21,82 +21,62 @@ class NeomorphismTester {
   testThemeSystem(colors: any): NeomorphismTestResult {
     try {
       const requiredNeomorphicProps = ['neomorphic'];
-      const requiredStates: NeoDepth[] = ['raised', 'raisedLg', 'pressed', 'inset', 'flat'];
+      const requiredStates: (keyof typeof colors.shadows)[] = ['raised', 'raisedLg', 'pressed', 'inset', 'flat'];
       
-      // Check if neomorphic properties exist
-      if (!colors.neomorphic) {
+      // Check if shadows exist
+      if (!colors.shadows) {
         return {
-          testName: 'Theme System - Neomorphic Properties',
+          testName: 'Theme System - Shadow Properties',
           success: false,
-          message: 'Missing neomorphic properties in theme'
+          message: 'Missing shadows in theme'
         };
       }
 
-      // Check if all required states exist
-      for (const state of requiredStates) {
-        if (!colors.neomorphic[state]) {
+      // Check if all required shadow presets exist
+      const requiredShadowKeys = ['sm', 'md', 'lg'] as const;
+      for (const key of requiredShadowKeys) {
+        if (!colors.shadows[key]) {
           return {
-            testName: 'Theme System - Neomorphic States',
+            testName: 'Theme System - Shadow Presets',
             success: false,
-            message: `Missing neomorphic state: ${state}`
-          };
-        }
-
-        // Check if each state has required properties
-        // flat only needs backgroundColor; all others need shadow + backgroundColor
-        const stateDef = colors.neomorphic[state];
-        if (!('backgroundColor' in stateDef)) {
-          return {
-            testName: 'Theme System - State Properties',
-            success: false,
-            message: `Missing property 'backgroundColor' in neomorphic.${state}`
-          };
-        }
-        if (state !== 'flat' && !('shadow' in stateDef)) {
-          return {
-            testName: 'Theme System - State Properties',
-            success: false,
-            message: `Missing property 'shadow' in neomorphic.${state}`
+            message: `Missing shadow preset: ${key}`
           };
         }
       }
 
-      // Check shadow values are properly formatted as NeoShadow objects
-      const raisedShadow: NeoShadow = colors.neomorphic.raised.shadow;
+      const raisedShadow: ShadowPreset = colors.shadows.md;
       if (!raisedShadow || typeof raisedShadow !== 'object') {
         return {
           testName: 'Theme System - Shadow Values',
           success: false,
-          message: 'Invalid shadow value in raised state: expected NeoShadow object'
+          message: 'Invalid shadow value in md preset: expected ShadowPreset object'
         };
       }
-      const requiredShadowProps: (keyof NeoShadow)[] = ['shadowColor', 'shadowOffset', 'shadowOpacity', 'shadowRadius', 'elevation'];
+      const requiredShadowProps: (keyof ShadowPreset)[] = ['shadowColor', 'shadowOffset', 'shadowOpacity', 'shadowRadius', 'elevation'];
       for (const prop of requiredShadowProps) {
         if (!(prop in raisedShadow)) {
           return {
             testName: 'Theme System - Shadow Values',
             success: false,
-            message: `Missing NeoShadow property '${prop}' in neomorphic.raised.shadow`
+            message: `Missing ShadowPreset property '${prop}' in shadows.md`
           };
         }
       }
 
       return {
-        testName: 'Theme System - Neomorphic Properties',
+        testName: 'Theme System - Shadow Properties',
         success: true,
         message: 'All neomorphic theme properties are correctly configured',
         details: {
-          hasRaised: !!colors.neomorphic.raised,
-          hasRaisedLg: !!colors.neomorphic.raisedLg,
-          hasPressed: !!colors.neomorphic.pressed,
-          hasInset: !!colors.neomorphic.inset,
-          hasFlat: !!colors.neomorphic.flat,
-          shadowFormat: 'NeoShadow object'
+          hasSm: !!colors.shadows.sm,
+          hasMd: !!colors.shadows.md,
+          hasLg: !!colors.shadows.lg,
+          shadowFormat: 'ShadowPreset object'
         }
       };
     } catch (error) {
       return {
-        testName: 'Theme System - Neomorphic Properties',
+        testName: 'Theme System - Shadow Properties',
         success: false,
         message: error instanceof Error ? error.message : 'Unknown error'
       };
@@ -158,46 +138,46 @@ class NeomorphismTester {
   // Test shadow properties for neomorphic effect
   testShadowProperties(colors: any): NeomorphismTestResult {
     try {
-      const raisedShadow: NeoShadow = colors.neomorphic.raised.shadow;
-      const pressedShadow: NeoShadow = colors.neomorphic.pressed.shadow;
-      const insetShadow: NeoShadow = colors.neomorphic.inset.shadow;
+      const smShadow: ShadowPreset = colors.shadows.sm;
+      const mdShadow: ShadowPreset = colors.shadows.md;
+      const lgShadow: ShadowPreset = colors.shadows.lg;
 
-      // Check if raised shadow has positive offsets (light source from top-left)
-      if (raisedShadow.shadowOffset.width <= 0 || raisedShadow.shadowOffset.height <= 0) {
+      // Check if md shadow has positive offsets
+      if (mdShadow.shadowOffset.width < 0 || mdShadow.shadowOffset.height <= 0) {
         return {
-          testName: 'Shadow Properties - Raised Shadow',
+          testName: 'Shadow Properties - Md Shadow',
           success: false,
-          message: 'Raised shadow should have positive offsets for neomorphic effect'
+          message: 'Md shadow should have non-negative width and positive height offsets'
         };
       }
 
-      // Check if pressed shadow has reduced opacity (receded look)
-      if (pressedShadow.shadowOpacity >= raisedShadow.shadowOpacity) {
+      // Check if lg shadow has higher opacity than md and sm
+      if (lgShadow.shadowOpacity < mdShadow.shadowOpacity) {
         return {
-          testName: 'Shadow Properties - Pressed Shadow',
+          testName: 'Shadow Properties - Shadow Opacity',
           success: false,
-          message: 'Pressed shadow should have lower opacity than raised shadow'
+          message: 'Lg shadow should have higher or equal opacity than md shadow'
         };
       }
 
-      // Check if inset shadow has positive offsets
-      if (insetShadow.shadowOffset.width <= 0 || insetShadow.shadowOffset.height <= 0) {
+      // Check if sm shadow has positive offsets
+      if (smShadow.shadowOffset.width < 0 || smShadow.shadowOffset.height <= 0) {
         return {
-          testName: 'Shadow Properties - Inset Shadow',
+          testName: 'Shadow Properties - Sm Shadow',
           success: false,
-          message: 'Inset shadow should have positive offsets'
+          message: 'Sm shadow should have non-negative width and positive height offsets'
         };
       }
 
       return {
-        testName: 'Shadow Properties - Neomorphic Shadows',
+        testName: 'Shadow Properties',
         success: true,
-        message: 'Shadow properties are correctly configured for neomorphism',
+        message: 'Shadow properties are correctly configured',
         details: {
-          raisedOffset: raisedShadow.shadowOffset,
-          pressedOpacity: pressedShadow.shadowOpacity,
-          insetOffset: insetShadow.shadowOffset,
-          raisedElevation: raisedShadow.elevation
+          smOffset: smShadow.shadowOffset,
+          mdOpacity: mdShadow.shadowOpacity,
+          lgOffset: lgShadow.shadowOffset,
+          mdElevation: mdShadow.elevation
         }
       };
     } catch (error) {
@@ -340,7 +320,7 @@ class NeomorphismTester {
     }
 
     report += `\n=== NEOMORPHISM IMPLEMENTATION STATUS ===\n`;
-    report += `Theme System: ✅ Updated with neomorphic properties (NeoShadow objects)\n`;
+    report += `Theme System: ✅ Updated with shadow properties (ShadowPreset objects)\n`;
     report += `Components: ✅ All target components updated with theme tokens\n`;
     report += `Styles: ✅ Home styles updated with neomorphic shadows\n`;
     report += `Colors: ✅ Monochrome gray palette for light mode\n`;

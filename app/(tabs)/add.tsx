@@ -8,20 +8,19 @@ import { useTranslation } from '@/utils/i18n';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React from 'react';
-import { ActivityIndicator, Alert, Dimensions, FlatList, Platform, Share, Text, TouchableOpacity, View, ScrollView } from 'react-native';
+import { Alert, Platform, Share, Text, TouchableOpacity, View, ScrollView } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import ActionModal, { ActionOption } from '@/components/ActionModal';
+import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
+import ActionModal from '@/components/ActionModal';
 import { useScreenGuide } from '@/hooks/useScreenGuide';
 import ScreenGuide from '@/components/ScreenGuide';
 import type { GuideTip } from '@/components/ScreenGuide';
 
-// Helper to get random pastel colors for cards
-const getRandomColor = (index: number, isDarkMode: boolean) => {
-  const lightColors = ['#FFE4E1', '#E0FFFF', '#E6E6FA', '#F0FFF0', '#FFF0F5', '#FDF5E6'];
-  const darkColors = ['#2C1A1A', '#1A2C2C', '#1A1A2C', '#1B2C1B', '#2C1A24', '#2C2A1A'];
-  const arr = isDarkMode ? darkColors : lightColors;
-  return arr[index % arr.length];
-};
+import { JEWEL_DARK, JEWEL_LIGHT } from '@/utils/magicColors';
+import LivePress from '@/components/LivePress';
+
+const getJewelColor = (i: number, isDark: boolean) =>
+  (isDark ? JEWEL_DARK : JEWEL_LIGHT)[i % 6];
 
 export default function NotesScreen() {
   const router = useRouter();
@@ -32,183 +31,142 @@ export default function NotesScreen() {
   const insets = useSafeAreaInsets();
   const { showGuide, dismissGuide } = useScreenGuide('notes');
 
-  const notesTips: GuideTip[] = isArabic ? [
-    { icon: 'document-text-outline', title: 'ملاحظة سريعة', description: 'اضغط "ملاحظة سريعة" لإنشاء ملاحظة غنية بالتنسيق والألوان.', accentColor: '#5CB2FF' },
-    { icon: 'notifications-outline', title: 'تذكير جديد', description: 'اضغط "تذكير جديد" لإنشاء تذكير بتاريخ ووقت محدد.', accentColor: '#FF5C77' },
-    { icon: 'hand-left-outline', title: 'اضغط مطولاً', description: 'اضغط مطولاً على بطاقة لتعديلها أو مشاركتها أو حذفها.', accentColor: '#FFAB00' },
+  const tips: GuideTip[] = isArabic ? [
+    { icon: 'document-text-outline', title: 'ملاحظة سريعة', description: 'اضغط لإنشاء ملاحظة غنية بالتنسيق والألوان.', accentColor: colors.primary },
+    { icon: 'notifications-outline', title: 'تذكير جديد', description: 'اضغط لإنشاء تذكير بتاريخ ووقت محدد.', accentColor: colors.warning },
+    { icon: 'hand-left-outline', title: 'اضغط مطولاً', description: 'اضغط مطولاً على بطاقة لتعديلها أو مشاركتها أو حذفها.', accentColor: colors.success },
   ] : [
-    { icon: 'document-text-outline', title: 'Quick Note', description: 'Tap "Quick Note" to create a rich note with formatting and colors.', accentColor: '#5CB2FF' },
-    { icon: 'notifications-outline', title: 'New Reminder', description: 'Tap "New Reminder" to create a reminder with a specific date and time.', accentColor: '#FF5C77' },
-    { icon: 'hand-left-outline', title: 'Long Press', description: 'Long press any card to edit, share, or delete it.', accentColor: '#FFAB00' },
+    { icon: 'document-text-outline', title: 'Quick Note', description: 'Tap to create a rich note with formatting and colors.', accentColor: colors.primary },
+    { icon: 'notifications-outline', title: 'New Reminder', description: 'Tap to create a reminder with a specific date and time.', accentColor: colors.warning },
+    { icon: 'hand-left-outline', title: 'Long Press', description: 'Long press any card to edit, share, or delete it.', accentColor: colors.success },
   ];
 
   const todos = useOfflineQuery<any[]>('todos', api.todos.get, userId ? { userId } : 'skip');
   const deleteTodo = useOfflineMutation(api.todos.deleteTodo, "todos:deleteTodo");
+  const [actionVisible, setActionVisible] = React.useState(false);
+  const [selected, setSelected] = React.useState<any>(null);
 
-  const [isActionModalVisible, setActionModalVisible] = React.useState(false);
-  const [selectedItem, setSelectedItem] = React.useState<any>(null);
+  const reminders = todos?.filter((t: any) => t.type === 'reminder' || (!t.type && t.dueDate && t.dueDate > 0 && !t.categoryId && !t.priority && !t.timerDuration)) ?? [];
+  const notes = todos?.filter((t: any) => t.type === 'note' || (!t.type && (!t.dueDate || t.dueDate === 0) && !t.categoryId && !t.priority && !t.timerDuration && !t.isCompleted)) ?? [];
 
   if (todos === undefined) {
     return (
       <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
-        <ActivityIndicator size="large" color={colors.primary} />
+        <Animated.View entering={FadeInDown.duration(400)}>
+          <View style={styles.loadingPulse} />
+        </Animated.View>
       </View>
     );
   }
 
-  // Filter notes vs reminders
-  const reminders = todos.filter(t => t.type === 'reminder' || (!t.type && t.dueDate && t.dueDate > 0 && !t.categoryId && !t.priority && !t.timerDuration));
-  const notes = todos.filter(t => t.type === 'note' || (!t.type && (!t.dueDate || t.dueDate === 0) && !t.categoryId && !t.priority && !t.timerDuration && !t.isCompleted));
-
-
-
-  const renderCard = (item: any, globalIndex: number) => {
-    if (item.isAdd) {
-      const isRem = item._id === 'add_new_rem';
-      return (
-        <TouchableOpacity
-          key={item._id}
-          style={[
-            styles.gridCard,
-            {
-              backgroundColor: colors.surface,
-              borderWidth: 0,
-              padding: 0,
-              borderRadius: 32,
-              justifyContent: 'center',
-              alignItems: 'center',
-              shadowColor: "#000",
-              shadowOpacity: 0.1,
-              shadowRadius: 10,
-              elevation: 4
-            }
-          ]}
-          activeOpacity={0.7}
+  const AddCard = ({ type, index }: { type: 'reminder' | 'note'; index: number }) => {
+    const isRem = type === 'reminder';
+    return (
+      <Animated.View entering={FadeInDown.duration(500).delay(index * 100)} style={styles.addCardOuter}>
+        <LivePress
+          style={styles.addCardInner}
+          activeOpacity={0.97}
           onPress={() => router.push({ pathname: '/note-detail', params: { isReminder: isRem ? 'true' : 'false' } })}
         >
-          <View style={{
-            width: 56,
-            height: 56,
-            borderRadius: 28,
-            backgroundColor: isRem ? colors.bg : 'transparent',
-            justifyContent: 'center',
-            alignItems: 'center',
-            marginBottom: 12,
-            overflow: 'hidden'
-          }}>
-            <Ionicons name={isRem ? 'alarm' : 'add'} size={32} color={colors.primary} />
+          <View style={styles.addCardIconWrap}>
+            <Ionicons name={isRem ? 'alarm' : 'sparkles'} size={28} color={colors.primary} />
           </View>
-          <Text style={[{
-            color: colors.text,
-            fontSize: 16,
-            fontWeight: '700',
-            fontFamily: Platform.OS === 'ios' ? 'Inter' : 'sans-serif-medium'
-          }, isArabic && { textAlign: 'right' }]}>
+          <Text style={[styles.addCardLabel, isArabic && { textAlign: 'right' }]}>
             {isRem ? t.newReminder : t.quickNote}
           </Text>
-        </TouchableOpacity>
-      );
-    }
-
-    const bgColor = getRandomColor(globalIndex, isDarkMode);
-
-    return (
-      <TouchableOpacity
-        key={item._id}
-        style={[styles.gridCard, { backgroundColor: bgColor }]}
-        activeOpacity={0.7}
-        onPress={() => router.push({ pathname: '/note-detail', params: { id: item._id } })}
-        onLongPress={() => {
-          setSelectedItem(item);
-          setActionModalVisible(true);
-        }}
-      >
-        <Text style={[styles.cardTitle, { color: isDarkMode ? '#FFFFFF' : '#000000' }]} numberOfLines={2}>
-          {item.text || 'Untitled'}
-        </Text>
-        <Text style={[styles.cardDesc, { color: isDarkMode ? '#FFFFFF99' : 'rgba(0,0,0,0.6)' }]}>...</Text>
-        {(item.type === 'reminder' || item.dueDate) && item.dueDate ? (
-          <Text style={[styles.cardDate, { color: colors.primary }]}>
-            {new Date(item.dueDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+          <Text style={[styles.addCardHint, isArabic && { textAlign: 'right' }]}>
+            {isRem ? 'Set date & time' : 'Rich text editor'}
           </Text>
-        ) : null}
-      </TouchableOpacity>
+        </LivePress>
+      </Animated.View>
     );
   };
 
+  const NoteCard = ({ item, index }: { item: any; index: number }) => {
+    const bg = getJewelColor(index, isDarkMode);
+    const textColor = isDarkMode ? '#FFFFFF' : '#1E1F23';
+    const mutedColor = isDarkMode ? 'rgba(255,255,255,0.6)' : 'rgba(0,0,0,0.5)';
+    const accentColor = isDarkMode ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.06)';
 
+    return (
+      <Animated.View entering={FadeInDown.duration(500).delay((index + 1) * 80).springify()} style={styles.cardOuter}>
+        <LivePress
+          style={[styles.cardInner, { backgroundColor: bg }]}
+          activeOpacity={0.97}
+          onPress={() => router.push({ pathname: '/note-detail', params: { id: item._id } })}
+          onLongPress={() => { setSelected(item); setActionVisible(true); }}
+        >
+          {item.dueDate ? (
+            <View style={[styles.cardReminderPill, { backgroundColor: accentColor }]}>
+              <Ionicons name="alarm-outline" size={12} color={colors.primary} />
+              <Text style={[styles.cardReminderPillText, { color: colors.primary }]}>
+                {new Date(item.dueDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+              </Text>
+            </View>
+          ) : null}
+          <Text style={[styles.cardTitleText, { color: textColor }]} numberOfLines={2}>
+            {item.text || 'Untitled'}
+          </Text>
+          <View style={styles.cardTrailing}>
+            <Ionicons
+              name={item.type === 'reminder' ? 'notifications' : 'document-text'}
+              size={16}
+              color={mutedColor}
+            />
+          </View>
+        </LivePress>
+      </Animated.View>
+    );
+  };
+
+  const Section = ({ title, count, items, type }: { title: string; count: number; items: any[]; type: 'reminder' | 'note' }) => (
+    <Animated.View entering={FadeInUp.duration(600).delay(200)} style={styles.sectionOuter}>
+      <View style={styles.sectionInner}>
+        <View style={[styles.sectionHeader, isArabic && { flexDirection: 'row-reverse' }]}>
+          <Text style={[styles.sectionLabel, isArabic && { textAlign: 'right' }]}>{title}</Text>
+          <View style={styles.sectionBadge}>
+            <Text style={styles.sectionBadgeText}>{count}</Text>
+          </View>
+        </View>
+
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.scrollContent}
+        >
+          <View style={[styles.cardsRow, isArabic && { flexDirection: 'row-reverse' }]}>
+            <AddCard type={type} index={0} />
+            {items.map((item, i) => <NoteCard key={item._id} item={item} index={i} />)}
+          </View>
+        </ScrollView>
+      </View>
+    </Animated.View>
+  );
 
   return (
     <SafeAreaView style={[styles.safeArea, { overflow: 'hidden' }]} edges={['left', 'right', 'bottom']}>
-      <View style={[styles.header, isArabic && { flexDirection: 'row-reverse' }, { paddingTop: Math.max(insets.top, 16) }]}>
-        <Text style={[styles.headerTitle, { fontFamily: Platform.OS === 'ios' ? 'Baskerville' : 'serif', fontSize: 32 }]}>{t.notesAndReminders}</Text>
-      </View>
+      <Animated.View entering={FadeInDown.duration(500)} style={[styles.header, isArabic && { flexDirection: 'row-reverse' }, { paddingTop: Math.max(insets.top, 20) }]}>
+        <Text style={styles.headerTitle}>{t.notesAndReminders}</Text>
+      </Animated.View>
 
       <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 100 }}>
-        <View style={styles.sectionContainer}>
-          <View style={[styles.sectionHeader, isArabic && { flexDirection: 'row-reverse' }]}>
-            <Text style={[styles.sectionTitle, { fontFamily: Platform.OS === 'ios' ? 'Baskerville' : 'serif' }]}>{t.reminders}</Text>
-            <Text style={{ color: colors.textMuted, fontSize: 16 }}>{reminders.length}</Text>
-          </View>
-
-          <ScrollView 
-            horizontal 
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={{ paddingRight: 24 }}
-          >
-            <View style={[{ flexDirection: 'row', alignItems: 'center' }, isArabic && { flexDirection: 'row-reverse' }]}>
-              {/* Quick Add Reminder - Lone Column, Centered Vertically */}
-              <View style={[styles.loneColumnCentered, { marginRight: 12, marginLeft: isArabic ? 12 : 24 }]}>
-                {renderCard({ _id: 'add_new_rem', isAdd: true }, -1)}
-              </View>
-              
-              {/* Reminder items - 2 Row Grid */}
-              <View style={[styles.horizontalGridContainer, { paddingHorizontal: 0 }, isArabic && { flexDirection: 'column-reverse' }]}>
-                {reminders.map((item, index) => renderCard(item, index))}
-              </View>
-            </View>
-          </ScrollView>
-        </View>
-
-        <View style={styles.sectionContainer}>
-          <View style={[styles.sectionHeader, isArabic && { flexDirection: 'row-reverse' }]}>
-            <Text style={[styles.sectionTitle, { fontFamily: Platform.OS === 'ios' ? 'Baskerville' : 'serif' }]}>{t.notes}</Text>
-            <Text style={{ color: colors.textMuted, fontSize: 16 }}>{notes.length}</Text>
-          </View>
-
-          <ScrollView 
-            horizontal 
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={{ paddingRight: 24 }}
-          >
-            <View style={[{ flexDirection: 'row', alignItems: 'center' }, isArabic && { flexDirection: 'row-reverse' }]}>
-              {/* Quick Add Note - Lone Column, Centered Vertically */}
-              <View style={[styles.loneColumnCentered, { marginRight: 12, marginLeft: isArabic ? 12 : 24 }]}>
-                {renderCard({ _id: 'add_new_note', isAdd: true }, -1)}
-              </View>
-
-              {/* Note items - 2 Row Grid */}
-              <View style={[styles.horizontalGridContainer, { paddingHorizontal: 0 }, isArabic && { flexDirection: 'column-reverse' }]}>
-                {notes.map((item, index) => renderCard(item, index))}
-              </View>
-            </View>
-          </ScrollView>
-        </View>
+        <Section title={t.reminders} count={reminders.length} items={reminders} type="reminder" />
+        <Section title={t.notes} count={notes.length} items={notes} type="note" />
       </ScrollView>
 
-      <ActionModal 
-        visible={isActionModalVisible}
-        onClose={() => { setActionModalVisible(false); setSelectedItem(null); }}
-        title={selectedItem?.text || (selectedItem?.type === 'reminder' ? t.reminders : t.notes)}
+      <ActionModal
+        visible={actionVisible}
+        onClose={() => { setActionVisible(false); setSelected(null); }}
+        title={selected?.text || (selected?.type === 'reminder' ? t.reminders : t.notes)}
         isArabic={isArabic}
         options={[
-          { label: t.edit, icon: 'create-outline', onPress: () => router.push({ pathname: '/note-detail', params: { id: selectedItem?._id } }) },
-          { label: t.share, icon: 'share-social-outline', onPress: () => Share.share({ message: `${selectedItem?.text || 'Untitled'}\n\n${selectedItem?.description || ''}` }) },
-          { label: t.delete, icon: 'trash-outline', variant: 'destructive', onPress: () => { if (selectedItem) deleteTodo({ id: selectedItem._id }); } }
+          { label: t.edit, icon: 'create-outline', onPress: () => router.push({ pathname: '/note-detail', params: { id: selected?._id } }) },
+          { label: t.share, icon: 'share-social-outline', onPress: () => Share.share({ message: `${selected?.text || 'Untitled'}\n\n${selected?.description || ''}` }) },
+          { label: t.delete, icon: 'trash-outline', variant: 'destructive', onPress: () => { if (selected) deleteTodo({ id: selected._id }); } }
         ]}
       />
 
-      <ScreenGuide visible={showGuide} tips={notesTips} onDismiss={dismissGuide} isArabic={isArabic} />
+      <ScreenGuide visible={showGuide} tips={tips} onDismiss={dismissGuide} isArabic={isArabic} />
     </SafeAreaView>
   );
 }

@@ -1,67 +1,95 @@
 import { useAuth } from '@/hooks/useAuth';
-import useTheme, { getNeoShadow } from '@/hooks/useTheme';
+import useTheme from '@/hooks/useTheme';
 import { useTranslation } from '@/utils/i18n';
-import React from 'react';
-import { Platform, StyleProp, StyleSheet, Text, TouchableOpacity, ViewStyle } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import { useEffect } from 'react';
+import { StyleProp, StyleSheet, Text, TouchableWithoutFeedback, ViewStyle } from 'react-native';
+import Animated, {
+  Easing,
+  useAnimatedStyle,
+  useSharedValue,
+  withDelay,
+  withRepeat,
+  withSequence,
+  withSpring,
+  withTiming,
+} from 'react-native-reanimated';
+import { PRESS_SPRING } from './LivePress';
 
 interface FloatingActionButtonProps {
   onPress: () => void;
   style?: StyleProp<ViewStyle>;
 }
 
+const FAB_RADIUS = 20;
+
 export default function FloatingActionButton({ onPress, style }: FloatingActionButtonProps) {
   const { colors } = useTheme();
   const { language } = useAuth();
   const { isArabic } = useTranslation(language);
-  const raisedLg = getNeoShadow(colors, 'raisedLg', isArabic);
+
+  const breath = useSharedValue(1);
+  const press = useSharedValue(1);
+
+  useEffect(() => {
+    breath.value = withRepeat(
+      withSequence(
+        withDelay(2200, withTiming(1.025, { duration: 1100, easing: Easing.inOut(Easing.ease) })),
+        withDelay(400, withTiming(1, { duration: 1100, easing: Easing.inOut(Easing.ease) }))
+      ),
+      -1,
+      false
+    );
+    return () => {
+      breath.value = 1;
+    };
+  }, [breath]);
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: breath.value * press.value }],
+  }));
 
   return (
-    <TouchableOpacity
-      style={[
-        styles.fab, 
-        { 
-          backgroundColor: colors.primary,
-          shadowColor: raisedLg.shadowColor,
-          shadowOffset: raisedLg.shadowOffset,
-          shadowOpacity: raisedLg.shadowOpacity,
-          shadowRadius: raisedLg.shadowRadius,
-          elevation: raisedLg.elevation,
-        }, 
-        style
-      ]}
-      onPress={onPress}
-      activeOpacity={0.8}
-    >
-      <Text style={[
-        styles.text, 
-        { 
-          color: colors.primaryText,
-          fontSize: 12,
-          fontWeight: '800',
-          fontFamily: Platform.OS === 'ios' ? 'Inter' : 'sans-serif-medium'
-        }
-      ]}>
-        {isArabic ? 'إضافة مهمة' : 'Add a Task'}
-      </Text>
-    </TouchableOpacity>
+    <Animated.View style={[styles.wrapper, { ...colors.shadows.glow }, animatedStyle, style]}>
+      <TouchableWithoutFeedback
+        onPress={onPress}
+        onPressIn={() => { press.value = withSpring(0.96, PRESS_SPRING); }}
+        onPressOut={() => { press.value = withSpring(1, PRESS_SPRING); }}
+      >
+        <LinearGradient
+          colors={['#EC9A33', '#EC9A33']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.fab}
+        >
+          <Text style={[styles.text, { color: colors.primaryText }]}>
+            {isArabic ? 'إضافة مهمة' : 'Add a Task'}
+          </Text>
+        </LinearGradient>
+      </TouchableWithoutFeedback>
+    </Animated.View>
   );
 }
 
 const styles = StyleSheet.create({
+  wrapper: {
+    alignSelf: 'flex-start',
+    borderRadius: FAB_RADIUS,
+    overflow: 'hidden',
+  },
   fab: {
-    height: 42,
-    paddingHorizontal: 24,
-    borderRadius: 20,
+    height: 44,
+    paddingHorizontal: 12,
+    borderRadius: FAB_RADIUS,
+    overflow: 'hidden',
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.25,
-    shadowRadius: 24,
-    elevation: 6,
     zIndex: 100,
+    alignSelf: 'flex-start',
   },
   text: {
+    fontSize: 13,
+    fontWeight: '700',
     textAlign: 'center',
   },
 });

@@ -1,0 +1,2 @@
+- [x] Update `components/FloatingActionButton.tsx` to fix Add a Task gradient clipping
+- [x] Mark TODO complete after edit

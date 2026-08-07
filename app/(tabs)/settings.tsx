@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, ScrollView, TouchableOpacity, TouchableWithoutFeedback, StatusBar, Switch, Platform, Modal, TextInput, Alert, Image, ActivityIndicator, KeyboardAvoidingView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
 import useTheme from '@/hooks/useTheme';
 import { createSettingsStyles } from '@/assets/styles/settings.styles';
 import { api } from '@/convex/_generated/api';
@@ -153,17 +154,17 @@ const Settings = () => {
 
   const SettingItem = ({ icon, label, value, type = 'chevron', color, onPress, status }: any) => (
     <TouchableOpacity 
-      style={styles.settingItem} 
+      style={styles.settingRow} 
       onPress={onPress} 
-      activeOpacity={0.7}
+      activeOpacity={0.97}
       disabled={type === 'switch' && status === undefined}
     >
-      <View style={[styles.iconWrapper, { backgroundColor: color + '15' }]}>
+      <View style={[styles.settingIconWrap, { backgroundColor: color + '14' }]}>
         <Ionicons name={icon} size={20} color={color} />
       </View>
       <Text style={[styles.settingLabel, isArabic && { textAlign: 'right' }]}>{label}</Text>
       {value && <Text style={styles.settingValue}>{value}</Text>}
-      {type === 'chevron' && <Ionicons name={isArabic ? "chevron-back" : "chevron-forward"} size={18} color={colors.textMuted} />}
+      {type === 'chevron' && <Ionicons name={isArabic ? "chevron-back" : "chevron-forward"} size={16} color={colors.textMuted} style={styles.settingChevron} />}
       {type === 'switch' && (
         <Switch 
           value={status ?? isDarkMode} 
@@ -181,35 +182,35 @@ const Settings = () => {
       <SafeAreaView style={styles.safeArea}>
         <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
           
-          <View style={styles.header}>
+          <Animated.View entering={FadeInDown.duration(500)} style={styles.header}>
             <Text style={[styles.headerTitle, isArabic && { textAlign: 'right' }]}>
               {t.settings}
             </Text>
-          </View>
+          </Animated.View>
 
           {/* Profile Section */}
-          <View style={styles.section}>
-            <Text style={[styles.sectionTitle, isArabic && { textAlign: 'right' }]}>
-              {t.profile}
-            </Text>
-            <View style={[styles.card, styles.profileHero]}>
+          <Animated.View entering={FadeInUp.duration(600).delay(100)} style={styles.profileOuter}>
+            <View style={styles.profileInner}>
+              <View style={styles.profileRow}>
                 <TouchableOpacity 
-                  style={[styles.avatarContainer, isArabic && { marginLeft: 0, marginRight: 0 }]}
+                  style={styles.avatarContainer}
                   onPress={handlePickImage}
                   disabled={isUploading}
                 >
                   {isUploading ? (
                     <ActivityIndicator color={colors.primary} />
                   ) : userSettings?.profilePictureUrl ? (
-                    <Image source={{ uri: userSettings.profilePictureUrl }} style={{ width: 64, height: 64, borderRadius: 32 }} />
+                    <Image source={{ uri: userSettings.profilePictureUrl }} style={styles.avatar} />
                   ) : (
-                    <Ionicons name="person" size={40} color={colors.primary} />
+                    <View style={[styles.avatar, { justifyContent: 'center', alignItems: 'center' }]}>
+                      <Ionicons name="person" size={36} color={colors.primary} />
+                    </View>
                   )}
-                  <View style={{ position: 'absolute', bottom: -2, right: -2, backgroundColor: colors.surface, borderRadius: 10, padding: 2, borderWidth: 1, borderColor: colors.border }}>
-                    <Ionicons name="camera" size={14} color={colors.primary} />
+                  <View style={styles.avatarEditButton}>
+                    <Ionicons name="camera" size={14} color={colors.primaryText} />
                   </View>
                 </TouchableOpacity>
-                <View style={[styles.profileInfo, isArabic && { alignItems: 'flex-end', marginLeft: 0, marginRight: 20 }]}>
+                <View style={[styles.profileInfo, isArabic && { alignItems: 'flex-end' }]}>
                   <Text style={styles.profileName}>
                     {isAnonymous ? t.guest : (userSettings?.name || '...')}
                   </Text>
@@ -218,16 +219,17 @@ const Settings = () => {
                   </Text>
                 </View>
                 {isAnonymous ? (
-                  <TouchableOpacity onPress={() => router.push('/auth')}>
+                  <TouchableOpacity style={styles.profileEditBtn} onPress={() => router.push('/auth')}>
                     <Ionicons name={isArabic ? "log-in" : "log-in-outline"} size={24} color={colors.primary} />
                   </TouchableOpacity>
                 ) : (
-                  <TouchableOpacity onPress={() => setIsEditModalVisible(true)}>
+                  <TouchableOpacity style={styles.profileEditBtn} onPress={() => setIsEditModalVisible(true)}>
                     <Ionicons name="create-outline" size={20} color={colors.primary} />
                   </TouchableOpacity>
                 )}
               </View>
             </View>
+          </Animated.View>
 
           {/* Profile Edit Modal */}
           <Modal visible={isEditModalVisible} transparent animationType="slide" onRequestClose={() => setIsEditModalVisible(false)}>
@@ -265,6 +267,9 @@ const Settings = () => {
                   <TouchableOpacity style={styles.saveButton} onPress={handleUpdateProfile}>
                     <Text style={styles.saveButtonText}>Save Changes</Text>
                   </TouchableOpacity>
+                  <TouchableOpacity style={styles.cancelButton} onPress={() => setIsEditModalVisible(false)}>
+                    <Text style={styles.cancelButtonText}>Cancel</Text>
+                  </TouchableOpacity>
                 </View>
                 </View>
               </KeyboardAvoidingView>
@@ -279,21 +284,25 @@ const Settings = () => {
                 <Text style={styles.modalTitle}>{isArabic ? 'اختر النغمة' : 'Select Sound'}</Text>
                 
                 <TouchableOpacity 
-                  style={[styles.saveButton, { marginBottom: 12, backgroundColor: notificationSound === 'default' ? colors.primary : colors.surface }]}
+                  style={[styles.soundOption, notificationSound === 'default' && styles.soundOptionActive]}
                   onPress={() => handleSoundChange('default')}
                 >
-                  <Text style={[styles.saveButtonText, { color: notificationSound === 'default' ? colors.primaryText : colors.text }]}>{isArabic ? 'النغمة الافتراضية' : 'Default'}</Text>
+                  <Ionicons name="notifications-outline" size={22} color={notificationSound === 'default' ? colors.primary : colors.textMuted} />
+                  <Text style={styles.soundOptionLabel}>{isArabic ? 'النغمة الافتراضية' : 'Default'}</Text>
+                  {notificationSound === 'default' && <Ionicons name="checkmark-circle" size={22} color={colors.primary} />}
                 </TouchableOpacity>
 
                 <TouchableOpacity 
-                  style={[styles.saveButton, { marginBottom: 24, backgroundColor: notificationSound === 'alarm_tone.wav' ? colors.primary : colors.surface }]}
+                  style={[styles.soundOption, notificationSound === 'alarm_tone.wav' && styles.soundOptionActive]}
                   onPress={() => handleSoundChange('alarm_tone.wav')}
                 >
-                  <Text style={[styles.saveButtonText, { color: notificationSound === 'alarm_tone.wav' ? colors.primaryText : colors.text }]}>{isArabic ? 'نغمة مخصصة' : 'Custom Sound'}</Text>
+                  <Ionicons name="musical-note-outline" size={22} color={notificationSound === 'alarm_tone.wav' ? colors.primary : colors.textMuted} />
+                  <Text style={styles.soundOptionLabel}>{isArabic ? 'نغمة مخصصة' : 'Custom Sound'}</Text>
+                  {notificationSound === 'alarm_tone.wav' && <Ionicons name="checkmark-circle" size={22} color={colors.primary} />}
                 </TouchableOpacity>
 
-                <TouchableOpacity style={[styles.saveButton, { backgroundColor: colors.danger }]} onPress={() => setIsSoundModalVisible(false)}>
-                  <Text style={styles.saveButtonText}>{t.cancel || 'Cancel'}</Text>
+                <TouchableOpacity style={styles.cancelButton} onPress={() => setIsSoundModalVisible(false)}>
+                  <Text style={styles.cancelButtonText}>{t.cancel || 'Cancel'}</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -301,8 +310,8 @@ const Settings = () => {
           </Modal>
 
           {/* Preferences */}
-          <View style={styles.section}>
-            <Text style={[styles.sectionTitle, isArabic && { textAlign: 'right' }]}>
+          <Animated.View entering={FadeInUp.duration(600).delay(200)} style={styles.sectionGroup}>
+            <Text style={[styles.sectionGroupLabel, isArabic && { textAlign: 'right' }]}>
               {t.preferences}
             </Text>
             <View style={styles.card}>
@@ -314,7 +323,7 @@ const Settings = () => {
                 onPress={toggleDarkMode}
                 status={isDarkMode}
               />
-              <View style={styles.divider} />
+              <View style={styles.settingRowDivider} />
               <SettingItem 
                 icon="notifications-outline" 
                 label={t.notifications} 
@@ -323,7 +332,7 @@ const Settings = () => {
                 onPress={handleToggleNotifications}
                 color={colors.danger} 
               />
-              <View style={styles.divider} />
+              <View style={styles.settingRowDivider} />
               <SettingItem 
                 icon="musical-notes-outline" 
                 label={isArabic ? 'نغمة الإشعار' : 'Notification Sound'}
@@ -331,7 +340,7 @@ const Settings = () => {
                 onPress={() => setIsSoundModalVisible(true)}
                 color={colors.warning} 
               />
-              <View style={styles.divider} />
+              <View style={styles.settingRowDivider} />
               <SettingItem 
                 icon="language-outline" 
                 label={t.language} 
@@ -340,44 +349,44 @@ const Settings = () => {
                 color={colors.success} 
               />
             </View>
-          </View>
+          </Animated.View>
 
-          {/* Statistics Section */}
-          <View style={styles.section}>
-            <Text style={[styles.sectionTitle, isArabic && { textAlign: 'right' }]}>
+          {/* Statistics */}
+          <Animated.View entering={FadeInUp.duration(600).delay(300)} style={styles.sectionGroup}>
+            <Text style={[styles.sectionGroupLabel, isArabic && { textAlign: 'right' }]}>
               {t.statistics}
             </Text>
-            <View style={[styles.card, styles.dbInfoCard]}>
-              <View style={[styles.dbRow, isArabic && { flexDirection: 'row-reverse' }]}>
-                <Text style={styles.dbLabel}>{t.totalTasks}</Text>
-                <Text style={styles.dbValue}>{todos.length}</Text>
+            <View style={styles.statsGrid}>
+              <View style={styles.statCard}>
+                <Text style={styles.statValue}>{todos.length}</Text>
+                <Text style={styles.statLabel}>{t.totalTasks}</Text>
               </View>
-              <View style={[styles.dbRow, isArabic && { flexDirection: 'row-reverse' }]}>
-                <Text style={styles.dbLabel}>{t.completed}</Text>
-                <View style={[styles.statusBadge, { backgroundColor: colors.success + '15' }]}>
-                  <Text style={[styles.statusText, { color: colors.success }]}>
-                    {todos.filter(t => t.status === 'done').length} {t.done}
-                  </Text>
-                </View>
-              </View>
-              <View style={[styles.dbRow, isArabic && { flexDirection: 'row-reverse' }]}>
-                <Text style={styles.dbLabel}>{t.activeWorkspaces}</Text>
-                <Text style={styles.dbValue}>{projects.length}</Text>
-              </View>
-              <View style={[styles.dbRow, isArabic && { flexDirection: 'row-reverse' }]}>
-                <Text style={styles.dbLabel}>{t.completionRate}</Text>
-                <Text style={[styles.dbValue, { color: colors.primary }]}>
-                  {todos.length > 0 
-                    ? Math.round((todos.filter(t => t.status === 'done').length / todos.length) * 100) 
-                    : 0}%
+              <View style={styles.statCard}>
+                <Text style={[styles.statValue, { color: colors.success }]}>
+                  {todos.filter((t: any) => t.status === 'done').length}
                 </Text>
+                <Text style={styles.statLabel}>{t.completed}</Text>
               </View>
             </View>
-          </View>
+            <View style={styles.statsGrid}>
+              <View style={styles.statCard}>
+                <Text style={styles.statValue}>{projects.length}</Text>
+                <Text style={styles.statLabel}>{t.activeWorkspaces}</Text>
+              </View>
+              <View style={styles.statCard}>
+                <Text style={[styles.statValue, { color: colors.primary }]}>
+                  {todos.length > 0 
+                    ? Math.round((todos.filter((t: any) => t.status === 'done').length / todos.length) * 100) 
+                    : 0}%
+                </Text>
+                <Text style={styles.statLabel}>{t.completionRate}</Text>
+              </View>
+            </View>
+          </Animated.View>
 
-          {/* Utility / Other */}
-          <View style={styles.section}>
-            <Text style={[styles.sectionTitle, isArabic && { textAlign: 'right' }]}>
+          {/* Utility */}
+          <Animated.View entering={FadeInUp.duration(600).delay(400)} style={styles.sectionGroup}>
+            <Text style={[styles.sectionGroupLabel, isArabic && { textAlign: 'right' }]}>
               {t.project}
             </Text>
             <View style={styles.card}>
@@ -386,13 +395,13 @@ const Settings = () => {
                 label={t.privacy} 
                 color={colors.success} 
               />
-              <View style={styles.divider} />
+              <View style={styles.settingRowDivider} />
               <SettingItem 
                 icon="help-circle-outline" 
                 label={t.help} 
                 color={colors.warning} 
               />
-              <View style={styles.divider} />
+              <View style={styles.settingRowDivider} />
               <SettingItem 
                 icon="information-circle-outline" 
                 label={t.about} 
@@ -400,11 +409,11 @@ const Settings = () => {
               />
             </View>
             
-            <TouchableOpacity style={styles.logoutButton} onPress={signOut}>
+            <TouchableOpacity style={[styles.logoutButton, { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 8 }]} onPress={signOut}>
               <Ionicons name="log-out-outline" size={20} color={colors.danger} />
               <Text style={styles.logoutText}>{t.logout}</Text>
             </TouchableOpacity>
-          </View>
+          </Animated.View>
 
           <Text style={styles.versionText}>VERSION 1.0.4 (BETA)</Text>
         </ScrollView>

@@ -5,11 +5,13 @@ import useTheme from "@/hooks/useTheme";
 import { Ionicons } from '@expo/vector-icons';
 import React, { useMemo, useRef, useState } from 'react';
 import { Alert } from 'react-native';
+import Animated, { Easing, FadeInDown } from 'react-native-reanimated';
 
 import ActionModal from "@/components/ActionModal";
 import CircularProgress from "@/components/CircularProgress";
 import FloatingActionButton from "@/components/FloatingActionButton";
 import Header from "@/components/Header";
+import LivePress from "@/components/LivePress";
 import ProjectPickerModal from "@/components/ProjectPickerModal";
 import type { GuideTip } from "@/components/ScreenGuide";
 import ScreenGuide from "@/components/ScreenGuide";
@@ -22,6 +24,7 @@ import { useScreenGuide } from "@/hooks/useScreenGuide";
 import { useTaskTimers } from "@/hooks/useTaskTimers";
 import { useRouter } from "expo-router";
 import { ActivityIndicator, FlatList, KeyboardAvoidingView, Platform, ScrollView, StatusBar, Text, TouchableOpacity, View } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { api } from "../../convex/_generated/api";
 import { Id } from '../../convex/_generated/dataModel';
@@ -61,13 +64,13 @@ const Index = () => {
     useDailyReminders(todos, language);
 
     const homeTips: GuideTip[] = isArabic ? [
-      { icon: 'add-circle-outline', title: 'أضف مهمة', description: 'اكتب مهمتك في الحقل بالأسفل واضغط إرسال لإضافتها.', accentColor: '#D4F82D' },
-      { icon: 'timer-outline', title: 'مؤقت ذكي', description: 'اضغط على أيقونة الساعة لتحديد مدة المهمة وموعدها.', accentColor: '#00E096' },
-      { icon: 'hand-left-outline', title: 'اضغط مطولاً', description: 'اضغط مطولاً على أي مهمة لحذفها أو مشاركتها أو ربطها بمشروع.', accentColor: '#5CB2FF' },
+      { icon: 'add-circle-outline', title: 'أضف مهمة', description: 'اكتب مهمتك في الحقل بالأسفل واضغط إرسال لإضافتها.', accentColor: '#F2B544' },
+      { icon: 'timer-outline', title: 'مؤقت ذكي', description: 'اضغط على أيقونة الساعة لتحديد مدة المهمة وموعدها.', accentColor: '#4EE6C1' },
+      { icon: 'hand-left-outline', title: 'اضغط مطولاً', description: 'اضغط مطولاً على أي مهمة لحذفها أو مشاركتها أو ربطها بمشروع.', accentColor: '#A89CFF' },
     ] : [
-      { icon: 'add-circle-outline', title: 'Add a Task', description: 'Type your task in the input field below and hit send to add it.', accentColor: '#D4F82D' },
-      { icon: 'timer-outline', title: 'Smart Timer', description: 'Tap the clock icon on any task to set a duration and due date.', accentColor: '#00E096' },
-      { icon: 'hand-left-outline', title: 'Long Press', description: 'Long press any task to delete, share, or link it to a project.', accentColor: '#5CB2FF' },
+      { icon: 'add-circle-outline', title: 'Add a Task', description: 'Type your task in the input field below and hit send to add it.', accentColor: '#F2B544' },
+      { icon: 'timer-outline', title: 'Smart Timer', description: 'Tap the clock icon on any task to set a duration and due date.', accentColor: '#4EE6C1' },
+      { icon: 'hand-left-outline', title: 'Long Press', description: 'Long press any task to delete, share, or link it to a project.', accentColor: '#A89CFF' },
     ];
 
 
@@ -249,7 +252,16 @@ const Index = () => {
 
                       
                       {/* Today's Plan Card */}
-                       <View style={[homeStyles.todaysPlanCard, isArabic && { flexDirection: 'row-reverse' }]}>
+                       <Animated.View
+                         entering={FadeInDown.duration(400).easing(Easing.out(Easing.cubic))}
+                         style={{ marginHorizontal: 16, marginBottom: 24, ...colors.shadows.glow, borderRadius: 24 }}
+                       >
+                         <LinearGradient
+                           colors={isDarkMode ? ['#F2B544', '#EE9A3F', '#E8864F'] : ['#E39A1F', '#D08A16', '#C07814']}
+                           start={{ x: 0, y: 0 }}
+                           end={{ x: 1, y: 1 }}
+                           style={[homeStyles.todaysPlanCard, { marginHorizontal: 0, marginBottom: 0, flexDirection: isArabic ? 'row-reverse' : 'row' }]}
+                         >
                            <View style={isArabic && { alignItems: 'flex-end' }}>
                                <Text style={homeStyles.todaysPlanTitle}>{t.todaysPlan}</Text>
                                <Text style={homeStyles.todaysPlanSubtitle}>{todayDoneForProgress}/{todayAllForProgress} {t.tasksCompleted}</Text>
@@ -263,7 +275,8 @@ const Index = () => {
                             >
                                 <Text style={{ fontSize: 16, fontWeight: "800", color: colors.primaryText }}>{progressPercent}%</Text>
                             </CircularProgress>
-                      </View>
+                         </LinearGradient>
+                       </Animated.View>
 
                       {/* Filter Pills */}
                       <View style={[homeStyles.pillsContainer, isArabic && { flexDirection: 'row-reverse' }]}>
@@ -281,7 +294,7 @@ const Index = () => {
                                                 (isArabic ? 'لم تُنجز' : 'Not Done');
 
                               return (
-                                  <TouchableOpacity 
+                                  <LivePress 
                                       key={filter} 
                                       style={[homeStyles.pill, isActive ? homeStyles.pillActive : homeStyles.pillInactive]}
                                       onPress={() => setActiveFilter(filter)}
@@ -292,7 +305,7 @@ const Index = () => {
                                       <Text style={[homeStyles.pillSubText, { color: isActive ? colors.primary + 'CC' : colors.textMuted }]}>
                                           {count} {count === 1 ? t.task : t.tasks}
                                       </Text>
-                                  </TouchableOpacity>
+                                  </LivePress>
                               );
                           })}
                       </View>
@@ -306,9 +319,9 @@ const Index = () => {
                                       onPress={() => setIsTaskModalVisible(true)} 
                                       style={homeStyles.fab}
                                   />
-                                  <TouchableOpacity onPress={() => setGlobalActionModalVisible(true)}>
+                                  <LivePress onPress={() => setGlobalActionModalVisible(true)}>
                                       <Ionicons name="ellipsis-horizontal" size={20} color={colors.textMuted} />
-                                  </TouchableOpacity>
+                                  </LivePress>
                               </View>
                           </View>
                        )}

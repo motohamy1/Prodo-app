@@ -575,7 +575,7 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ visible, onClose, tod
                       style={[styles.customTimerSaveButton, { backgroundColor: projectColor }]}
                       onPress={handleSaveCustomTimer}
                     >
-                      <Ionicons name="checkmark" size={20} color={isDarkMode ? "#000" : "#FFF"} />
+                      <Ionicons name="checkmark" size={20} color={colors.primaryText} />
                     </TouchableOpacity>
                   </View>
                 </View>
@@ -714,8 +714,8 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ visible, onClose, tod
                         }
                       }}
                     >
-                      <Ionicons name={!currentTodoId ? "save-outline" : todo?.status === 'in_progress' ? "pause" : "play"} size={22} color={isDarkMode ? "#000" : "#FFF"} />
-                      <Text style={[styles.mainControlButtonText, { color: isDarkMode ? "#000" : "#FFF" }]}>
+                      <Ionicons name={!currentTodoId ? "save-outline" : todo?.status === 'in_progress' ? "pause" : "play"} size={22} color={colors.primaryText} />
+                      <Text style={[styles.mainControlButtonText, { color: colors.primaryText }]}>
                         {!currentTodoId ? (isArabic ? 'احفظ للبدء' : 'Save to Start') : todo?.status === 'in_progress' ? (isArabic ? 'إيقاف' : 'Pause Task') : todo?.status === 'paused' ? (isArabic ? 'استئناف المهمة' : 'Resume Task') : (isArabic ? 'ابدأ المهمة' : 'Start Task')}
                       </Text>
                     </TouchableOpacity>

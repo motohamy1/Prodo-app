@@ -1,6 +1,14 @@
-import React from 'react';
-import { View, StyleSheet, Text } from 'react-native';
-import Svg, { Circle, G } from 'react-native-svg';
+import React, { useEffect } from 'react';
+import { View, StyleSheet } from 'react-native';
+import Animated, {
+  Easing,
+  useAnimatedProps,
+  useSharedValue,
+  withTiming,
+} from 'react-native-reanimated';
+import Svg, { Circle } from 'react-native-svg';
+
+const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 
 interface CircularProgressProps {
   size: number;
@@ -22,35 +30,44 @@ const CircularProgress: React.FC<CircularProgressProps> = ({
   const center = size / 2;
   const radius = center - strokeWidth / 2;
   const circumference = 2 * Math.PI * radius;
-  
-  // Progress is mostly 0 to 100
+
   const progressPercent = Math.min(Math.max(progress, 0), 100);
-  const strokeDashoffset = circumference - (circumference * progressPercent) / 100;
+  const animatedProgress = useSharedValue(progressPercent);
+
+  useEffect(() => {
+    animatedProgress.value = withTiming(progressPercent, {
+      duration: 600,
+      easing: Easing.out(Easing.cubic),
+    });
+  }, [progressPercent, animatedProgress]);
+
+  const animatedProps = useAnimatedProps(() => ({
+    strokeDashoffset: circumference - (circumference * animatedProgress.value) / 100,
+  }));
 
   return (
     <View style={{ width: size, height: size, justifyContent: 'center', alignItems: 'center' }}>
       <Svg width={size} height={size} style={styles.svg}>
-        <G rotation="-90" origin={`${center}, ${center}`}>
-          <Circle
-            stroke={unfilledColor}
-            cx={center}
-            cy={center}
-            r={radius}
-            strokeWidth={strokeWidth}
-            fill="transparent"
-          />
-          <Circle
-            stroke={color}
-            cx={center}
-            cy={center}
-            r={radius}
-            strokeWidth={strokeWidth}
-            strokeDasharray={circumference}
-            strokeDashoffset={strokeDashoffset}
-            strokeLinecap="round"
-            fill="transparent"
-          />
-        </G>
+        <Circle
+          stroke={unfilledColor}
+          cx={center}
+          cy={center}
+          r={radius}
+          strokeWidth={strokeWidth}
+          fill="transparent"
+        />
+        <AnimatedCircle
+          stroke={color}
+          cx={center}
+          cy={center}
+          r={radius}
+          strokeWidth={strokeWidth}
+          strokeDasharray={circumference}
+          strokeDashoffset={circumference - (circumference * progressPercent) / 100}
+          animatedProps={animatedProps}
+          strokeLinecap="round"
+          fill="transparent"
+        />
       </Svg>
       <View style={[StyleSheet.absoluteFill, { justifyContent: 'center', alignItems: 'center' }]}>
         {children}
@@ -61,7 +78,7 @@ const CircularProgress: React.FC<CircularProgressProps> = ({
 
 const styles = StyleSheet.create({
   svg: {
-    transform: [{ rotateZ: '0deg' }], // Ensure SVG renders properly
+    transform: [{ rotate: '-90deg' }],
   },
 });
 

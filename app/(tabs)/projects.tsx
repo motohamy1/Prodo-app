@@ -38,6 +38,8 @@ import { createHomeStyles } from '@/assets/styles/home.styles';
 import { useScreenGuide } from '@/hooks/useScreenGuide';
 import ScreenGuide from '@/components/ScreenGuide';
 import type { GuideTip } from '@/components/ScreenGuide';
+import { LIST_TYPE_COLORS, PROJECT_COLORS } from '@/utils/magicColors';
+import Reanimated, { FadeInDown } from 'react-native-reanimated';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -58,20 +60,13 @@ const PROJECT_ICONS = [
   'compass-outline', 'infinite-outline', 'flash-outline', 'shield-outline',
 ];
 
-const ACCENT_COLORS = [
-  '#7C5CFF', '#FF6B6B', '#4ECDC4', '#FFD93D',
-  '#6BCB77', '#FF9500', '#47A3FF', '#FF2D55',
-  '#AF52DE', '#00C58E', '#FF6D00', '#007AFF',
-  '#E91E63', '#9C27B0', '#673AB7', '#3F51B5',
-  '#2196F3', '#03A9F4', '#00BCD4', '#009688',
-  '#4CAF50', '#8BC34A', '#CDDC39', '#FFEB3B',
-];
+const ACCENT_COLORS = PROJECT_COLORS;
 
 const RESOURCE_TYPES: { key: string; label: string; icon: string; color: string }[] = [
-  { key: 'link',  label: 'Link',  icon: 'link-outline',          color: '#47A3FF' },
-  { key: 'video', label: 'Video', icon: 'videocam-outline',       color: '#FF6B6B' },
-  { key: 'image', label: 'Image', icon: 'image-outline',          color: '#00C58E' },
-  { key: 'note',  label: 'Note',  icon: 'document-text-outline',  color: '#FFD93D' },
+  { key: 'link',  label: 'Link',  icon: 'link-outline',          color: LIST_TYPE_COLORS.todo },
+  { key: 'video', label: 'Video', icon: 'videocam-outline',       color: LIST_TYPE_COLORS.bullet },
+  { key: 'image', label: 'Image', icon: 'image-outline',          color: LIST_TYPE_COLORS.checklist },
+  { key: 'note',  label: 'Note',  icon: 'document-text-outline',  color: LIST_TYPE_COLORS.toggle },
 ];
 
 function getStatusColor(status: string | undefined, colors: any) {
@@ -350,17 +345,19 @@ const CategoriesView = ({ styles, colors, onSelectCategory, onAddCategory, onEdi
           <Text style={styles.emptySubText}>Tap + to create your first category</Text>
         </View>
       )}
-      {categories.map(cat => (
-        <TouchableOpacity key={cat._id} style={[styles.categoryCard, { shadowColor: cat.color }]} onPress={() => onSelectCategory(cat._id, cat.name, cat.color)} activeOpacity={0.82}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
-            <View style={[styles.categoryIconWrap, { backgroundColor: cat.color + '20' }]}>
-              <Ionicons name={cat.icon as any} size={28} color={cat.color} />
+      {categories.map((cat, i) => (
+        <Reanimated.View key={cat._id} entering={FadeInDown.duration(450).delay(i * 70)} style={[styles.categoryCard, { shadowColor: cat.color }]}>
+          <TouchableOpacity style={styles.categoryCardInner} onPress={() => onSelectCategory(cat._id, cat.name, cat.color)} activeOpacity={0.82}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
+              <View style={[styles.categoryIconWrap, { backgroundColor: cat.color + '20' }]}>
+                <Ionicons name={cat.icon as any} size={28} color={cat.color} />
+              </View>
+              <View style={styles.categoryInfo}>
+                <Text style={styles.categoryCardName}>{cat.name}</Text>
+                <Text style={styles.categoryCardCount}>Tap to explore</Text>
+              </View>
             </View>
-            <View style={styles.categoryInfo}>
-              <Text style={styles.categoryCardName}>{cat.name}</Text>
-              <Text style={styles.categoryCardCount}>Tap to explore</Text>
-            </View>
-          </View>
+          </TouchableOpacity>
           <TouchableOpacity 
             style={styles.categoryDeleteBtn} 
             onPress={() => onOpenAction({
@@ -387,15 +384,17 @@ const CategoriesView = ({ styles, colors, onSelectCategory, onAddCategory, onEdi
           >
             <Ionicons name="ellipsis-vertical" size={16} color={colors.textMuted} />
           </TouchableOpacity>
-        </TouchableOpacity>
+        </Reanimated.View>
       ))}
-      <TouchableOpacity 
-        style={[styles.categoryCard, { borderStyle: 'dashed', backgroundColor: 'transparent', shadowOpacity: 0, elevation: 0 }]} 
-        onPress={onAddCategory}
-      >
-        <Ionicons name="add-circle-outline" size={28} color={colors.textMuted} />
-        <Text style={{ marginLeft: 12, fontSize: 16, fontWeight: '700', color: colors.textMuted }}>Add New Category</Text>
-      </TouchableOpacity>
+      <Reanimated.View entering={FadeInDown.duration(450).delay(categories.length * 70)} style={[styles.categoryCard, { borderStyle: 'dashed', backgroundColor: 'transparent', shadowOpacity: 0, elevation: 0 }]}>
+        <TouchableOpacity 
+          style={styles.categoryAddBtn}
+          onPress={onAddCategory}
+        >
+          <Ionicons name="add-circle-outline" size={28} color={colors.textMuted} />
+          <Text style={{ marginLeft: 12, fontSize: 16, fontWeight: '700', color: colors.textMuted }}>Add New Category</Text>
+        </TouchableOpacity>
+      </Reanimated.View>
     </ScrollView>
   );
 };
@@ -403,10 +402,10 @@ const CategoriesView = ({ styles, colors, onSelectCategory, onAddCategory, onEdi
 // ─── Layer 2: Category Detail View (Sub-categories & Direct Projects) ────────
 
 const LIST_TYPE_CARDS = [
-  { key: 'checklist', label: 'Checklists', icon: 'checkbox-outline', color: '#4ECDC4' },
-  { key: 'todo', label: 'To-Do Tasks', icon: 'list-outline', color: '#7C5CFF' },
-  { key: 'bullet', label: 'Bullet Points', icon: 'ellipse', color: '#FF6B6B' },
-  { key: 'toggle', label: 'Toggle Lists', icon: 'albums-outline', color: '#FFD93D' },
+  { key: 'checklist', label: 'Checklists', icon: 'checkbox-outline', color: LIST_TYPE_COLORS.checklist },
+  { key: 'todo', label: 'To-Do Tasks', icon: 'list-outline', color: LIST_TYPE_COLORS.todo },
+  { key: 'bullet', label: 'Bullet Points', icon: 'ellipse', color: LIST_TYPE_COLORS.bullet },
+  { key: 'toggle', label: 'Toggle Lists', icon: 'albums-outline', color: LIST_TYPE_COLORS.toggle },
 ];
 
 const CategoryDetailView = ({
@@ -625,21 +624,22 @@ const CategoryDetailView = ({
             <Text style={[styles.sectionLabel, { paddingHorizontal: 0, marginBottom: 0 }]}>Lists</Text>
           </View>
           <View style={styles.categoryListsGrid}>
-            {LIST_TYPE_CARDS.map(card => {
+            {LIST_TYPE_CARDS.map((card, i) => {
               const count = getListCount(card.key);
               return (
-                <TouchableOpacity
-                  key={card.key}
-                  style={styles.categoryListCard}
-                  onPress={() => openListModal(card.key)}
-                  activeOpacity={0.82}
-                >
-                  <View style={[styles.categoryListCardIconWrap, { backgroundColor: card.color + '20' }]}>
-                    <Ionicons name={card.icon as any} size={24} color={card.color} />
-                  </View>
-                  <Text style={styles.categoryListCardTitle}>{card.label}</Text>
-                  <Text style={styles.categoryListCardCount}>{count} item{count !== 1 ? 's' : ''}</Text>
-                </TouchableOpacity>
+                <Reanimated.View key={card.key} entering={FadeInDown.duration(450).delay(i * 60)} style={styles.categoryListCard}>
+                  <TouchableOpacity
+                    style={styles.categoryListCardInner}
+                    onPress={() => openListModal(card.key)}
+                    activeOpacity={0.82}
+                  >
+                    <View style={[styles.categoryListCardIconWrap, { backgroundColor: card.color + '20' }]}>
+                      <Ionicons name={card.icon as any} size={24} color={card.color} />
+                    </View>
+                    <Text style={styles.categoryListCardTitle}>{card.label}</Text>
+                    <Text style={styles.categoryListCardCount}>{count} item{count !== 1 ? 's' : ''}</Text>
+                  </TouchableOpacity>
+                </Reanimated.View>
               );
             })}
           </View>
@@ -752,14 +752,14 @@ const SubCategoryProjectsView = ({
             <Ionicons name="ellipsis-vertical" size={18} color={colors.textMuted} />
           </TouchableOpacity>
         </View>
-        {projects.map(project => {
+        {projects.map((project, i) => {
           const { pct } = getProgress(project._id);
           return (
-            <TouchableOpacity
-              key={project._id}
-              style={[styles.projectGridCard, { shadowColor: project.color }]}
-              onPress={() => onSelectProject(project._id)}
-              onLongPress={() => onOpenAction({
+            <Reanimated.View key={project._id} entering={FadeInDown.duration(450).delay(i * 60)} style={[styles.projectGridCard, { shadowColor: project.color }]}>
+              <TouchableOpacity
+                style={{ flex: 1 }}
+                onPress={() => onSelectProject(project._id)}
+                onLongPress={() => onOpenAction({
                 title: project.name,
                 options: [
                   {
@@ -795,13 +795,16 @@ const SubCategoryProjectsView = ({
               <View style={styles.projectGridFooter}>
                  <View style={styles.gridProgressBarTrack}><View style={[styles.gridProgressBarFill, { width: `${pct}%`, backgroundColor: project.color }]} /></View>
                  <Text style={styles.gridProgressText}>{pct}% Complete</Text>
-              </View>
-            </TouchableOpacity>
+                 </View>
+              </TouchableOpacity>
+            </Reanimated.View>
           );
         })}
-        <TouchableOpacity style={[styles.projectGridCard, { borderStyle: 'dashed', backgroundColor: 'transparent', shadowOpacity: 0, elevation: 0, justifyContent: 'center', alignItems: 'center' }]} onPress={onAddProject}>
-          <Ionicons name="add-circle-outline" size={32} color={colors.textMuted} /><Text style={{ marginTop: 8, fontSize: 13, fontWeight: '600', color: colors.textMuted }}>Add Project</Text>
-        </TouchableOpacity>
+        <Reanimated.View entering={FadeInDown.duration(450).delay(projects.length * 60)} style={[styles.projectGridCard, { borderStyle: 'dashed', backgroundColor: 'transparent', shadowOpacity: 0, elevation: 0, justifyContent: 'center', alignItems: 'center' }]}>
+          <TouchableOpacity style={{ alignItems: 'center', justifyContent: 'center', flex: 1 }} onPress={onAddProject}>
+            <Ionicons name="add-circle-outline" size={32} color={colors.textMuted} /><Text style={{ marginTop: 8, fontSize: 13, fontWeight: '600', color: colors.textMuted }}>Add Project</Text>
+          </TouchableOpacity>
+        </Reanimated.View>
 
         {/* Category Lists Section */}
         <View style={{ width: '100%', marginTop: 20 }}>
@@ -809,21 +812,22 @@ const SubCategoryProjectsView = ({
             <Text style={[styles.sectionLabel, { paddingHorizontal: 0, marginBottom: 0 }]}>Lists</Text>
           </View>
           <View style={styles.categoryListsGrid}>
-            {LIST_TYPE_CARDS.map(card => {
+            {LIST_TYPE_CARDS.map((card, i) => {
               const count = getListCount(card.key);
               return (
-                <TouchableOpacity
-                  key={card.key}
-                  style={styles.categoryListCard}
-                  onPress={() => openListModal(card.key)}
-                  activeOpacity={0.82}
-                >
-                  <View style={[styles.categoryListCardIconWrap, { backgroundColor: card.color + '20' }]}>
-                    <Ionicons name={card.icon as any} size={24} color={card.color} />
-                  </View>
-                  <Text style={styles.categoryListCardTitle}>{card.label}</Text>
-                  <Text style={styles.categoryListCardCount}>{count} item{count !== 1 ? 's' : ''}</Text>
-                </TouchableOpacity>
+                <Reanimated.View key={card.key} entering={FadeInDown.duration(450).delay(i * 60)} style={styles.categoryListCard}>
+                  <TouchableOpacity
+                    style={styles.categoryListCardInner}
+                    onPress={() => openListModal(card.key)}
+                    activeOpacity={0.82}
+                  >
+                    <View style={[styles.categoryListCardIconWrap, { backgroundColor: card.color + '20' }]}>
+                      <Ionicons name={card.icon as any} size={24} color={card.color} />
+                    </View>
+                    <Text style={styles.categoryListCardTitle}>{card.label}</Text>
+                    <Text style={styles.categoryListCardCount}>{count} item{count !== 1 ? 's' : ''}</Text>
+                  </TouchableOpacity>
+                </Reanimated.View>
               );
             })}
           </View>
@@ -1286,13 +1290,13 @@ const Projects: React.FC = () => {
   const { showGuide, dismissGuide } = useScreenGuide('projects');
 
   const projectsTips: GuideTip[] = isArabic ? [
-    { icon: 'folder-outline', title: 'أنشئ فئة', description: 'اضغط "+ إضافة فئة" لتنظيم مشاريعك في مجموعات.', accentColor: '#7C5CFF' },
-    { icon: 'rocket-outline', title: 'أضف مشروع', description: 'ادخل أي فئة واضغط "+ مشروع" لإضافة مشروع جديد.', accentColor: '#00E096' },
-    { icon: 'layers-outline', title: 'فئات فرعية', description: 'أضف فئات فرعية لتنظيم أعمق داخل كل فئة.', accentColor: '#FFAB00' },
+    { icon: 'folder-outline', title: 'أنشئ فئة', description: 'اضغط "+ إضافة فئة" لتنظيم مشاريعك في مجموعات.', accentColor: '#A89CFF' },
+    { icon: 'rocket-outline', title: 'أضف مشروع', description: 'ادخل أي فئة واضغط "+ مشروع" لإضافة مشروع جديد.', accentColor: '#4EE6C1' },
+    { icon: 'layers-outline', title: 'فئات فرعية', description: 'أضف فئات فرعية لتنظيم أعمق داخل كل فئة.', accentColor: '#F2B544' },
   ] : [
-    { icon: 'folder-outline', title: 'Create a Category', description: 'Tap "+ Add Category" to organize your projects into groups.', accentColor: '#7C5CFF' },
-    { icon: 'rocket-outline', title: 'Add a Project', description: 'Enter any category and tap "+ Add" to create a new project.', accentColor: '#00E096' },
-    { icon: 'layers-outline', title: 'Sub-Categories', description: 'Add sub-categories for deeper organization inside each category.', accentColor: '#FFAB00' },
+    { icon: 'folder-outline', title: 'Create a Category', description: 'Tap "+ Add Category" to organize your projects into groups.', accentColor: '#A89CFF' },
+    { icon: 'rocket-outline', title: 'Add a Project', description: 'Enter any category and tap "+ Add" to create a new project.', accentColor: '#4EE6C1' },
+    { icon: 'layers-outline', title: 'Sub-Categories', description: 'Add sub-categories for deeper organization inside each category.', accentColor: '#F2B544' },
   ];
 
   const [layer, setLayer] = useState<Layer>('categories');

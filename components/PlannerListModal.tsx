@@ -15,12 +15,13 @@ import { useMutation } from 'convex/react';
 import { api } from '@/convex/_generated/api';
 import { Id } from '@/convex/_generated/dataModel';
 import { useOfflineQuery } from '@/hooks/useOfflineQuery';
+import { LIST_TYPE_COLORS } from '@/utils/magicColors';
 
 const LIST_TYPE_CONFIG: Record<string, { label: string; icon: string; color: string }> = {
-  checklist: { label: 'Checklist', icon: 'checkbox-outline', color: '#4ECDC4' },
-  todo: { label: 'To-Do Tasks', icon: 'list-outline', color: '#7C5CFF' },
-  bullet: { label: 'Bullet Points', icon: 'ellipse', color: '#FF6B6B' },
-  toggle: { label: 'Toggle Lists', icon: 'albums-outline', color: '#FFD93D' },
+  checklist: { label: 'Checklist', icon: 'checkbox-outline', color: LIST_TYPE_COLORS.checklist },
+  todo: { label: 'To-Do Tasks', icon: 'list-outline', color: LIST_TYPE_COLORS.todo },
+  bullet: { label: 'Bullet Points', icon: 'ellipse', color: LIST_TYPE_COLORS.bullet },
+  toggle: { label: 'Toggle Lists', icon: 'albums-outline', color: LIST_TYPE_COLORS.toggle },
 };
 
 interface PlannerListModalProps {

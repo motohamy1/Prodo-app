@@ -1,4 +1,4 @@
-import useTheme, { getNeoShadow } from '@/hooks/useTheme';
+import useTheme from '@/hooks/useTheme';
 import { Ionicons } from '@expo/vector-icons';
 import React from 'react';
 import { Modal, Platform, StyleSheet, Text, TouchableOpacity, TouchableWithoutFeedback, View } from 'react-native';
@@ -19,8 +19,7 @@ interface ActionModalProps {
 }
 
 const ActionModal: React.FC<ActionModalProps> = ({ visible, onClose, options, title, isArabic = false }) => {
-  const { colors, isDarkMode } = useTheme();
-  const raised = getNeoShadow(colors, 'raised', isArabic);
+  const { colors } = useTheme();
 
   return (
     <Modal
@@ -32,19 +31,7 @@ const ActionModal: React.FC<ActionModalProps> = ({ visible, onClose, options, ti
       <TouchableWithoutFeedback onPress={onClose}>
         <View style={styles.overlay}>
           <TouchableWithoutFeedback>
-            <View style={[
-              styles.content, 
-              { 
-                backgroundColor: colors.neomorphic.raised.backgroundColor, 
-                borderTopLeftRadius: 32, 
-                borderTopRightRadius: 32,
-                shadowColor: colors.shadow,
-                shadowOffset: { width: -8, height: -8 },
-                shadowOpacity: 0.1,
-                shadowRadius: 16,
-                elevation: 8,
-              }
-            ]}>
+            <View style={[styles.content, { backgroundColor: colors.surfaceHigh }]}>
               <View style={styles.handle} />
               
               {title && (
@@ -62,16 +49,9 @@ const ActionModal: React.FC<ActionModalProps> = ({ visible, onClose, options, ti
                     key={index}
                     style={[
                       styles.option,
-                      { 
-                        backgroundColor: colors.neomorphic.raised.backgroundColor,
-                        shadowColor: colors.shadow,
-                        shadowOffset: { width: 4, height: 4 },
-                        shadowOpacity: 0.1,
-                        shadowRadius: 8,
-                        elevation: 4,
-                      },
-                      index === 0 && { borderTopLeftRadius: 20, borderTopRightRadius: 20 },
-                      index === options.length - 1 && { borderBottomLeftRadius: 20, borderBottomRightRadius: 20 },
+                      { backgroundColor: colors.surface },
+                      index === 0 && { borderTopLeftRadius: 14, borderTopRightRadius: 14 },
+                      index === options.length - 1 && { borderBottomLeftRadius: 14, borderBottomRightRadius: 14 },
                       index < options.length - 1 && { borderBottomWidth: 1, borderBottomColor: colors.border }
                     ]}
                     onPress={() => {
@@ -79,17 +59,7 @@ const ActionModal: React.FC<ActionModalProps> = ({ visible, onClose, options, ti
                       onClose();
                     }}
                   >
-                    <View style={[
-                      styles.iconWrap, 
-                      { 
-                        backgroundColor: colors.neomorphic.raised.backgroundColor,
-                        shadowColor: colors.shadow,
-                        shadowOffset: { width: 2, height: 2 },
-                        shadowOpacity: 0.1,
-                        shadowRadius: 4,
-                        elevation: 2,
-                      }
-                    ]}>
+                    <View style={[styles.iconWrap, { backgroundColor: option.variant === 'destructive' ? colors.dangerBg : colors.bg }]}>
                       <Ionicons 
                         name={option.icon} 
                         size={22} 
@@ -138,11 +108,8 @@ const styles = StyleSheet.create({
     paddingBottom: Platform.OS === 'ios' ? 40 : 24,
     paddingTop: 12,
     paddingHorizontal: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: -10 },
-    shadowOpacity: 0.2,
-    shadowRadius: 20,
-    elevation: 20,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
   },
   handle: {
     width: 44,
@@ -160,17 +127,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 4,
   },
   title: {
-    fontSize: 22,
-    fontWeight: '800',
+    fontSize: 20,
+    fontWeight: '700',
     letterSpacing: -0.5,
   },
   optionsContainer: {
     marginBottom: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
+    borderRadius: 14,
+    overflow: 'hidden',
   },
   option: {
     flexDirection: 'row',
@@ -181,24 +145,24 @@ const styles = StyleSheet.create({
   iconWrap: {
     width: 40,
     height: 40,
-    borderRadius: 14,
+    borderRadius: 10,
     justifyContent: 'center',
     alignItems: 'center',
   },
   optionLabel: {
-    fontSize: 17,
-    fontWeight: '700',
+    fontSize: 16,
+    fontWeight: '600',
     flex: 1,
   },
   cancelButton: {
-    borderRadius: 20,
+    borderRadius: 14,
     paddingVertical: 16,
     alignItems: 'center',
     marginTop: 8,
   },
   cancelText: {
-    fontSize: 17,
-    fontWeight: '800',
+    fontSize: 16,
+    fontWeight: '700',
   },
 });
 

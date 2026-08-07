@@ -1,14 +1,27 @@
 import { Tabs } from 'expo-router';
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import useTheme from '@/hooks/useTheme';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Platform } from 'react-native';
+import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 import { useAuth } from '@/hooks/useAuth';
 import { useTranslation } from '@/utils/i18n';
 
+const AnimatedTabIcon = ({ name, focused, color, size }: { name: React.ComponentProps<typeof Ionicons>['name']; focused: boolean; color: string; size: number }) => {  const scale = useSharedValue(focused ? 1.15 : 1);
+  useEffect(() => {
+    scale.value = withSpring(focused ? 1.15 : 1, { damping: 12, stiffness: 260 });
+  }, [focused, scale]);
+  const animatedStyle = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
+  return (
+    <Animated.View style={animatedStyle}>
+      <Ionicons name={name} size={size} color={color} />
+    </Animated.View>
+  );
+};
+
 const TabLayout = () => {
-  const { colors, isDarkMode } = useTheme();
+  const { colors } = useTheme();
   const insets = useSafeAreaInsets();
   const { language } = useAuth();
   const { t } = useTranslation(language);
@@ -17,7 +30,6 @@ const TabLayout = () => {
 
   return (
     <Tabs
-      sceneContainerStyle={{ backgroundColor: colors.bg }}
       screenOptions={{
         headerShown: false,
         tabBarActiveTintColor: colors.primary,
@@ -37,9 +49,9 @@ const TabLayout = () => {
           left: 0,
           right: 0,
           bottom: 0,
-          shadowColor: '#000',
+          shadowColor: colors.shadow,
           shadowOffset: { width: 0, height: -4 },
-          shadowOpacity: 0.06,
+          shadowOpacity: 0.12,
           shadowRadius: 16,
         },
         tabBarLabelStyle: {
@@ -52,8 +64,8 @@ const TabLayout = () => {
         name="index"
         options={{
           title: t.tabTodo,
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="home-outline" size={size} color={color} />
+          tabBarIcon: ({ color, size, focused }) => (
+            <AnimatedTabIcon name={focused ? 'home' : 'home-outline'} focused={focused} size={size} color={color as string} />
           ),
         }}
       />
@@ -61,8 +73,8 @@ const TabLayout = () => {
         name="planner"
         options={{
           title: t.tabPlanner,
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="calendar-outline" size={size} color={color} />
+          tabBarIcon: ({ color, size, focused }) => (
+            <AnimatedTabIcon name={focused ? 'calendar' : 'calendar-outline'} focused={focused} size={size} color={color as string} />
           ),
         }}
       />
@@ -70,8 +82,8 @@ const TabLayout = () => {
         name="add"
         options={{
           title: t.tabAdd,
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="add-circle" size={size + 4} color={color} />
+          tabBarIcon: ({ color, size, focused }) => (
+            <AnimatedTabIcon name="add-circle" focused={focused} size={size + 4} color={color as string} />
           ),
         }}
       />
@@ -79,8 +91,8 @@ const TabLayout = () => {
         name="projects"
         options={{
           title: t.tabProjects,
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="briefcase-outline" size={size} color={color} />
+          tabBarIcon: ({ color, size, focused }) => (
+            <AnimatedTabIcon name={focused ? 'briefcase' : 'briefcase-outline'} focused={focused} size={size} color={color as string} />
           ),
         }}
       />
@@ -88,8 +100,8 @@ const TabLayout = () => {
         name="settings"
         options={{
           title: t.tabSettings,
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="settings-outline" size={size} color={color} />
+          tabBarIcon: ({ color, size, focused }) => (
+            <AnimatedTabIcon name={focused ? 'settings' : 'settings-outline'} focused={focused} size={size} color={color as string} />
           ),
         }}
       />

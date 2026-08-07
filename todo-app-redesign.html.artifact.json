@@ -1,0 +1,22 @@
+{
+  "version": 1,
+  "kind": "html",
+  "title": "To-Do App — Full Tab Redesign (iOS + Android)",
+  "entry": "todo-app-redesign.html",
+  "renderer": "html",
+  "status": "complete",
+  "exports": [
+    "html",
+    "pdf",
+    "zip"
+  ],
+  "primary": true,
+  "createdAt": "2026-07-02T00:49:59.529Z",
+  "updatedAt": "2026-07-02T00:49:59.534Z",
+  "sourceSkillId": "live-artifact",
+  "metadata": {
+    "identifier": "todo-app-redesign",
+    "artifactType": "text/html",
+    "inferred": false
+  }
+}

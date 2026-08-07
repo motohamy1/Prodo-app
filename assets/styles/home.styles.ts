@@ -1,13 +1,7 @@
-import { ColorScheme, getNeoShadow } from "@/hooks/useTheme";
+import { ColorScheme } from "@/hooks/useTheme";
 import { Platform, StyleSheet } from "react-native";
 
 export const createHomeStyles = (colors: ColorScheme, isArabic: boolean = false) => {
-  const raised = getNeoShadow(colors, 'raised', isArabic);
-  const raisedLg = getNeoShadow(colors, 'raisedLg', isArabic);
-  const flat = getNeoShadow(colors, 'flat', isArabic);
-  const inset = getNeoShadow(colors, 'inset', isArabic);
-  const pressed = getNeoShadow(colors, 'pressed', isArabic);
-
   const styles = StyleSheet.create({
     container: {
       flex: 1,
@@ -20,9 +14,9 @@ export const createHomeStyles = (colors: ColorScheme, isArabic: boolean = false)
       flexDirection: "row",
       alignItems: "center",
       justifyContent: "space-between",
-      paddingHorizontal: 16,
+      paddingHorizontal: 20,
       paddingTop: 16,
-      paddingBottom: 12,
+      paddingBottom: 8,
     },
     headerLeft: {
       flexDirection: "column",
@@ -30,13 +24,14 @@ export const createHomeStyles = (colors: ColorScheme, isArabic: boolean = false)
       gap: 4,
     },
     headerDate: {
-      fontSize: 14,
+      fontSize: 13,
       fontWeight: '600',
       color: colors.textMuted,
+      letterSpacing: 0.3,
     },
     headerGreeting: {
-      fontSize: isArabic ? 24 : 24,
-      fontWeight: "800",
+      fontSize: 32,
+      fontWeight: "700",
       color: colors.text,
       letterSpacing: -0.5,
     },
@@ -44,30 +39,22 @@ export const createHomeStyles = (colors: ColorScheme, isArabic: boolean = false)
       width: 44,
       height: 44,
       borderRadius: 22,
-      backgroundColor: raised.backgroundColor,
+      backgroundColor: colors.surface,
       justifyContent: 'center',
       alignItems: 'center',
-      shadowColor: raised.shadowColor,
-      shadowOffset: raised.shadowOffset,
-      shadowOpacity: raised.shadowOpacity,
-      shadowRadius: raised.shadowRadius,
-      elevation: raised.elevation,
+      ...colors.shadows.sm,
     },
     scrollContent: {
-      paddingVertical: 12,
+      paddingVertical: 8,
       paddingBottom: 110,
     },
 
-    // --- Today's Plan Banner ---
+    // Today's Plan Banner
     todaysPlanCard: {
       backgroundColor: colors.primary,
-      borderRadius: 30,
-      shadowColor: raisedLg.shadowColor,
-      shadowOffset: raisedLg.shadowOffset,
-      shadowOpacity: raisedLg.shadowOpacity,
-      shadowRadius: raisedLg.shadowRadius,
-      elevation: raisedLg.elevation,
-      padding: 22,
+      borderRadius: 24,
+      ...colors.shadows.md,
+      padding: 24,
       marginHorizontal: 16,
       flexDirection: 'row',
       justifyContent: 'space-between',
@@ -75,48 +62,44 @@ export const createHomeStyles = (colors: ColorScheme, isArabic: boolean = false)
       marginBottom: 24,
     },
     todaysPlanTitle: {
-      fontSize: isArabic ? 22 : 20,
-      fontWeight: '800',
+      fontSize: 20,
+      fontWeight: '700',
       color: colors.primaryText,
       marginBottom: 4,
     },
     todaysPlanSubtitle: {
-      fontSize: isArabic ? 14 : 14,
+      fontSize: 13,
       color: colors.primaryText + 'CC',
-      fontWeight: '700',
+      fontWeight: '600',
     },
 
-    // --- Filter Pills ---
+    // Filter Pills
     pillsContainer: {
       flexDirection: 'row',
       marginHorizontal: 16,
-      backgroundColor: flat.backgroundColor,
-      borderRadius: 20,
-      padding: 6,
-      gap: 6,
-      marginBottom: 32,
+      backgroundColor: colors.bg,
+      borderRadius: colors.radii.lg,
+      padding: 4,
+      gap: 4,
+      marginBottom: 24,
     },
     pill: {
       flex: 1,
-      paddingVertical: 12,
-      borderRadius: 16,
+      paddingVertical: 10,
+      borderRadius: colors.radii.md,
       alignItems: 'center',
       justifyContent: 'center',
     },
     pillActive: {
-      backgroundColor: raised.backgroundColor,
-      shadowColor: raised.shadowColor,
-      shadowOffset: raised.shadowOffset,
-      shadowOpacity: raised.shadowOpacity,
-      shadowRadius: raised.shadowRadius,
-      elevation: raised.elevation,
+      backgroundColor: colors.surface,
+      ...colors.shadows.sm,
     },
     pillInactive: {
       backgroundColor: 'transparent',
     },
     pillText: {
       fontSize: 13,
-      fontWeight: '700',
+      fontWeight: '600',
     },
     pillSubText: {
       fontSize: 10,
@@ -124,7 +107,7 @@ export const createHomeStyles = (colors: ColorScheme, isArabic: boolean = false)
       marginTop: 1,
     },
 
-    // --- Timeline List ---
+    // Section
     sectionTitleContainer: {
       flexDirection: 'row',
       justifyContent: 'space-between',
@@ -133,16 +116,16 @@ export const createHomeStyles = (colors: ColorScheme, isArabic: boolean = false)
       marginBottom: 16,
     },
     sectionTitleText: {
-      fontSize: isArabic ? 20 : 18,
-      fontWeight: '800',
+      fontSize: 18,
+      fontWeight: '700',
       color: colors.text,
     },
 
-    // --- Old Card styles repurposed for timeline/category cards ---
+    // Card container
     cardContainer: {
       marginStart: 16,
       marginEnd: 16,
-      marginBottom: 16,
+      marginBottom: 12,
       flexDirection: 'row',
     },
     timelineColumn: {
@@ -152,75 +135,64 @@ export const createHomeStyles = (colors: ColorScheme, isArabic: boolean = false)
     },
     timelineTimeTop: {
       fontSize: 9,
-      fontWeight: '800',
+      fontWeight: '700',
       color: colors.textMuted,
       textAlign: 'center',
       flexWrap: 'wrap',
     },
     timelineTimeBottom: {
       fontSize: 9,
-      fontWeight: '800',
+      fontWeight: '700',
       color: colors.textMuted,
       textAlign: 'center',
       flexWrap: 'wrap',
     },
     timelineTime: {
-      fontSize: 14,
+      fontSize: 13,
       fontWeight: '500',
       color: colors.textMuted,
     },
     card: {
       flex: 1,
-      borderRadius: 26,
-      padding: 18,
-      backgroundColor: raised.backgroundColor,
-      shadowColor: raised.shadowColor,
-      shadowOffset: raised.shadowOffset,
-      shadowOpacity: raised.shadowOpacity,
-      shadowRadius: raised.shadowRadius,
-      elevation: raised.elevation,
+      borderRadius: colors.radii.lg,
+      padding: 16,
+      backgroundColor: colors.taskInProgressBg,
+      borderWidth: 1,
+      borderColor: colors.border,
+      ...colors.shadows.sm,
     },
     cardNotDone: {
-      shadowColor: colors.danger,
-      shadowOpacity: 0.15,
-      shadowRadius: 20,
-      elevation: 4,
+      borderLeftWidth: 3,
+      borderLeftColor: colors.danger,
     },
     cardHeader: {
       flexDirection: "row",
       justifyContent: "space-between",
       alignItems: "flex-start",
-      marginBottom: 12,
+      marginBottom: 10,
     },
     cardTitle: {
-      fontSize: isArabic ? 20 : 18,
-      fontWeight: "800",
-      color: colors.surfaceText,
+      fontSize: 16,
+      fontWeight: "600",
+      color: colors.text,
       flex: 1,
       writingDirection: 'auto',
-      fontFamily: Platform.OS === 'ios' ? 'Inter' : 'sans-serif-medium',
     },
 
-    // Utilities
     statusAndActionRow: {
       flexDirection: 'row',
       justifyContent: 'space-between',
       alignItems: 'center',
-      marginBottom: 16,
+      marginBottom: 12,
     },
     badge: {
       alignSelf: "flex-start",
-      paddingHorizontal: 12,
+      paddingHorizontal: 10,
       paddingVertical: 4,
-      borderRadius: 16,
-      shadowColor: colors.shadow,
-      shadowOffset: { width: 0, height: 1 },
-      shadowOpacity: 0.04,
-      shadowRadius: 4,
-      elevation: 1,
+      borderRadius: colors.radii.sm,
     },
     badgeText: {
-      fontSize: 12,
+      fontSize: 11,
       fontWeight: "600",
     },
     actionButtons: {
@@ -230,33 +202,27 @@ export const createHomeStyles = (colors: ColorScheme, isArabic: boolean = false)
     actionBtn: {
       flexDirection: 'row',
       alignItems: 'center',
-      paddingHorizontal: 14,
+      paddingHorizontal: 12,
       paddingVertical: 8,
-      borderRadius: 16,
+      borderRadius: colors.radii.md,
       gap: 4,
-      backgroundColor: raised.backgroundColor,
-      shadowColor: raised.shadowColor,
-      shadowOffset: raised.shadowOffset,
-      shadowOpacity: raised.shadowOpacity,
-      shadowRadius: raised.shadowRadius,
-      elevation: raised.elevation,
+      backgroundColor: colors.surface,
+      borderWidth: 1,
+      borderColor: colors.border,
     },
     actionBtnText: {
       fontSize: 12,
       fontWeight: '600',
     },
     iconBtn: {
-      width: 36,
-      height: 36,
+      width: 44,
+      height: 44,
       justifyContent: 'center',
       alignItems: 'center',
-      backgroundColor: raised.backgroundColor,
-      shadowColor: raised.shadowColor,
-      shadowOffset: raised.shadowOffset,
-      shadowOpacity: raised.shadowOpacity,
-      shadowRadius: raised.shadowRadius,
-      elevation: raised.elevation,
-      borderRadius: 18,
+      backgroundColor: colors.surface,
+      borderRadius: colors.radii.md,
+      borderWidth: 1,
+      borderColor: colors.border,
     },
     dividerDashed: {
       height: 1,
@@ -293,7 +259,7 @@ export const createHomeStyles = (colors: ColorScheme, isArabic: boolean = false)
     },
     statText: {
       fontSize: 12,
-      color: colors.surfaceText + '99',
+      color: colors.text + '99',
       fontWeight: '500',
     },
     loadingContainer: {
@@ -314,53 +280,45 @@ export const createHomeStyles = (colors: ColorScheme, isArabic: boolean = false)
     addButton: {
       flexDirection: 'row',
       alignItems: 'center',
-      backgroundColor: raised.backgroundColor,
+      backgroundColor: colors.surface,
       marginHorizontal: 16,
       padding: 16,
-      borderRadius: 20,
+      borderRadius: colors.radii.lg,
       gap: 12,
-      marginBottom: 12,
-      shadowColor: raised.shadowColor,
-      shadowOffset: raised.shadowOffset,
-      shadowOpacity: raised.shadowOpacity,
-      shadowRadius: raised.shadowRadius,
-      elevation: raised.elevation,
+      marginBottom: 8,
+      borderWidth: 1,
+      borderColor: colors.border,
+      ...colors.shadows.sm,
     },
     addButtonText: {
-      fontSize: 16,
-      color: colors.text,
-      fontWeight: '700',
-    },
-
-    addInputContainer: {
-      backgroundColor: inset.backgroundColor,
-      marginHorizontal: 16,
-      padding: 16,
-      borderRadius: 26,
-      marginBottom: 0,
-      shadowColor: inset.shadowColor,
-      shadowOffset: inset.shadowOffset,
-      shadowOpacity: inset.shadowOpacity,
-      shadowRadius: inset.shadowRadius,
-      elevation: inset.elevation,
-    },
-    addInput: {
-      fontSize: 16,
+      fontSize: 15,
       color: colors.text,
       fontWeight: '600',
     },
+
+    addInputContainer: {
+      backgroundColor: colors.surface,
+      marginHorizontal: 16,
+      padding: 16,
+      borderRadius: colors.radii.lg,
+      marginBottom: 0,
+      borderWidth: 1,
+      borderColor: colors.border,
+      ...colors.shadows.sm,
+    },
+    addInput: {
+      fontSize: 15,
+      color: colors.text,
+      fontWeight: '500',
+    },
     fab: {
-      height: 42,
-      paddingHorizontal: 24,
-      borderRadius: 20,
+      height: 44,
+      paddingHorizontal: 10,
+      borderRadius: colors.radii.lg,
       backgroundColor: colors.primary,
       justifyContent: 'center',
       alignItems: 'center',
-      shadowColor: raisedLg.shadowColor,
-      shadowOffset: raisedLg.shadowOffset,
-      shadowOpacity: raisedLg.shadowOpacity,
-      shadowRadius: raisedLg.shadowRadius,
-      elevation: raisedLg.elevation,
+      ...colors.shadows.md,
     },
   });
 

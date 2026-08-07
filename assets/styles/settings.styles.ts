@@ -1,231 +1,400 @@
-import { ColorScheme, getNeoShadow } from "@/hooks/useTheme";
-import { StyleSheet, Dimensions, Platform } from "react-native";
-
-const { width } = Dimensions.get('window');
+import { ColorScheme } from "@/hooks/useTheme";
+import { StyleSheet } from "react-native";
 
 export const createSettingsStyles = (colors: ColorScheme, isArabic: boolean = false) => {
-  const raised = getNeoShadow(colors, 'raised', isArabic);
-  const flat = getNeoShadow(colors, 'flat', isArabic);
-  const inset = getNeoShadow(colors, 'inset', isArabic);
-  return StyleSheet.create({
+  const styles = StyleSheet.create({
     container: {
       flex: 1,
       backgroundColor: colors.bg,
     },
     safeArea: {
       flex: 1,
-    },
-    scrollContent: {
-      paddingBottom: 120,
+      backgroundColor: colors.bg,
     },
     header: {
-      paddingHorizontal: 24,
-      paddingTop: 32,
-      paddingBottom: 24,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      paddingHorizontal: 20,
+      paddingTop: 8,
+      paddingBottom: 16,
     },
     headerTitle: {
-      fontSize: isArabic ? 38 : 34,
-      fontWeight: '800',
+      fontSize: 32,
+      fontWeight: "700",
       color: colors.text,
-      letterSpacing: -1,
+      letterSpacing: -0.5,
     },
-    section: {
-      marginTop: 24,
-      paddingHorizontal: 20,
+    scrollContent: {
+      paddingHorizontal: 16,
+      paddingBottom: 48,
     },
-    sectionTitle: {
-      fontSize: isArabic ? 15 : 13,
-      fontWeight: '800',
-      color: colors.primary,
-      textTransform: 'uppercase',
-      letterSpacing: 1.5,
-      marginBottom: 16,
-      marginLeft: isArabic ? 0 : 4,
-      marginRight: isArabic ? 4 : 0,
+
+    // Profile hero (double-bezel)
+    profileOuter: {
+      marginBottom: 32,
+      borderRadius: 24,
+      backgroundColor: colors.surface + '40',
+      borderWidth: 1,
+      borderColor: colors.border,
+      overflow: 'hidden',
     },
-    card: {
-      backgroundColor: raised.backgroundColor,
-      borderRadius: 30,
-      padding: 4,
-      shadowColor: colors.shadow,
-      shadowOffset: { width: 0, height: 6 },
-      shadowOpacity: 0.06,
-      shadowRadius: 20,
-      elevation: 4,
-    },
-    profileHero: {
-      flexDirection: 'row',
-      alignItems: 'center',
+    profileInner: {
       padding: 20,
     },
+    profileRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 16,
+    },
     avatarContainer: {
-      width: 80,
-      height: 80,
-      borderRadius: 40,
-      backgroundColor: colors.primary + '15',
+      position: 'relative',
+    },
+    avatar: {
+      width: 64,
+      height: 64,
+      borderRadius: 32,
+      backgroundColor: colors.primary + '20',
+      borderWidth: 1,
+      borderColor: colors.text + '10',
+    },
+    avatarEditButton: {
+      position: 'absolute',
+      bottom: -2,
+      right: -2,
+      width: 28,
+      height: 28,
+      borderRadius: 14,
+      backgroundColor: colors.primary,
       justifyContent: 'center',
       alignItems: 'center',
       borderWidth: 2,
-      borderColor: colors.primary,
+      borderColor: colors.bg,
     },
     profileInfo: {
-      marginLeft: 20,
       flex: 1,
     },
     profileName: {
-      fontSize: isArabic ? 24 : 22,
-      fontWeight: '800',
-      color: colors.surfaceText,
-      marginBottom: 4,
+      fontSize: 18,
+      fontWeight: '700',
+      color: colors.text,
+      marginBottom: 2,
     },
     profileEmail: {
       fontSize: 14,
       color: colors.textMuted,
-      fontWeight: '500',
     },
-    settingItem: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      padding: 16,
-      borderRadius: 20,
-    },
-    iconWrapper: {
-      width: 40,
-      height: 40,
-      borderRadius: 16,
+    profileEditBtn: {
+      width: 44,
+      height: 44,
+      borderRadius: 22,
+      backgroundColor: colors.surface,
       justifyContent: 'center',
       alignItems: 'center',
-      marginRight: 16,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+
+    // Section groups
+    sectionGroup: {
+      marginBottom: 24,
+    },
+    sectionGroupLabel: {
+      fontSize: 11,
+      fontWeight: '700',
+      color: colors.textMuted,
+      textTransform: 'uppercase',
+      letterSpacing: 1,
+      marginBottom: 10,
+      paddingHorizontal: 4,
+    },
+    settingRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingVertical: 16,
+      paddingHorizontal: 18,
+      backgroundColor: colors.surface,
+      gap: 14,
+    },
+    settingRowFirst: {
+      borderTopLeftRadius: 16,
+      borderTopRightRadius: 16,
+    },
+    settingRowLast: {
+      borderBottomLeftRadius: 16,
+      borderBottomRightRadius: 16,
+    },
+    settingRowSingle: {
+      borderRadius: 16,
+    },
+    settingRowDivider: {
+      height: 1,
+      backgroundColor: colors.border,
+      marginHorizontal: 18,
+    },
+    settingIconWrap: {
+      width: 40,
+      height: 40,
+      borderRadius: 12,
+      justifyContent: 'center',
+      alignItems: 'center',
     },
     settingLabel: {
       flex: 1,
-      fontSize: isArabic ? 18 : 16,
-      fontWeight: '700',
-      color: colors.surfaceText,
+      fontSize: 16,
+      fontWeight: '500',
+      color: colors.text,
     },
     settingValue: {
       fontSize: 14,
       color: colors.textMuted,
-      marginRight: 8,
-      fontWeight: '500',
     },
-    divider: {
-      height: 1,
-      backgroundColor: colors.border,
-      marginHorizontal: 16,
-      opacity: 0.5,
+    settingChevron: {
+      opacity: 0.4,
     },
-    dbInfoCard: {
-      padding: 20,
-    },
-    dbRow: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      marginBottom: 12,
-    },
-    dbLabel: {
-      fontSize: 14,
-      color: colors.textMuted,
-      fontWeight: '600',
-    },
-    dbValue: {
-      fontSize: 14,
-      color: colors.surfaceText,
-      fontWeight: '700',
-      fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
-    },
-    statusBadge: {
-      paddingHorizontal: 8,
-      paddingVertical: 4,
-      borderRadius: 8,
-      backgroundColor: colors.success + '15',
-    },
-    statusText: {
-      fontSize: 10,
-      fontWeight: '800',
-      color: colors.success,
-      textTransform: 'uppercase',
-    },
-    logoutButton: {
-      marginTop: 12,
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'center',
-      padding: 16,
-      backgroundColor: colors.danger + '10',
-      borderRadius: 20,
-      gap: 8,
-    },
-    logoutText: {
+    settingDanger: {
       color: colors.danger,
-      fontSize: 16,
-      fontWeight: '700',
     },
-    versionText: {
-      textAlign: 'center',
-      marginTop: 32,
-      color: colors.textMuted,
+    settingRowDanger: {
+      backgroundColor: colors.dangerBg,
+      borderWidth: 1,
+      borderColor: colors.danger + '25',
+    },
+
+    // Stats grid
+    statsGrid: {
+      flexDirection: 'row',
+      gap: 12,
+      marginBottom: 32,
+    },
+    statCard: {
+      flex: 1,
+      backgroundColor: colors.surface,
+      borderRadius: 20,
+      padding: 18,
+      borderWidth: 1,
+      borderColor: colors.border,
+      ...colors.shadows.sm,
+    },
+    statValue: {
+      fontSize: 28,
+      fontWeight: '700',
+      color: colors.text,
+      marginBottom: 4,
+    },
+    statLabel: {
       fontSize: 12,
       fontWeight: '600',
-      letterSpacing: 1,
+      color: colors.textMuted,
+      letterSpacing: 0.2,
     },
+
+    // Logout
+    logoutButton: {
+      backgroundColor: colors.dangerBg,
+      borderRadius: 16,
+      padding: 18,
+      alignItems: 'center',
+      borderWidth: 1,
+      borderColor: colors.danger + '25',
+      marginTop: 8,
+    },
+    logoutText: {
+      fontSize: 15,
+      fontWeight: '700',
+      color: colors.danger,
+    },
+
+    // Modals
     modalOverlay: {
       flex: 1,
-      backgroundColor: colors.text + '80',
-      justifyContent: 'flex-end',
+      backgroundColor: 'rgba(0,0,0,0.6)',
+      justifyContent: 'center',
+      paddingHorizontal: 24,
     },
     modalContent: {
-      backgroundColor: colors.bg,
-      borderTopLeftRadius: 32,
-      borderTopRightRadius: 32,
+      backgroundColor: colors.surfaceHigh,
+      borderRadius: 24,
       padding: 24,
-      paddingBottom: Platform.OS === 'ios' ? 40 : 24,
-      minHeight: 400,
+      ...colors.shadows.lg,
     },
     modalHeader: {
       flexDirection: 'row',
       justifyContent: 'space-between',
       alignItems: 'center',
-      marginBottom: 24,
+      marginBottom: 20,
     },
     modalTitle: {
       fontSize: 20,
-      fontWeight: '800',
+      fontWeight: '700',
       color: colors.text,
     },
     modalBody: {
       gap: 16,
     },
+    inputGroup: {
+      gap: 6,
+    },
     inputLabel: {
-      fontSize: 14,
-      fontWeight: '700',
+      fontSize: 13,
+      fontWeight: '600',
       color: colors.textMuted,
-      marginBottom: 8,
     },
     textInput: {
-      backgroundColor: inset.backgroundColor,
-      borderRadius: 20,
+      backgroundColor: colors.bg,
+      borderRadius: 14,
       padding: 16,
-      color: colors.text,
       fontSize: 16,
-      shadowColor: colors.shadow,
-      shadowOffset: { width: 0, height: 4 },
-      shadowOpacity: 0.04,
-      shadowRadius: 10,
-      elevation: 2,
+      color: colors.text,
+      borderWidth: 1,
+      borderColor: colors.border,
     },
     saveButton: {
       backgroundColor: colors.primary,
-      borderRadius: 20,
+      borderRadius: 16,
       padding: 16,
       alignItems: 'center',
-      marginTop: 24,
+      marginTop: 8,
     },
     saveButtonText: {
-      color: colors.primaryText,
       fontSize: 16,
-      fontWeight: '800',
+      fontWeight: '700',
+      color: colors.primaryText,
+    },
+    cancelButton: {
+      padding: 14,
+      alignItems: 'center',
+    },
+    cancelButtonText: {
+      fontSize: 15,
+      fontWeight: '600',
+      color: colors.textMuted,
+    },
+
+    // Sound selection modal
+    soundOption: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingVertical: 14,
+      paddingHorizontal: 16,
+      borderRadius: 14,
+      backgroundColor: colors.bg,
+      marginBottom: 8,
+      gap: 12,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    soundOptionActive: {
+      borderColor: colors.primary,
+      backgroundColor: colors.primary + '12',
+    },
+    soundOptionLabel: {
+      flex: 1,
+      fontSize: 15,
+      fontWeight: '600',
+      color: colors.text,
+    },
+    soundOptionCheck: {},
+
+    // Backward compat aliases
+    profileSection: {
+      marginBottom: 32,
+    },
+    card: {
+      backgroundColor: colors.surface,
+      borderRadius: 20,
+      padding: 20,
+      borderWidth: 1,
+      borderColor: colors.border,
+      marginBottom: 12,
+      ...colors.shadows.sm,
+    },
+    profileHero: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 16,
+    },
+    iconWrapper: {
+      width: 40,
+      height: 40,
+      borderRadius: 12,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    settingItem: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingVertical: 16,
+      paddingHorizontal: 18,
+      backgroundColor: colors.surface,
+      borderWidth: 1,
+      borderColor: colors.border,
+      gap: 14,
+      borderRadius: 16,
+      marginBottom: 1,
+    },
+    divider: {
+      height: 1,
+      backgroundColor: colors.border,
+    },
+    dbInfoCard: {
+      backgroundColor: colors.surface,
+      borderRadius: 16,
+      padding: 16,
+      borderWidth: 1,
+      borderColor: colors.border,
+      marginBottom: 16,
+    },
+    dbRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      paddingVertical: 6,
+    },
+    dbLabel: {
+      fontSize: 13,
+      color: colors.textMuted,
+    },
+    dbValue: {
+      fontSize: 13,
+      color: colors.text,
+      fontWeight: '600',
+    },
+    statusBadge: {
+      backgroundColor: colors.success + '18',
+      paddingHorizontal: 10,
+      paddingVertical: 3,
+      borderRadius: 8,
+    },
+    statusText: {
+      fontSize: 11,
+      fontWeight: '700',
+      color: colors.success,
+    },
+    versionText: {
+      textAlign: 'center',
+      fontSize: 12,
+      color: colors.textMuted,
+      marginTop: 32,
+      marginBottom: 16,
+    },
+    appVersion: {
+      textAlign: 'center',
+      fontSize: 12,
+      color: colors.textMuted,
+      marginTop: 32,
+      marginBottom: 16,
+    },
+    section: {
+      marginBottom: 32,
+    },
+    sectionTitle: {
+      fontSize: 16,
+      fontWeight: '700',
+      color: colors.text,
+      marginBottom: 12,
     },
   });
+
+  return styles;
 };

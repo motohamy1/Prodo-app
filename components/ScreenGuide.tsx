@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import useTheme from '@/hooks/useTheme';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -28,6 +29,7 @@ interface ScreenGuideProps {
 
 export default function ScreenGuide({ visible, tips, onDismiss, isArabic = false }: ScreenGuideProps) {
   const insets = useSafeAreaInsets();
+  const { colors } = useTheme();
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(80)).current;
 
@@ -89,6 +91,9 @@ export default function ScreenGuide({ visible, tips, onDismiss, isArabic = false
           {
             transform: [{ translateY: slideAnim }],
             bottom: insets.bottom + 90,
+            backgroundColor: colors.surfaceHigh,
+            borderColor: colors.border,
+            ...colors.shadows.lg,
           },
           isArabic && { direction: 'rtl' },
         ]}
@@ -96,15 +101,15 @@ export default function ScreenGuide({ visible, tips, onDismiss, isArabic = false
         {/* Header */}
         <View style={[styles.cardHeader, isArabic && { flexDirection: 'row-reverse' }]}>
           <View style={[styles.headerLeft, isArabic && { flexDirection: 'row-reverse' }]}>
-            <View style={styles.sparkle}>
-              <Ionicons name="sparkles" size={16} color="#D4F82D" />
+            <View style={[styles.sparkle, { backgroundColor: colors.primary + '1F' }]}>
+              <Ionicons name="sparkles" size={16} color={colors.primary} />
             </View>
-            <Text style={styles.headerTitle}>
+            <Text style={[styles.headerTitle, { color: colors.surfaceText }]}>
               {isArabic ? 'نصائح سريعة' : 'Quick Tips'}
             </Text>
           </View>
           <TouchableOpacity onPress={handleDismiss} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
-            <Text style={styles.gotItBtn}>
+            <Text style={[styles.gotItBtn, { color: colors.primary }]}>
               {isArabic ? 'فهمت' : 'Got it'}
             </Text>
           </TouchableOpacity>
@@ -121,14 +126,14 @@ export default function ScreenGuide({ visible, tips, onDismiss, isArabic = false
                 index < tips.length - 1 && styles.tipBorder,
               ]}
             >
-              <View style={[styles.tipIcon, { backgroundColor: (tip.accentColor || '#D4F82D') + '18' }]}>
-                <Ionicons name={tip.icon} size={20} color={tip.accentColor || '#D4F82D'} />
+              <View style={[styles.tipIcon, { backgroundColor: (tip.accentColor || colors.primary) + '18' }]}> 
+                <Ionicons name={tip.icon} size={20} color={tip.accentColor || colors.primary} />
               </View>
               <View style={[styles.tipText, isArabic && { alignItems: 'flex-end' }]}>
-                <Text style={[styles.tipTitle, isArabic && { textAlign: 'right' }]}>
+                <Text style={[styles.tipTitle, { color: colors.surfaceText }, isArabic && { textAlign: 'right' }]}>
                   {tip.title}
                 </Text>
-                <Text style={[styles.tipDesc, isArabic && { textAlign: 'right' }]}>
+                <Text style={[styles.tipDesc, { color: colors.textMuted }, isArabic && { textAlign: 'right' }]}>
                   {tip.description}
                 </Text>
               </View>
@@ -142,7 +147,7 @@ export default function ScreenGuide({ visible, tips, onDismiss, isArabic = false
 
 const styles = StyleSheet.create({
   overlay: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     zIndex: 999,
     justifyContent: 'flex-end',
   },
@@ -150,17 +155,10 @@ const styles = StyleSheet.create({
     position: 'absolute',
     left: 16,
     right: 16,
-    backgroundColor: 'rgba(28, 28, 33, 0.97)',
     borderRadius: 24,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
     paddingVertical: 16,
     paddingHorizontal: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: -8 },
-    shadowOpacity: 0.4,
-    shadowRadius: 24,
-    elevation: 20,
   },
   cardHeader: {
     flexDirection: 'row',
@@ -169,7 +167,7 @@ const styles = StyleSheet.create({
     marginBottom: 14,
     paddingBottom: 12,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,255,255,0.06)',
+    borderBottomColor: 'rgba(127,116,164,0.20)',
   },
   headerLeft: {
     flexDirection: 'row',
@@ -180,20 +178,17 @@ const styles = StyleSheet.create({
     width: 28,
     height: 28,
     borderRadius: 14,
-    backgroundColor: 'rgba(212, 248, 45, 0.12)',
     alignItems: 'center',
     justifyContent: 'center',
   },
   headerTitle: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#FFFFFF',
     letterSpacing: 0.3,
   },
   gotItBtn: {
     fontSize: 15,
     fontWeight: '700',
-    color: '#D4F82D',
     letterSpacing: 0.2,
   },
   tipsContainer: {
@@ -207,7 +202,7 @@ const styles = StyleSheet.create({
   },
   tipBorder: {
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,255,255,0.04)',
+    borderBottomColor: 'rgba(127,116,164,0.18)',
   },
   tipIcon: {
     width: 40,
@@ -223,12 +218,10 @@ const styles = StyleSheet.create({
   tipTitle: {
     fontSize: 15,
     fontWeight: '700',
-    color: '#FFFFFF',
     marginBottom: 3,
   },
   tipDesc: {
     fontSize: 13,
-    color: '#9494B8',
     lineHeight: 19,
   },
 });

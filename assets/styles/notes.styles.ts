@@ -1,16 +1,8 @@
-import { StyleSheet, Dimensions, Platform } from 'react-native';
-import { ColorScheme, getNeoShadow } from "@/hooks/useTheme";
-
-const { width } = Dimensions.get('window');
-const cardWidth = width * 0.45;
-const gridCardWidth = (width - 48 - 12) / 2; // (Screen - horizontal padding*2 - gap) / 2
-
+import { ColorScheme } from "@/hooks/useTheme";
+import { Platform, StyleSheet } from "react-native";
 
 export const createNotesStyles = (colors: ColorScheme, isArabic: boolean = false) => {
-  const raised = getNeoShadow(colors, 'raised', isArabic);
-  const flat = getNeoShadow(colors, 'flat', isArabic);
-  const inset = getNeoShadow(colors, 'inset', isArabic);
-  return StyleSheet.create({
+  const styles = StyleSheet.create({
     container: {
       flex: 1,
       backgroundColor: colors.bg,
@@ -20,94 +12,283 @@ export const createNotesStyles = (colors: ColorScheme, isArabic: boolean = false
       backgroundColor: colors.bg,
     },
     header: {
-      paddingHorizontal: 24,
-      paddingTop: 15,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      paddingHorizontal: 20,
       paddingBottom: 16,
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
     },
     headerTitle: {
-      fontSize: isArabic ? 28 : 26,
-      fontWeight: '800',
+      fontSize: 32,
+      fontWeight: "700",
       color: colors.text,
+      letterSpacing: -0.5,
     },
-    sectionContainer: {
-      marginBottom: 20,
+
+    // Section: outer double-bezel frame
+    sectionOuter: {
+      marginHorizontal: 16,
+      marginBottom: 24,
+      borderRadius: 24,
+      backgroundColor: colors.surface + '40',
+      borderWidth: 1,
+      borderColor: colors.border,
+      overflow: 'hidden',
+    },
+    sectionInner: {
+      paddingTop: 20,
+      paddingBottom: 8,
     },
     sectionHeader: {
       flexDirection: 'row',
       justifyContent: 'space-between',
       alignItems: 'center',
-      paddingHorizontal: 24,
+      paddingHorizontal: 20,
+      marginBottom: 14,
+    },
+    sectionLabel: {
+      fontSize: 16,
+      fontWeight: '700',
+      color: colors.text,
+      letterSpacing: -0.2,
+    },
+    sectionBadge: {
+      backgroundColor: colors.surface,
+      paddingHorizontal: 10,
+      paddingVertical: 3,
+      borderRadius: 10,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    sectionBadgeText: {
+      fontSize: 12,
+      fontWeight: '700',
+      color: colors.textMuted,
+    },
+
+    // Cards row
+    scrollContent: {
+      paddingRight: 24,
+      paddingLeft: 4,
+    },
+    cardsRow: {
+      flexDirection: 'row',
+      alignItems: 'stretch',
+      paddingLeft: 16,
+    },
+
+    // Add card (dashed glass)
+    addCardOuter: {
+      marginRight: 16,
+    },
+    addCardInner: {
+      width: 170,
+      borderRadius: 20,
+      backgroundColor: colors.surface,
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderStyle: 'dashed',
+      paddingVertical: 24,
+      paddingHorizontal: 20,
+      alignItems: 'center',
+      justifyContent: 'center',
+      minHeight: 200,
+      ...colors.shadows.sm,
+    },
+    addCardIconWrap: {
+      width: 56,
+      height: 56,
+      borderRadius: 28,
+      backgroundColor: colors.primary + '14',
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginBottom: 14,
+    },
+    addCardLabel: {
+      fontSize: 15,
+      fontWeight: '700',
+      color: colors.text,
+      textAlign: 'center',
+      marginBottom: 4,
+    },
+    addCardHint: {
+      fontSize: 12,
+      color: colors.textMuted,
+      textAlign: 'center',
+    },
+
+    // Note/reminder card (double-bezel)
+    cardOuter: {
+      marginRight: 16,
+      borderRadius: 22,
+      padding: 2,
+      backgroundColor: colors.border + '60',
+    },
+    cardInner: {
+      width: 170,
+      borderRadius: 20,
+      padding: 18,
+      minHeight: 200,
+      justifyContent: 'space-between',
+    },
+    cardReminderPill: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      alignSelf: 'flex-start',
+      gap: 6,
+      paddingHorizontal: 10,
+      paddingVertical: 4,
+      borderRadius: 10,
       marginBottom: 12,
     },
+    cardReminderPillText: {
+      fontSize: 11,
+      fontWeight: '700',
+    },
+    cardTitleText: {
+      fontSize: 16,
+      fontWeight: '600',
+      flex: 1,
+      marginBottom: 12,
+      lineHeight: 22,
+    },
+    cardTrailing: {
+      alignSelf: 'flex-end',
+      opacity: 0.5,
+    },
+
+    // Loading
+    loadingPulse: {
+      width: 48,
+      height: 48,
+      borderRadius: 24,
+      backgroundColor: colors.surface,
+    },
+
+    // Kept for backward compat
+    loadingContainer: {
+      flex: 1,
+      justifyContent: "center",
+      alignItems: "center",
+    },
+    emptyState: {
+      paddingVertical: 40,
+      alignItems: 'center',
+    },
+    emptyStateText: {
+      fontSize: 14,
+      color: colors.textMuted,
+      marginTop: 8,
+    },
+    horizontalScroll: {
+      paddingHorizontal: 16,
+      paddingBottom: 8,
+    },
+    sectionContainer: {
+      marginBottom: 24,
+    },
     sectionTitle: {
-      fontSize: isArabic ? 22 : 20,
+      fontSize: 16,
       fontWeight: '700',
       color: colors.text,
+      paddingHorizontal: 16,
+      marginBottom: 12,
+      marginTop: 8,
     },
-    listContent: {
-      paddingHorizontal: 20,
-    },
-    card: {
-      width: cardWidth,
-      height: 125,
-      borderRadius: 26,
-      padding: 16,
-      marginHorizontal: 8,
+    sectionHeaderRow: {
+      flexDirection: 'row',
       justifyContent: 'space-between',
-      shadowColor: colors.shadow,
-      shadowOffset: { width: 0, height: 6 },
-      shadowOpacity: 0.08,
-      shadowRadius: 16,
-      elevation: 4,
+      alignItems: 'center',
+      paddingHorizontal: 16,
+      marginBottom: 12,
     },
-    cardTitle: {
-      fontSize: 18,
-      fontWeight: '700',
-      color: colors.text,
-      marginBottom: 8,
-      fontFamily: Platform.OS === 'ios' ? 'Inter' : 'sans-serif-medium',
-      writingDirection: 'auto',
+    sectionHeaderCount: {
+      fontSize: 13,
+      color: colors.textMuted,
+    },
+    horizontalGridContainer: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
     },
     loneColumnCentered: {
       justifyContent: 'center',
-      height: 265, // Match horizontalGridContainer height
+      alignItems: 'center',
+    },
+    gridCard: {
+      width: 160,
+      borderRadius: 20,
+      padding: 16,
+      marginRight: 12,
+      marginBottom: 12,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    card: {
+      width: 180,
+      backgroundColor: colors.surface,
+      borderRadius: 20,
+      padding: 16,
+      marginRight: 12,
+      borderWidth: 1,
+      borderColor: colors.border,
+      ...colors.shadows.sm,
+    },
+    cardTitle: {
+      fontSize: 15,
+      fontWeight: '600',
+      color: colors.text,
+      marginBottom: 8,
+    },
+    cardPreview: {
+      fontSize: 13,
+      color: colors.textMuted,
+      lineHeight: 20,
+      marginBottom: 12,
     },
     cardDesc: {
-      fontSize: 14,
-      fontWeight: '500',
-      color: colors.text + '99',
-      flex: 1,
+      fontSize: 12,
+      color: colors.textMuted,
     },
     cardDate: {
       fontSize: 12,
       fontWeight: '600',
-      color: colors.text + 'CC',
+      color: colors.primary,
     },
-    emptyText: {
-      paddingHorizontal: 24,
+    cardMeta: {
+      fontSize: 11,
       color: colors.textMuted,
-      fontSize: 14,
-      fontStyle: 'italic',
     },
-    fab: {
-      position: 'absolute',
-      bottom: 100,
-      right: 24,
-      width: 60,
-      height: 60,
-      borderRadius: 30,
-      backgroundColor: colors.primary,
+    cardReminderBadge: {
+      alignSelf: 'flex-start',
+      backgroundColor: colors.warningBg,
+      paddingHorizontal: 8,
+      paddingVertical: 3,
+      borderRadius: 6,
+      marginBottom: 8,
+    },
+    cardReminderText: {
+      fontSize: 11,
+      fontWeight: '600',
+      color: colors.warning,
+    },
+    addCard: {
+      width: 180,
+      backgroundColor: 'transparent',
+      borderRadius: 20,
+      padding: 16,
+      marginRight: 12,
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderStyle: 'dashed',
       justifyContent: 'center',
       alignItems: 'center',
-      shadowColor: colors.primary,
-      shadowOffset: { width: 0, height: 8 },
-      shadowOpacity: 0.3,
-      shadowRadius: 24,
-      elevation: 8,
-      zIndex: 100,
+      minHeight: 140,
+    },
+    addCardText: {
+      fontSize: 13,
+      color: colors.textMuted,
+      fontWeight: '600',
+      marginTop: 8,
     },
     detailSafeArea: {
       flex: 1,
@@ -118,204 +299,64 @@ export const createNotesStyles = (colors: ColorScheme, isArabic: boolean = false
       justifyContent: 'space-between',
       alignItems: 'center',
       paddingHorizontal: 16,
-      paddingTop: 16,
-      paddingBottom: 8,
+      paddingVertical: 12,
     },
     detailHeaderBtn: {
       width: 44,
       height: 44,
-      borderRadius: 22, // perfect circle
-      backgroundColor: raised.backgroundColor, // subtle background for icon containers
+      borderRadius: 12,
+      backgroundColor: colors.surface,
       justifyContent: 'center',
       alignItems: 'center',
-      shadowColor: colors.shadow,
-      shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 0.2,
-      shadowRadius: 4,
-      elevation: 3,
+      borderWidth: 1,
+      borderColor: colors.border,
     },
-    detailHeaderBtnIcon: {
-      color: colors.text, // icon matches the text color
-    },
+    detailHeaderBtnIcon: {},
     detailHeaderRight: {
       flexDirection: 'row',
-      gap: 12,
-    },
-    detailContent: {
-      flex: 1,
-      paddingHorizontal: 24,
-      paddingTop: 16,
-    },
-    titleInput: {
-      fontSize: 34,
-      fontWeight: '800',
-      fontFamily: Platform.OS === 'ios' ? 'Baskerville' : 'serif',
-      color: colors.text,
-      marginBottom: 8,
-      minHeight: 44,
-    },
-    dateSubtitle: {
-      fontSize: 16,
-      color: colors.textMuted,
-      marginBottom: 24,
-      fontWeight: '500',
-    },
-    bodyInput: {
-      fontSize: 18,
-      color: colors.text,
-      flex: 1,
-      textAlignVertical: 'top',
-      lineHeight: 28,
-      paddingBottom: 100, // space for toolbar
-      minHeight: 40,
-    },
-    
-    // Rich Toolbar
-    toolbarWrapper: {
-      position: 'absolute',
-      bottom: 2,
-      left: 20,
-      right: 20,
-      backgroundColor: '#1C1C1E', // Charcoal dark
-      borderRadius: 24,
-      padding: 16,
-      shadowColor: colors.shadow,
-      shadowOffset: { width: 0, height: 10 },
-      shadowOpacity: 0.3,
-      shadowRadius: 20,
-      elevation: 10,
-    },
-    toolbarHeader: {
-      flexDirection: 'row',
-      justifyContent: 'flex-end',
-      marginBottom: 12,
-    },
-    toolbarDismiss: {
-       padding: 4,
-    },
-    toolbarRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      marginBottom: 16,
-    },
-    toolbarFontSelector: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      backgroundColor: '#2C2C2E',
-      paddingHorizontal: 12,
-      paddingVertical: 8,
-      borderRadius: 12,
       gap: 8,
     },
-    toolbarFontText: {
-      color: colors.surfaceText,
+    inlineReminderHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      paddingHorizontal: 16,
+      marginBottom: 8,
+    },
+    inlineReminderTitle: {
       fontSize: 14,
       fontWeight: '600',
-    },
-    toolbarIconRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-around',
-      gap: 12,
-    },
-    toolbarIconBtn: {
-      width: 40,
-      height: 40,
-      borderRadius: 10,
-      backgroundColor: '#2C2C2E',
-      justifyContent: 'center',
-      alignItems: 'center',
-    },
-    toolbarIconBtnActive: {
-      backgroundColor: '#3A3A3C',
-      borderWidth: 1,
-      borderColor: colors.primary,
-    },
-    
-    // Reminder Modal Styles
-    modalOverlay: {
-      flex: 1,
-      backgroundColor: colors.text + '66',
-      justifyContent: 'flex-end',
-    },
-    modalContent: {
-      backgroundColor: colors.bg,
-      borderTopLeftRadius: 32,
-      borderTopRightRadius: 32,
-      paddingTop: 24,
-      paddingHorizontal: 24,
-      paddingBottom: 40,
-      height: '85%',
-    },
-    modalHeader: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      marginBottom: 24,
-    },
-    modalCloseBtn: {
-      width: 40,
-      height: 40,
-      borderRadius: 12,
-      backgroundColor: raised.backgroundColor,
-      justifyContent: 'center',
-      alignItems: 'center',
-    },
-    modalTitle: {
-      flex: 1,
-      textAlign: 'center',
-      fontSize: 20,
-      fontWeight: '700',
-      color: colors.text,
-      marginRight: 40, // offset close btn
-    },
-    sectionLabel: {
-      fontSize: 16,
-      fontWeight: '700',
-      color: colors.text,
-      marginBottom: 12,
-      marginTop: 20,
-    },
-    reminderTitleInput: {
-      backgroundColor: inset.backgroundColor,
-      borderRadius: 20,
-      paddingHorizontal: 16,
-      paddingVertical: 16,
-      fontSize: 16,
       color: colors.text,
     },
     calendarCard: {
-      backgroundColor: raised.backgroundColor,
-      borderRadius: 30,
+      backgroundColor: colors.surface,
+      borderRadius: 20,
       padding: 16,
-      shadowColor: colors.shadow,
-      shadowOffset: { width: 0, height: 6 },
-      shadowOpacity: 0.06,
-      shadowRadius: 16,
-      elevation: 3,
+      marginHorizontal: 16,
+      borderWidth: 1,
+      borderColor: colors.border,
     },
     calendarHeader: {
       flexDirection: 'row',
       justifyContent: 'space-between',
       alignItems: 'center',
-      marginBottom: 16,
+      marginBottom: 12,
     },
     calendarTitle: {
-      fontSize: 16,
-      fontWeight: '700',
+      fontSize: 14,
+      fontWeight: '600',
       color: colors.text,
     },
     weekDaysRow: {
       flexDirection: 'row',
-      justifyContent: 'space-around',
-      marginBottom: 12,
+      marginBottom: 8,
     },
     weekDayText: {
-      fontSize: 12,
+      flex: 1,
+      textAlign: 'center',
+      fontSize: 11,
       fontWeight: '600',
       color: colors.textMuted,
-      width: 30,
-      textAlign: 'center',
     },
     daysGrid: {
       flexDirection: 'row',
@@ -323,134 +364,75 @@ export const createNotesStyles = (colors: ColorScheme, isArabic: boolean = false
     },
     dayCell: {
       width: '14.28%',
-      height: 40,
+      aspectRatio: 1,
       justifyContent: 'center',
       alignItems: 'center',
-      marginBottom: 4,
+      borderRadius: 8,
     },
     dayCellActive: {
-      backgroundColor: colors.warning,
-      borderRadius: 20,
-      width: 40,
+      backgroundColor: colors.primary,
     },
     dayText: {
-      fontSize: 14,
-      fontWeight: '500',
+      fontSize: 13,
       color: colors.text,
     },
     dayTextActive: {
-      color: colors.text,
-      fontWeight: '800',
+      color: colors.primaryText,
     },
     timePresetsRow: {
       flexDirection: 'row',
-      justifyContent: 'space-between',
-      gap: 12,
+      flexWrap: 'wrap',
+      gap: 8,
+      marginTop: 12,
     },
     timePresetBtn: {
-      flex: 1,
-      height: 80,
-      borderRadius: 26,
-      justifyContent: 'center',
-      alignItems: 'center',
-    },
-    timePresetMain: {
-      fontSize: 20,
-      fontWeight: '800',
-    },
-    timePresetMeridian: {
-      fontSize: 12,
-      fontWeight: '700',
-      opacity: 0.6,
-      marginTop: 4,
-    },
-    createReminderBtn: {
-      backgroundColor: colors.primary,
-      borderRadius: 30,
-      paddingVertical: 18,
-      alignItems: 'center',
-      marginTop: 30,
-      shadowColor: colors.primary,
-      shadowOffset: { width: 0, height: 8 },
-      shadowOpacity: 0.25,
-      shadowRadius: 24,
-      elevation: 6,
-    },
-    createReminderText: {
-      fontSize: 18,
-      fontWeight: '800',
-      color: colors.primaryText,
-    },
-    // Checklist Styles
-    checklistContainer: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      marginVertical: 4,
-      gap: 12,
-    },
-    checkbox: {
-      width: 24,
-      height: 24,
-      borderRadius: 12,
-      borderWidth: 2,
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+      borderRadius: 8,
+      backgroundColor: colors.bg,
+      borderWidth: 1,
       borderColor: colors.border,
+    },
+    timePresetMain: {},
+    toolbarWrapper: {
+      backgroundColor: colors.surface,
+      borderTopWidth: 1,
+      borderTopColor: colors.border,
+      paddingVertical: 10,
+      paddingHorizontal: 16,
+    },
+    toolbarIconBtn: {
+      width: 40,
+      height: 40,
+      borderRadius: 10,
+      backgroundColor: 'transparent',
       justifyContent: 'center',
       alignItems: 'center',
     },
-    checkboxChecked: {
-      backgroundColor: colors.primary,
-      borderColor: colors.primary,
-    },
-    checklistText: {
-      fontSize: 18,
-      color: colors.text,
+    modalOverlay: {
       flex: 1,
+      backgroundColor: 'rgba(0,0,0,0.6)',
+      justifyContent: 'flex-end',
     },
-    checklistTextDone: {
-      textDecorationLine: 'line-through',
-      color: colors.textMuted,
-    },
-    gridContainer: {
-      flexDirection: 'row',
-      flexWrap: 'wrap',
-      paddingHorizontal: 24,
-      gap: 12,
-    },
-    gridCard: {
-      width: gridCardWidth,
-      height: 110,
-      borderRadius: 32,
-      padding: 16,
-      justifyContent: 'space-between',
-      shadowColor: colors.shadow,
-      shadowOffset: { width: 0, height: 4 },
-      shadowOpacity: 0.1,
-      shadowRadius: 10,
-      elevation: 4,
-    },
-    horizontalGridContainer: {
-      flexDirection: 'column',
-      flexWrap: 'wrap',
-      paddingHorizontal: 24,
-      height: 245, // Reduced to fit both sections on one screen
-      gap: 12,
-    },
-    inlineReminderHeader: {
-      backgroundColor: raised.backgroundColor,
-      borderRadius: 30,
+    modalContent: {
+      backgroundColor: colors.surfaceHigh,
+      borderTopLeftRadius: 24,
+      borderTopRightRadius: 24,
       padding: 20,
-      marginBottom: 24,
-      shadowColor: colors.shadow,
-      shadowOffset: { width: 0, height: 6 },
-      shadowOpacity: 0.06,
-      shadowRadius: 16,
-      elevation: 3,
+      paddingBottom: 40,
     },
-    inlineReminderTitle: {
+    modalHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: 16,
+    },
+    modalTitle: {
       fontSize: 18,
       fontWeight: '700',
       color: colors.text,
-      marginBottom: 16,
-    }
+    },
   });
+
+  return styles;
 };

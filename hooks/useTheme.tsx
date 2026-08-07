@@ -2,7 +2,6 @@ import * as SecureStore from 'expo-secure-store';
 import React, { createContext, ReactNode, useContext, useEffect, useState } from "react";
 import { Platform } from "react-native";
 
-// In-memory fallback
 const memoryStorage: Record<string, string> = {};
 
 const safeStorage = {
@@ -16,7 +15,7 @@ const safeStorage = {
       }
       return memoryStorage[key] || null;
     } catch (error) {
-      console.warn("AsyncStorage getItem failed, falling back to memory:", error);
+      console.warn("Storage getItem failed:", error);
       return memoryStorage[key] || null;
     }
   },
@@ -24,23 +23,19 @@ const safeStorage = {
     try {
       memoryStorage[key] = value;
       if (Platform.OS === "web") {
-        if (typeof localStorage !== "undefined") {
-          localStorage.setItem(key, value);
-        }
+        if (typeof localStorage !== "undefined") localStorage.setItem(key, value);
         return;
       }
       if (SecureStore && typeof SecureStore.setItemAsync === "function") {
         await SecureStore.setItemAsync(key, value);
       }
     } catch (error) {
-      console.warn("AsyncStorage setItem failed, using memory instead:", error);
+      console.warn("Storage setItem failed:", error);
     }
   },
 };
 
-// ── Neomorphic Shadow Types ──────────────────────────────────────────
-
-export interface NeoShadow {
+export interface ShadowPreset {
   shadowColor: string;
   shadowOffset: { width: number; height: number };
   shadowOpacity: number;
@@ -48,41 +43,10 @@ export interface NeoShadow {
   elevation: number;
 }
 
-export type NeoDepth = 'raised' | 'raisedLg' | 'pressed' | 'inset' | 'flat';
-
-/**
- * Returns neomorphic shadow props, optionally mirrored for RTL.
- * In RTL mode the light source flips horizontally: dark shadow moves
- * to bottom-left, light highlight moves to top-right.
- */
-export const getNeoShadow = (
-  colors: ColorScheme,
-  depth: NeoDepth,
-  isRTL: boolean = false,
-): { backgroundColor: string } & Partial<NeoShadow> => {
-  const preset = colors.neomorphic[depth];
-  if (depth === 'flat' || !('shadow' in preset)) {
-    return { backgroundColor: preset.backgroundColor };
-  }
-  const sh = preset.shadow as NeoShadow;
-  return {
-    backgroundColor: preset.backgroundColor,
-    shadowColor: sh.shadowColor,
-    shadowOffset: {
-      width: isRTL ? -sh.shadowOffset.width : sh.shadowOffset.width,
-      height: sh.shadowOffset.height,
-    },
-    shadowOpacity: sh.shadowOpacity,
-    shadowRadius: sh.shadowRadius,
-    elevation: sh.elevation,
-  };
-};
-
-// ── Color Scheme Interface ───────────────────────────────────────────
-
 export interface ColorScheme {
   bg: string;
   surface: string;
+  surfaceHigh: string;
   text: string;
   textMuted: string;
   border: string;
@@ -91,8 +55,8 @@ export interface ColorScheme {
   success: string;
   warning: string;
   danger: string;
-  shadow: string;
   info: string;
+  shadow: string;
   infoBg: string;
   successBg: string;
   warningBg: string;
@@ -102,20 +66,6 @@ export interface ColorScheme {
   taskDoneBg: string;
   taskPausedBg: string;
   taskNotDoneBg: string;
-  gradients: {
-    background: [string, string];
-    surface: [string, string];
-    primary: [string, string];
-    success: [string, string];
-    warning: [string, string];
-    danger: [string, string];
-    muted: [string, string];
-    empty: [string, string];
-  };
-  backgrounds: {
-    input: string;
-    editInput: string;
-  };
   surfaceText: string;
   statusBarStyle: "light-content" | "dark-content";
   radii: {
@@ -126,235 +76,158 @@ export interface ColorScheme {
     full: number;
     tab: number;
   };
-  neomorphic: {
-    raised: {
-      shadow: NeoShadow;
-      backgroundColor: string;
-    };
-    raisedLg: {
-      shadow: NeoShadow;
-      backgroundColor: string;
-    };
-    pressed: {
-      shadow: NeoShadow;
-      backgroundColor: string;
-    };
-    inset: {
-      shadow: NeoShadow;
-      backgroundColor: string;
-    };
-    flat: {
-      backgroundColor: string;
-    };
+  shadows: {
+    sm: ShadowPreset;
+    md: ShadowPreset;
+    lg: ShadowPreset;
+    glow: ShadowPreset;
+    auroraGlow: ShadowPreset;
   };
 }
 
-// ── Light Mode: Classic Neomorphism ──────────────────────────────────
-// Monochrome gray scale. Single accent: steel gray (#4A4A4A).
-// Every surface extrudes from the #E4E4E4 substrate with
-// sharp opposing shadows (dark bottom-right, light top-left).
-// Status is conveyed through extrusion depth, not color.
-
-const lightColors: ColorScheme = {
-  bg: "#E4E4E4",
-  surface: "#E4E4E4",
-  text: "#2D2D2D",
-  textMuted: "#8C8C8C",
-  border: "#D0D0D0",
-  // Single accent: darkest gray on the page, reserved for CTAs
-  primary: "#4A4A4A",
-  primaryText: "#FFFFFF",
-  // Semantic tones — all monochrome, distinguished by lightness
-  success: "#555555",
-  warning: "#666666",
-  danger: "#777777",
-  info: "#999999",
-  // Alert/status backgrounds — tonal, no hue
-  infoBg: "#E8E8E8",
-  successBg: "#DADADA",
-  warningBg: "#E0E0E0",
-  dangerBg: "#DEDEDE",
-  // Task status backgrounds — extrusion depth encoded as lightness
-  taskInProgressBg: "#ECECEC",   // Maximum extrusion (raised)
-  taskNotStartedBg: "#E4E4E4",   // Flush with background (flat)
-  taskDoneBg: "#DADADA",         // Inset (embossed)
-  taskPausedBg: "#E8E8E8",       // Moderate extrusion
-  taskNotDoneBg: "#DEDEDE",      // Slightly darker than not-started
-  shadow: "#B0B0B0",
-  gradients: {
-    background: ["#E4E4E4", "#E4E4E4"],
-    surface: ["#EEEEEE", "#E8E8E8"],
-    primary: ["#5A5A5A", "#4A4A4A"],
-    success: ["#6A6A6A", "#555555"],
-    warning: ["#7A7A7A", "#666666"],
-    danger: ["#8A8A8A", "#777777"],
-    muted: ["#ECECEC", "#E4E4E4"],
-    empty: ["#E8E8E8", "#E4E4E4"],
-  },
-  backgrounds: {
-    input: "#D8D8D8",     // Inset surface — darker than background
-    editInput: "#E0E0E0",
-  },
-  surfaceText: "#2D2D2D",
-  statusBarStyle: "dark-content" as const,
-  radii: {
-    sm: 10,
-    md: 16,
-    lg: 20,
-    xl: 26,
-    full: 30,
-    tab: 32,
-  },
-  neomorphic: {
-    raised: {
-      shadow: {
-        shadowColor: "#B0B0B0",
-        shadowOffset: { width: 6, height: 6 },
-        shadowOpacity: 0.35,
-        shadowRadius: 12,
-        elevation: 8,
-      },
-      backgroundColor: "#ECECEC",
-    },
-    raisedLg: {
-      shadow: {
-        shadowColor: "#B0B0B0",
-        shadowOffset: { width: 8, height: 8 },
-        shadowOpacity: 0.4,
-        shadowRadius: 16,
-        elevation: 10,
-      },
-      backgroundColor: "#ECECEC",
-    },
-    pressed: {
-      shadow: {
-        shadowColor: "#B0B0B0",
-        shadowOffset: { width: 4, height: 4 },
-        shadowOpacity: 0.25,
-        shadowRadius: 8,
-        elevation: 4,
-      },
-      backgroundColor: "#DADADA",
-    },
-    inset: {
-      shadow: {
-        shadowColor: "#B0B0B0",
-        shadowOffset: { width: 4, height: 4 },
-        shadowOpacity: 0.2,
-        shadowRadius: 8,
-        elevation: 2,
-      },
-      backgroundColor: "#D8D8D8",
-    },
-    flat: {
-      backgroundColor: "#E4E4E4",
-    },
-  },
-};
-
-// ── Dark Mode: Classic Neomorphism ───────────────────────────────────
-// Monochrome dark scale. Single accent: light steel (#CCCCCC).
-// Light-on-dark extrusion: raised surfaces are lighter than background.
-// Dark shadow recedes, light highlight rises.
-
 const darkColors: ColorScheme = {
-  bg: "#000000",
-  surface: "#000000",
-  surfaceText: "#FFFFFF",
-  text: "#FFFFFF",
-  textMuted: "#98989F",
-  border: "#1C1C1E",
-  // Single accent: lightest gray on the dark surface
-  primary: "#CCCCCC",
-  primaryText: "#000000",
-  // Semantic tones — monochrome light-dark reversal
-  success: "#AAAAAA",
-  warning: "#999999",
-  danger: "#888888",
-  info: "#777777",
-  // Alert/status backgrounds — tonal, no hue
-  infoBg: "#1C1C1E",
-  successBg: "#111111",
-  warningBg: "#161616",
-  dangerBg: "#141414",
-  // Task status backgrounds — extrusion depth
-  taskInProgressBg: "#1C1C1E",   // Maximum extrusion
-  taskNotStartedBg: "#000000",   // Flush with background
-  taskDoneBg: "#111111",         // Inset
-  taskPausedBg: "#161616",       // Moderate extrusion
-  taskNotDoneBg: "#141414",      // Slightly lighter than not-started
-  shadow: "#000000",
-  gradients: {
-    background: ["#000000", "#000000"],
-    surface: ["#0A0A0A", "#000000"],
-    primary: ["#DDDDDD", "#CCCCCC"],
-    success: ["#BBBBBB", "#AAAAAA"],
-    warning: ["#AAAAAA", "#999999"],
-    danger: ["#999999", "#888888"],
-    muted: ["#0A0A0A", "#000000"],
-    empty: ["#000000", "#0A0A0A"],
-  },
-  backgrounds: {
-    input: "#111111",     // Inset surface — darker than background
-    editInput: "#1C1C1E",
-  },
+  bg: "#151120",
+  surface: "#1E1830",
+  surfaceHigh: "#292045",
+  text: "#F4F0FA",
+  textMuted: "#9C92BE",
+  border: "#352B54",
+  primary: "#F2B544",
+  primaryText: "#1C1330",
+  success: "#4EE6C1",
+  warning: "#F2B544",
+  danger: "#F4789C",
+  info: "#A89CFF",
+  shadow: "#0A0714",
+  infoBg: "#251E44",
+  successBg: "#13282E",
+  warningBg: "#2B2214",
+  dangerBg: "#2D1926",
+  taskInProgressBg: "#241C3C",
+  taskNotStartedBg: "#1E1830",
+  taskDoneBg: "#13282E",
+  taskPausedBg: "#251F38",
+  taskNotDoneBg: "#2D1926",
+  surfaceText: "#F4F0FA",
   statusBarStyle: "light-content" as const,
   radii: {
-    sm: 10,
-    md: 16,
-    lg: 20,
-    xl: 26,
-    full: 30,
-    tab: 32,
+    sm: 6,
+    md: 10,
+    lg: 14,
+    xl: 20,
+    full: 24,
+    tab: 20,
   },
-  neomorphic: {
-    raised: {
-      shadow: {
-        shadowColor: "#000000",
-        shadowOffset: { width: 6, height: 6 },
-        shadowOpacity: 0.45,
-        shadowRadius: 12,
-        elevation: 8,
-      },
-      backgroundColor: "#1C1C1E",
+  shadows: {
+    sm: {
+      shadowColor: "#0A0714",
+      shadowOffset: { width: 0, height: 1 },
+      shadowOpacity: 0.45,
+      shadowRadius: 6,
+      elevation: 3,
     },
-    raisedLg: {
-      shadow: {
-        shadowColor: "#000000",
-        shadowOffset: { width: 8, height: 8 },
-        shadowOpacity: 0.5,
-        shadowRadius: 16,
-        elevation: 10,
-      },
-      backgroundColor: "#1C1C1E",
+    md: {
+      shadowColor: "#0A0714",
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.50,
+      shadowRadius: 12,
+      elevation: 6,
     },
-    pressed: {
-      shadow: {
-        shadowColor: "#000000",
-        shadowOffset: { width: 4, height: 4 },
-        shadowOpacity: 0.35,
-        shadowRadius: 8,
-        elevation: 4,
-      },
-      backgroundColor: "#111111",
+    lg: {
+      shadowColor: "#0A0714",
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.55,
+      shadowRadius: 20,
+      elevation: 10,
     },
-    inset: {
-      shadow: {
-        shadowColor: "#000000",
-        shadowOffset: { width: 4, height: 4 },
-        shadowOpacity: 0.3,
-        shadowRadius: 8,
-        elevation: 2,
-      },
-      backgroundColor: "#111111",
+    glow: {
+      shadowColor: "#F2B544",
+      shadowOffset: { width: 0, height: 6 },
+      shadowOpacity: 0.35,
+      shadowRadius: 18,
+      elevation: 8,
     },
-    flat: {
-      backgroundColor: "#000000",
+    auroraGlow: {
+      shadowColor: "#4EE6C1",
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.30,
+      shadowRadius: 14,
+      elevation: 6,
     },
   },
 };
 
-// ── Theme Context & Provider ─────────────────────────────────────────
+const lightColors: ColorScheme = {
+  bg: "#F6F3FB",
+  surface: "#FFFFFF",
+  surfaceHigh: "#FDFCFF",
+  text: "#251D3A",
+  textMuted: "#7B7199",
+  border: "#E6DFF3",
+  primary: "#C08210",
+  primaryText: "#FFFFFF",
+  success: "#0C9C81",
+  warning: "#C08210",
+  danger: "#D64E74",
+  info: "#7466E8",
+  shadow: "#4A3A78",
+  infoBg: "#EEEBFD",
+  successBg: "#E2F7F1",
+  warningBg: "#FBF0DA",
+  dangerBg: "#FBE6ED",
+  taskInProgressBg: "#FBF7EE",
+  taskNotStartedBg: "#FFFFFF",
+  taskDoneBg: "#E2F7F1",
+  taskPausedBg: "#F7F4FB",
+  taskNotDoneBg: "#FBE6ED",
+  surfaceText: "#251D3A",
+  statusBarStyle: "dark-content" as const,
+  radii: {
+    sm: 6,
+    md: 10,
+    lg: 14,
+    xl: 20,
+    full: 24,
+    tab: 20,
+  },
+  shadows: {
+    sm: {
+      shadowColor: "#4A3A78",
+      shadowOffset: { width: 0, height: 1 },
+      shadowOpacity: 0.10,
+      shadowRadius: 6,
+      elevation: 2,
+    },
+    md: {
+      shadowColor: "#4A3A78",
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.13,
+      shadowRadius: 12,
+      elevation: 4,
+    },
+    lg: {
+      shadowColor: "#4A3A78",
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.16,
+      shadowRadius: 20,
+      elevation: 8,
+    },
+    glow: {
+      shadowColor: "#E9A93A",
+      shadowOffset: { width: 0, height: 6 },
+      shadowOpacity: 0.28,
+      shadowRadius: 16,
+      elevation: 6,
+    },
+    auroraGlow: {
+      shadowColor: "#0C9C81",
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.22,
+      shadowRadius: 12,
+      elevation: 4,
+    },
+  },
+};
 
 interface ThemeContextType {
   isDarkMode: boolean;

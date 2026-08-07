@@ -3,14 +3,27 @@ import { Id } from '@/convex/_generated/dataModel';
 import { useAuth } from '@/hooks/useAuth';
 import { useOfflineMutation } from '@/hooks/useOfflineMutation';
 import { useOfflineQuery } from '@/hooks/useOfflineQuery';
-import useTheme, { getNeoShadow } from '@/hooks/useTheme';
+import useTheme, { ShadowPreset } from '@/hooks/useTheme';
 import { useTranslation } from '@/utils/i18n';
 import { showTaskCompletedNotification } from '@/utils/notifications';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Alert, LayoutAnimation, Share, Text, TouchableOpacity, View } from 'react-native';
+import Animated, {
+  Easing,
+  FadeInDown,
+  useAnimatedStyle,
+  useSharedValue,
+  withDelay,
+  withRepeat,
+  withSequence,
+  withSpring,
+  withTiming,
+} from 'react-native-reanimated';
 import ActionModal from './ActionModal';
 import CircularProgress from './CircularProgress';
+import LivePress from './LivePress';
 import { SubtaskRow } from './SubtaskRow';
 import TaskDetailModal from './TaskDetailModal';
 
@@ -59,14 +72,25 @@ const getLuminance = (hex: string) => {
   return 0.299 * r + 0.587 * g + 0.114 * b;
 };
 
-const getStatusShadow = (colors: any, status: string, isRTL: boolean) => {
+const getStatusShadow = (colors: any, status: string) => {
   switch (status) {
-    case 'in_progress': return getNeoShadow(colors, 'raisedLg', isRTL);
-    case 'done': return getNeoShadow(colors, 'inset', isRTL);
-    case 'not_started': return getNeoShadow(colors, 'flat', isRTL);
-    case 'paused': return getNeoShadow(colors, 'raised', isRTL);
-    case 'not_done': return getNeoShadow(colors, 'raised', isRTL);
-    default: return getNeoShadow(colors, 'raised', isRTL);
+    case 'in_progress': return colors.shadows.md;
+    case 'done': return colors.shadows.sm;
+    case 'not_started': return colors.shadows.sm;
+    case 'paused': return colors.shadows.sm;
+    case 'not_done': return colors.shadows.sm;
+    default: return colors.shadows.sm;
+  }
+};
+
+const getStatusBg = (colors: any, status: string) => {
+  switch (status) {
+    case 'in_progress': return colors.taskInProgressBg;
+    case 'done': return colors.taskDoneBg;
+    case 'not_started': return colors.taskNotStartedBg;
+    case 'paused': return colors.taskPausedBg;
+    case 'not_done': return colors.taskNotDoneBg;
+    default: return colors.taskNotStartedBg;
   }
 };
 
@@ -111,6 +135,38 @@ const TodoCard: React.FC<TodoCardProps> = ({ todo, onSetTimer, onLongPress, onLi
   const hasAutoCompletedSubtasksRef = useRef(false);
   // Optimistic status: updates immediately on user action, syncs from server
   const [optimisticStatus, setOptimisticStatus] = useState(todo.status);
+
+  const pulse = useSharedValue(todo.status === 'in_progress' ? 0.35 : 0);
+  const titleScale = useSharedValue(1);
+  const prevStatusRef = useRef(todo.status);
+
+  useEffect(() => {
+    if (todo.status === 'in_progress') {
+      pulse.value = withRepeat(
+        withSequence(
+          withTiming(0.85, { duration: 900, easing: Easing.inOut(Easing.ease) }),
+          withTiming(0.35, { duration: 900, easing: Easing.inOut(Easing.ease) })
+        ),
+        -1,
+        false
+      );
+    } else {
+      pulse.value = withTiming(0, { duration: 250 });
+    }
+  }, [todo.status, pulse]);
+
+  useEffect(() => {
+    if (prevStatusRef.current !== 'done' && todo.status === 'done') {
+      titleScale.value = withSequence(
+        withDelay(60, withTiming(0.94, { duration: 110 })),
+        withSpring(1, { damping: 9, stiffness: 260 })
+      );
+    }
+    prevStatusRef.current = todo.status;
+  }, [todo.status, titleScale]);
+
+  const pulseStyle = useAnimatedStyle(() => ({ opacity: pulse.value }));
+  const titleStyle = useAnimatedStyle(() => ({ transform: [{ scale: titleScale.value }] }));
 
   // Timer tick effect
   useEffect(() => {
@@ -366,7 +422,7 @@ const TodoCard: React.FC<TodoCardProps> = ({ todo, onSetTimer, onLongPress, onLi
 
   const coreCard = (
     <>
-      <TouchableOpacity 
+      <LivePress 
         activeOpacity={0.95}
         onPress={() => openDetail()}
         onLongPress={() => { 
@@ -382,14 +438,23 @@ const TodoCard: React.FC<TodoCardProps> = ({ todo, onSetTimer, onLongPress, onLi
             borderColor: (todo.status === 'not_done' || isPastDue) ? cardBorderColor : 'transparent', 
             borderWidth: (todo.status === 'not_done' || isPastDue) ? 1 : 0, 
             padding: isTimelineMode ? 18 : 14,
-            ...(() => {
-              const s = getStatusShadow(colors, todo.status, isArabic);
-              const { backgroundColor: _, ...rest } = s;
-              return rest;
-            })(),
+            ...getStatusShadow(colors, todo.status),
           }
         ]}
       >
+        {optimisticStatus === 'in_progress' && (
+          <Animated.View
+            pointerEvents="none"
+            style={[{ position: 'absolute', top: 0, bottom: 0, start: 0, width: 3, zIndex: 2 }, pulseStyle]}
+          >
+            <LinearGradient
+              colors={['#F2B544', '#4EE6C1']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 0, y: 1 }}
+              style={{ flex: 1 }}
+            />
+          </Animated.View>
+        )}
         {isTimelineMode && (
           <View style={{
             position: 'absolute',
@@ -402,15 +467,23 @@ const TodoCard: React.FC<TodoCardProps> = ({ todo, onSetTimer, onLongPress, onLi
           <View style={[{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }]}>
             <View style={[{ flex: 1, paddingEnd: 8 }, isArabic && { alignItems: 'flex-end' }]}>
               {(
-                <View>
+                <Animated.View style={titleStyle}>
                   <Text 
-                    style={[homeStyles.cardTitle, { marginBottom: 10, color: contentColor }, isArabic && { textAlign: 'right' }]} 
+                    style={[
+                      homeStyles.cardTitle,
+                      { marginBottom: 10 },
+                      {
+                        color: todo.status === 'done' ? contentMutedColor : contentColor,
+                        textDecorationLine: todo.status === 'done' ? 'line-through' : 'none',
+                      },
+                      isArabic && { textAlign: 'right' },
+                    ]} 
                     numberOfLines={2}
                     ellipsizeMode="tail"
                   >
                     {todo.text}
                   </Text>
-                </View>
+                </Animated.View>
               )}
               <View style={[{ flexDirection: 'row', gap: 8 }]}>
                 <View style={[homeStyles.badge, { backgroundColor: badgeBg === colors.border ? colors.surfaceText + '15' : badgeBg, alignSelf: isArabic ? 'flex-end' : 'flex-start' }]}>
@@ -460,31 +533,31 @@ const TodoCard: React.FC<TodoCardProps> = ({ todo, onSetTimer, onLongPress, onLi
                 <>
                   {!isTimerSet && (
                     <View style={[{ flexDirection: 'row', alignItems: 'center', gap: 6 }]}>
-                      <TouchableOpacity 
+                      <LivePress 
                         style={[homeStyles.iconBtn, { backgroundColor: optimisticStatus === 'not_started' || optimisticStatus === 'not_done' ? colors.primary + '20' : 'transparent', borderWidth: 1, borderColor: optimisticStatus === 'not_started' || optimisticStatus === 'not_done' ? colors.primary : colors.border }]}
                         onPress={() => optimisticStatus !== 'not_started' && moveToStatus('not_started')}
                       >
                         <Ionicons name="ellipse-outline" size={16} color={optimisticStatus === 'not_started' || optimisticStatus === 'not_done' ? colors.primary : contentColor} />
-                      </TouchableOpacity>
-                      <TouchableOpacity 
+                      </LivePress>
+                      <LivePress 
                         style={[homeStyles.iconBtn, { backgroundColor: optimisticStatus === 'in_progress' ? colors.warning + '20' : 'transparent', borderWidth: 1, borderColor: optimisticStatus === 'in_progress' ? colors.warning : colors.border }]}
                         onPress={() => optimisticStatus !== 'in_progress' && moveToStatus('in_progress')}
                       >
                         <Ionicons name="play-outline" size={16} color={optimisticStatus === 'in_progress' ? colors.warning : contentColor} />
-                      </TouchableOpacity>
-                      <TouchableOpacity 
+                      </LivePress>
+                      <LivePress 
                         style={[homeStyles.iconBtn, { backgroundColor: optimisticStatus === 'done' ? colors.success + '20' : 'transparent', borderWidth: 1, borderColor: optimisticStatus === 'done' ? colors.success : colors.border }]}
                         onPress={() => optimisticStatus !== 'done' && moveToStatus('done')}
                       >
                         <Ionicons name="checkmark-circle-outline" size={16} color={optimisticStatus === 'done' ? colors.success : contentColor} />
-                      </TouchableOpacity>
+                      </LivePress>
                     </View>
                   )}
                   {(optimisticStatus === 'not_started' || optimisticStatus === 'not_done') && (
                     <View style={[{ flexDirection: 'row', alignItems: 'center', gap: 8 }]}>
                       {!isTimerSet ? (
                         <TouchableOpacity style={[homeStyles.actionBtn, { 
-                          backgroundColor: colors.neomorphic.raised.backgroundColor,
+                          backgroundColor: colors.surface,
                           shadowColor: colors.text,
                           shadowOffset: { width: 4, height: 4 },
                           shadowOpacity: 0.1,
@@ -495,17 +568,17 @@ const TodoCard: React.FC<TodoCardProps> = ({ todo, onSetTimer, onLongPress, onLi
                           <Text style={[homeStyles.actionBtnText, { color: contentColor }]}>{t.setTimer}</Text>
                         </TouchableOpacity>
                       ) : (
-                        <TouchableOpacity style={[homeStyles.actionBtn, { backgroundColor: isBrightBg ? colors.text : colors.primary }]} onPress={handleStartTimer}>
-                          <Ionicons name="play" size={16} color={isBrightBg ? "#FFFFFF" : (isDarkMode ? colors.text : colors.surfaceText)} />
-                          <Text style={[homeStyles.actionBtnText, { color: isBrightBg ? "#FFFFFF" : (isDarkMode ? colors.text : colors.surfaceText) }]}>{t.startTask}</Text>
-                        </TouchableOpacity>
+                        <LivePress style={[homeStyles.actionBtn, { backgroundColor: isBrightBg ? colors.text : colors.primary }]} onPress={handleStartTimer}>
+                          <Ionicons name="play" size={16} color={isBrightBg ? colors.surface : (isDarkMode ? colors.text : colors.surfaceText)} />
+                          <Text style={[homeStyles.actionBtnText, { color: isBrightBg ? colors.surface : (isDarkMode ? colors.text : colors.surfaceText) }]}>{t.startTask}</Text>
+                        </LivePress>
                       )}
                     </View>
                   )}
                   {optimisticStatus === 'in_progress' && (
                     <View style={[{ flexDirection: 'row', alignItems: 'center', gap: 8 }]}>
                       <TouchableOpacity style={[homeStyles.iconBtn, { backgroundColor: isBrightBg ? colors.surfaceText + '66' : colors.surface, borderColor: isBrightBg ? colors.text + '1A' : colors.border, borderWidth: 1 }]} onPress={handlePauseTimer}>
-                        <Ionicons name="pause" size={16} color={isBrightBg ? "#FFFFFF" : contentColor} />
+                        <Ionicons name="pause" size={16} color={isBrightBg ? colors.surface : contentColor} />
                       </TouchableOpacity>
                       {todo.timerDirection === 'up' && (
                         <TouchableOpacity style={[homeStyles.iconBtn, { backgroundColor: isBrightBg ? colors.success + '4D' : colors.success + '26', borderColor: isBrightBg ? colors.text + '1A' : colors.success + '40', borderWidth: 1 }]} onPress={() => { updateStatus({ id: todo._id, status: 'done' }); showTaskCompletedNotification(todo.text, isArabic ? 'ar' : 'en'); }}>
@@ -517,7 +590,7 @@ const TodoCard: React.FC<TodoCardProps> = ({ todo, onSetTimer, onLongPress, onLi
                   {optimisticStatus === 'paused' && (
                     <View style={[{ flexDirection: 'row', alignItems: 'center', gap: 8 }]}>
                       <TouchableOpacity style={[homeStyles.iconBtn, { backgroundColor: isBrightBg ? colors.text : colors.primary }]} onPress={handleStartTimer}>
-                        <Ionicons name="play" size={16} color={isBrightBg ? "#FFFFFF" : (isDarkMode ? colors.text : colors.surfaceText)} />
+                        <Ionicons name="play" size={16} color={isBrightBg ? colors.surface : (isDarkMode ? colors.text : colors.surfaceText)} />
                       </TouchableOpacity>
                       {todo.timerDirection === 'up' && (
                         <TouchableOpacity style={[homeStyles.iconBtn, { backgroundColor: isBrightBg ? colors.success + '4D' : colors.success + '26', borderColor: isBrightBg ? colors.text + '1A' : colors.success + '40', borderWidth: 1 }]} onPress={() => { updateStatus({ id: todo._id, status: 'done' }); showTaskCompletedNotification(todo.text, isArabic ? 'ar' : 'en'); }}>
@@ -532,24 +605,24 @@ const TodoCard: React.FC<TodoCardProps> = ({ todo, onSetTimer, onLongPress, onLi
                 <View style={[{ flexDirection: 'row', alignItems: 'center', gap: 6 }]}>
                   {!isTimerSet && (
                     <>
-                      <TouchableOpacity 
+                      <LivePress 
                         style={[homeStyles.iconBtn, { backgroundColor: optimisticStatus === 'not_started' || optimisticStatus === 'not_done' ? colors.primary + '20' : 'transparent', borderWidth: 1, borderColor: optimisticStatus === 'not_started' || optimisticStatus === 'not_done' ? colors.primary : colors.border }]}
                         onPress={() => optimisticStatus !== 'not_started' && moveToStatus('not_started')}
                       >
                         <Ionicons name="ellipse-outline" size={16} color={optimisticStatus === 'not_started' || optimisticStatus === 'not_done' ? colors.primary : contentColor} />
-                      </TouchableOpacity>
-                      <TouchableOpacity 
+                      </LivePress>
+                      <LivePress 
                         style={[homeStyles.iconBtn, { backgroundColor: optimisticStatus === 'in_progress' ? colors.warning + '20' : 'transparent', borderWidth: 1, borderColor: optimisticStatus === 'in_progress' ? colors.warning : colors.border }]}
                         onPress={() => optimisticStatus !== 'in_progress' && moveToStatus('in_progress')}
                       >
                         <Ionicons name="play-outline" size={16} color={optimisticStatus === 'in_progress' ? colors.warning : contentColor} />
-                      </TouchableOpacity>
-                      <TouchableOpacity 
+                      </LivePress>
+                      <LivePress 
                         style={[homeStyles.iconBtn, { backgroundColor: optimisticStatus === 'done' ? colors.success + '20' : 'transparent', borderWidth: 1, borderColor: optimisticStatus === 'done' ? colors.success : colors.border }]}
                         onPress={() => optimisticStatus !== 'done' && moveToStatus('done')}
                       >
                         <Ionicons name="checkmark-circle-outline" size={16} color={optimisticStatus === 'done' ? colors.success : contentColor} />
-                      </TouchableOpacity>
+                      </LivePress>
                     </>
                   )}
                   {anySubtaskRunning && (
@@ -654,7 +727,7 @@ const TodoCard: React.FC<TodoCardProps> = ({ todo, onSetTimer, onLongPress, onLi
             </View>
           )}
         </View>
-      </TouchableOpacity>
+      </LivePress>
     </>
   );
 
@@ -724,7 +797,9 @@ const TodoCard: React.FC<TodoCardProps> = ({ todo, onSetTimer, onLongPress, onLi
     const endTimeStr = isDone && todo.completedAt ? formatTimeShort(todo.completedAt) : '';
     
     return (
-      <View style={[
+      <Animated.View
+        entering={FadeInDown.duration(300).easing(Easing.out(Easing.cubic))}
+        style={[
         homeStyles.cardContainer,
         {
           marginHorizontal: 0,
@@ -748,12 +823,12 @@ const TodoCard: React.FC<TodoCardProps> = ({ todo, onSetTimer, onLongPress, onLi
         />
         )}
         {actionModal}
-      </View>
+      </Animated.View>
     );
   }
 
   return (
-    <View style={{ marginStart: depth * 16 }}>
+    <Animated.View entering={FadeInDown.duration(300).easing(Easing.out(Easing.cubic))} style={{ marginStart: depth * 16 }}>
       {coreCard}
       {!onOpenDetail && (
       <TaskDetailModal 
@@ -764,7 +839,7 @@ const TodoCard: React.FC<TodoCardProps> = ({ todo, onSetTimer, onLongPress, onLi
       />
       )}
       {actionModal}
-    </View>
+    </Animated.View>
   );
 };
 

@@ -3,7 +3,7 @@ import { View, Text, TouchableOpacity, ScrollView, StatusBar, Animated, StyleShe
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import useTheme, { getNeoShadow } from '@/hooks/useTheme';
+import useTheme from '@/hooks/useTheme';
 import { useAuth } from '@/hooks/useAuth';
 import { createPlannerStyles } from '@/assets/styles/planner.styles';
 import { useOfflineMutation } from '@/hooks/useOfflineMutation';
@@ -22,6 +22,8 @@ import { useTranslation } from '@/utils/i18n';
 import { useScreenGuide } from '@/hooks/useScreenGuide';
 import ScreenGuide from '@/components/ScreenGuide';
 import type { GuideTip } from '@/components/ScreenGuide';
+import { LIST_TYPE_COLORS } from '@/utils/magicColors';
+import Reanimated, { FadeInDown } from 'react-native-reanimated';
 
 const months_en = [
   'January', 'February', 'March', 'April',
@@ -36,9 +38,9 @@ const months_ar = [
 ];
 
 const LIST_TYPE_CARDS = [
-  { key: 'checklist', label: 'Checklists', icon: 'checkbox-outline', color: '#4ECDC4' },
-  { key: 'bullet', label: 'Bullet Points', icon: 'ellipse', color: '#FF6B6B' },
-  { key: 'toggle', label: 'Toggle Lists', icon: 'albums-outline', color: '#FFD93D' },
+  { key: 'checklist', label: 'Checklists', icon: 'checkbox-outline', color: LIST_TYPE_COLORS.checklist },
+  { key: 'bullet', label: 'Bullet Points', icon: 'ellipse', color: LIST_TYPE_COLORS.bullet },
+  { key: 'toggle', label: 'Toggle Lists', icon: 'albums-outline', color: LIST_TYPE_COLORS.toggle },
 ];
 
 const Planner = () => {
@@ -47,19 +49,19 @@ const Planner = () => {
   const { t, isArabic } = useTranslation(language);
   const styles = createPlannerStyles(colors, isArabic);
   const homeStyles = createHomeStyles(colors, isArabic);
-  const cardBg = getNeoShadow(colors, 'raised', isArabic).backgroundColor;
+  const cardBg = colors.surface;
   const router = useRouter();
   const months = isArabic ? months_ar : months_en;
   const { showGuide, dismissGuide } = useScreenGuide('planner');
 
   const plannerTips: GuideTip[] = isArabic ? [
-    { icon: 'calendar-outline', title: 'اختر شهراً', description: 'اضغط على أي شهر لعرض أيامه ومهامه.', accentColor: '#D4F82D' },
-    { icon: 'eye-outline', title: 'عرض اليوم', description: 'اضغط على يوم لرؤية المهام والملاحظات والتذكيرات.', accentColor: '#00E096' },
-    { icon: 'arrow-back-outline', title: 'الرجوع', description: 'اضغط X للعودة إلى عرض الشهور في أي وقت.', accentColor: '#5CB2FF' },
+    { icon: 'calendar-outline', title: 'اختر شهراً', description: 'اضغط على أي شهر لعرض أيامه ومهامه.', accentColor: '#F2B544' },
+    { icon: 'eye-outline', title: 'عرض اليوم', description: 'اضغط على يوم لرؤية المهام والملاحظات والتذكيرات.', accentColor: '#4EE6C1' },
+    { icon: 'arrow-back-outline', title: 'الرجوع', description: 'اضغط X للعودة إلى عرض الشهور في أي وقت.', accentColor: '#A89CFF' },
   ] : [
-    { icon: 'calendar-outline', title: 'Pick a Month', description: 'Tap any month to view its days and your scheduled tasks.', accentColor: '#D4F82D' },
-    { icon: 'eye-outline', title: 'Day View', description: 'Tap a day to see tasks, notes, and reminders for that date.', accentColor: '#00E096' },
-    { icon: 'arrow-back-outline', title: 'Go Back', description: 'Tap the X button to return to the month grid anytime.', accentColor: '#5CB2FF' },
+    { icon: 'calendar-outline', title: 'Pick a Month', description: 'Tap any month to view its days and your scheduled tasks.', accentColor: '#F2B544' },
+    { icon: 'eye-outline', title: 'Day View', description: 'Tap a day to see tasks, notes, and reminders for that date.', accentColor: '#4EE6C1' },
+    { icon: 'arrow-back-outline', title: 'Go Back', description: 'Tap the X button to return to the month grid anytime.', accentColor: '#A89CFF' },
   ];
   
   const [selectedMonth, setSelectedMonth] = useState<number | null>(null);
@@ -356,20 +358,21 @@ const Planner = () => {
             const tasks = getTasksForMonth(index);
             const isSelected = selectedMonth === index;
             return (
-              <TouchableOpacity
-                key={month}
-                style={[styles.monthCard, isSelected && styles.selectedMonthCard]}
-                onPress={() => setSelectedMonth(index)}
-                activeOpacity={0.7}
-              >
-                {tasks.length > 0 && !isSelected && <View style={styles.monthIndicator} />}
-                <Text style={[styles.monthName, isSelected && styles.selectedMonthName]}>
-                  {isArabic ? month : month.substring(0, 3)}
-                </Text>
-                <Text style={[styles.monthStats, isSelected && styles.selectedMonthStats]}>
-                  {tasks.length > 0 ? `${tasks.length} ${tasks.length === 1 ? t.task : t.tasks}` : t.empty}
-                </Text>
-              </TouchableOpacity>
+              <Reanimated.View key={month} entering={FadeInDown.duration(420).delay(index * 50)} style={{ width: '31%' }}>
+                <TouchableOpacity
+                  style={[styles.monthCard, isSelected && styles.selectedMonthCard]}
+                  onPress={() => setSelectedMonth(index)}
+                  activeOpacity={0.7}
+                >
+                  {tasks.length > 0 && !isSelected && <View style={styles.monthIndicator} />}
+                  <Text style={[styles.monthName, isSelected && styles.selectedMonthName]}>
+                    {isArabic ? month : month.substring(0, 3)}
+                  </Text>
+                  <Text style={[styles.monthStats, isSelected && styles.selectedMonthStats]}>
+                    {tasks.length > 0 ? `${tasks.length} ${tasks.length === 1 ? t.task : t.tasks}` : t.empty}
+                  </Text>
+                </TouchableOpacity>
+              </Reanimated.View>
             );
           })}
         </View>
@@ -388,8 +391,12 @@ const Planner = () => {
                         currentYear === new Date().getFullYear();
 
         dayElements.push(
-            <TouchableOpacity 
+            <Reanimated.View 
                 key={i} 
+                entering={FadeInDown.duration(380).delay((i % 14) * 40)} 
+                style={{ width: '13%' }}
+            >
+                <TouchableOpacity 
                 style={[
                     styles.dayCard, 
                     tasks.length > 0 && styles.hasTaskCard,
@@ -410,6 +417,7 @@ const Planner = () => {
                     {tasks.length > 0 ? `${tasks.length} ${tasks.length === 1 ? t.task : t.tasks}` : t.empty}
                 </Text>
             </TouchableOpacity>
+            </Reanimated.View>
         );
     }
 
@@ -814,7 +822,7 @@ const Planner = () => {
                                     activeOpacity={0.7}
                                 >
                                     <View style={[{ backgroundColor: '#FF6B6B15', width: 44, height: 44, borderRadius: 14, justifyContent: 'center', alignItems: 'center' }]}>
-                                        <Ionicons name="alarm-outline" size={22} color="#FF6B6B" />
+                                        <Ionicons name="alarm-outline" size={22} color={colors.danger} />
                                     </View>
                                     <View style={{ flex: 1, width: '100%', marginTop: 12 }}>
                                         <Text style={[styles.taskItemText, { fontSize: 15, fontWeight: '700' }, isArabic && { textAlign: 'right' }]} numberOfLines={2}>
