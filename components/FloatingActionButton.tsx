@@ -1,9 +1,8 @@
 import { useAuth } from '@/hooks/useAuth';
 import useTheme from '@/hooks/useTheme';
 import { useTranslation } from '@/utils/i18n';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useEffect } from 'react';
-import { StyleProp, StyleSheet, Text, TouchableWithoutFeedback, ViewStyle } from 'react-native';
+import { StyleProp, StyleSheet, Text, TouchableWithoutFeedback, View, ViewStyle } from 'react-native';
 import Animated, {
   Easing,
   useAnimatedStyle,
@@ -56,16 +55,11 @@ export default function FloatingActionButton({ onPress, style }: FloatingActionB
         onPressIn={() => { press.value = withSpring(0.96, PRESS_SPRING); }}
         onPressOut={() => { press.value = withSpring(1, PRESS_SPRING); }}
       >
-        <LinearGradient
-          colors={['#EC9A33', '#EC9A33']}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={styles.fab}
-        >
+        <View style={styles.fab}>
           <Text style={[styles.text, { color: colors.primaryText }]}>
             {isArabic ? 'إضافة مهمة' : 'Add a Task'}
           </Text>
-        </LinearGradient>
+        </View>
       </TouchableWithoutFeedback>
     </Animated.View>
   );
@@ -79,7 +73,8 @@ const styles = StyleSheet.create({
   },
   fab: {
     height: 44,
-    paddingHorizontal: 12,
+    paddingHorizontal: 8,
+    backgroundColor: '#EC9A33',
     borderRadius: FAB_RADIUS,
     overflow: 'hidden',
     justifyContent: 'center',

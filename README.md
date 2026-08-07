@@ -1,91 +1,102 @@
 # ToDoIt 👋
 
-A premium, localized, and feature-rich To-Do & Planner application built with **Expo**, **React Native**, and **Convex**. 
+ToDoIt is a mobile productivity application built with **Expo + React Native** and powered by **Convex**.
 
-ToDoIt is designed to provide a seamless productivity experience with focus on premium aesthetics, real-time synchronization, and powerful task management.
-
----
-
-## ✨ Key Features
-
-- **🏆 Comprehensive Task Management**: Create tasks with detailed descriptions, priority levels, and due dates.
-- **🔳 Nested Subtasks**: Break down complex goals into smaller, manageable subtasks with their own statuses and timers.
-- **⏱️ Integrated Timers**: Track time spent on tasks and subtasks directly within the app to boost focus and productivity.
-- **🗓️ Daily Planner**: A dedicated space to organize your day, manage reminders, and stay on top of your schedule.
-- **📁 Project Organization**: Group tasks into projects for better categorical focus and tracking.
-- **🔔 Premium Notifications**: Never miss a deadline with localized alerts and custom alarm tones.
-- **🌓 Dark Mode & RTL Support**: Full support for automatic theme switching and Right-to-Left (RTL) languages like Arabic.
-- **⚡ Real-time Sync**: Powered by Convex, your data stays in sync across all your devices instantly.
+It helps users manage tasks, projects, planning, and reminders in one place, with support for:
+- real-time sync,
+- offline-first behavior,
+- task timers,
+- notifications,
+- localization (including RTL),
+- and theme customization.
 
 ---
 
-## 🛠️ Tech Stack
+## What this project provides
 
-- **Frontend**: [React Native](https://reactnative.dev/) & [Expo](https://expo.dev/)
-- **Routing**: [Expo Router](https://docs.expo.dev/router/introduction/) (File-based navigation)
-- **Backend/Database**: [Convex](https://www.convex.dev/) (Real-time database & serverless backend)
-- **State Management**: Convex Hooks & React State
-- **Localization**: `i18next` & `react-i18next`
-- **Styling**: Vanilla React Native Styles with custom theme hooks
-- **Persistence**: `expo-secure-store`
+- A complete **To-Do management workflow** (create, update, organize, and track tasks).
+- **Project-based organization** for grouping related work.
+- **Daily planning** and structured productivity flows.
+- **Timer-based focus tracking** for tasks and subtasks.
+- **Reminder and notification support** with sound preferences.
+- **Offline-first data handling** and sync conflict management utilities.
+- **Cross-platform mobile app** experience through Expo (Android/iOS development workflow).
 
 ---
 
-## 🚀 Getting Started
+## Core Features
 
-### 1. Prerequisites
-- [Node.js](https://nodejs.org/) (LTS)
-- [Expo Go](https://expo.dev/go) on your mobile device or an emulator (Android Studio / Xcode)
+- ✅ Task creation and editing
+- ✅ Priority / status oriented task handling
+- ✅ Subtasks support
+- ✅ Project grouping
+- ✅ Daily planner flows
+- ✅ Reminder/notification flows
+- ✅ Timer utilities for productivity tracking
+- ✅ Dark/light theme support
+- ✅ i18n support (English and Arabic with RTL)
+- ✅ Convex-backed real-time sync
 
-### 2. Installation
-Clone the repository and install the dependencies:
+---
 
+## Tech Stack
+
+- **Mobile App**: [React Native](https://reactnative.dev/) + [Expo](https://expo.dev/)
+- **Routing**: [Expo Router](https://docs.expo.dev/router/introduction/)
+- **Backend / Realtime Data**: [Convex](https://www.convex.dev/)
+- **Localization**: `i18next`, `react-i18next`
+- **Notifications & Device APIs**: Expo APIs
+- **Persistence/Secure Storage**: `expo-secure-store`
+- **Language**: TypeScript
+
+---
+
+## Project Structure (high level)
+
+- `app/` – Application screens and route structure (Expo Router)
+- `components/` – Reusable UI components (cards, modals, inputs, etc.)
+- `hooks/` – Custom hooks (theme, auth, sync, timers, onboarding, notifications)
+- `convex/` – Backend schema and serverless functions
+- `utils/` – Supporting utilities (notifications, local storage, i18n, sync helpers)
+- `assets/` – Images, icons, sounds, and style modules
+
+---
+
+## Getting Started
+
+### 1) Prerequisites
+- [Node.js](https://nodejs.org/) (LTS recommended)
+- npm
+- Expo Go app (or Android/iOS emulator)
+
+### 2) Install dependencies
 ```bash
-git clone <repository-url>
-cd to-do-app
 npm install
 ```
 
-### 3. Setup Backend (Convex)
-The project uses Convex for its backend. Initialize your Convex project by running:
-
+### 3) Run Convex (backend)
 ```bash
 npx convex dev
 ```
-Follow the prompts to link the project to your Convex account. This will start a local backend development environment.
 
-### 4. Start the Application
-In a separate terminal, start the Expo development server:
-
+### 4) Start Expo app
 ```bash
 npx expo start -c
 ```
 
 ---
 
-## 📱 Project Structure
+## Notes
 
-- `app/`: Contains the Expo Router screen definitions and tabs.
-- `components/`: Reusable UI components (TodoCard, TaskDetailModal, ActionModal, etc.).
-- `convex/`: Backend schema and serverless functions (todos, projects, etc.).
-- `hooks/`: Custom React hooks for theming, auth, and state.
-- `assets/`: Images, icons, and custom sound files.
-- `utils/`: Helper functions, localization setup, and notification logic.
+- This repository includes product/design/spec documentation files (`PRODUCT.md`, `DESIGN.md`, `PLAN.md`, and `specs/`) used to guide development.
+- Convex setup is required for full real-time backend behavior.
 
 ---
 
-## 🌐 Localization
-
-ToDoIt is built to be accessible globally. Current supported languages:
-- **English** (en)
-- **Arabic** (ar) - with full RTL layout support.
-
----
-
-## 📄 License
+## License
 
 This project is licensed under the [MIT License](LICENSE).
 
 ---
 
-Developed with ❤️ by [dr-tohamy](https://github.com/dr-tohamy)
+Developed by [dr-tohamy](https://github.com/dr-tohamy)

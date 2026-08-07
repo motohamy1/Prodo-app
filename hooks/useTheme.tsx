@@ -92,7 +92,7 @@ const darkColors: ColorScheme = {
   text: "#F4F0FA",
   textMuted: "#9C92BE",
   border: "#352B54",
-  primary: "#F2B544",
+  primary: "#EC9A33",
   primaryText: "#1C1330",
   success: "#4EE6C1",
   warning: "#F2B544",
