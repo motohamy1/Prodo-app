@@ -49,13 +49,13 @@ export default function FloatingActionButton({ onPress, style }: FloatingActionB
   }));
 
   return (
-    <Animated.View style={[styles.wrapper, { ...colors.shadows.glow }, animatedStyle, style]}>
+    <Animated.View style={[styles.wrapper, { ...colors.shadows.glow, shadowColor: colors.primary }, animatedStyle, style]}>
       <TouchableWithoutFeedback
         onPress={onPress}
         onPressIn={() => { press.value = withSpring(0.96, PRESS_SPRING); }}
         onPressOut={() => { press.value = withSpring(1, PRESS_SPRING); }}
       >
-        <View style={styles.fab}>
+        <View style={[styles.fab, { backgroundColor: colors.primary }]}>
           <Text style={[styles.text, { color: colors.primaryText }]}>
             {isArabic ? 'إضافة مهمة' : 'Add a Task'}
           </Text>
@@ -74,7 +74,6 @@ const styles = StyleSheet.create({
   fab: {
     height: 44,
     paddingHorizontal: 8,
-    backgroundColor: '#EC9A33',
     borderRadius: FAB_RADIUS,
     overflow: 'hidden',
     justifyContent: 'center',

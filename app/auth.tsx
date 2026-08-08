@@ -13,7 +13,7 @@ import { useRouter } from 'expo-router';
 const AuthScreen = () => {
   const { colors, isDarkMode } = useTheme();
   const { userId: currentUserId, isAnonymous, linkAccount, language } = useAuth();
-  const { isArabic } = useTranslation(language);
+  const { t, isArabic } = useTranslation(language);
   const signUpMutation = useMutation(api.auth.signUp);
   const signInMutation = useMutation(api.auth.signIn);
   const router = useRouter();

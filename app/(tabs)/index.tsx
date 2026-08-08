@@ -257,7 +257,7 @@ const Index = () => {
                          style={{ marginHorizontal: 16, marginBottom: 24, ...colors.shadows.glow, borderRadius: 24 }}
                        >
                          <LinearGradient
-                           colors={isDarkMode ? ['#F2B544', '#EE9A3F', '#E8864F'] : ['#E39A1F', '#D08A16', '#C07814']}
+                           colors={isDarkMode ? ['#818CF8', '#6366F1', '#4F46E5'] : ['#F97316', '#E15A3E', '#C2410C']}
                            start={{ x: 0, y: 0 }}
                            end={{ x: 1, y: 1 }}
                            style={[homeStyles.todaysPlanCard, { marginHorizontal: 0, marginBottom: 0, flexDirection: isArabic ? 'row-reverse' : 'row' }]}
