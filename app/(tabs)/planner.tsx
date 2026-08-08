@@ -249,14 +249,14 @@ const Planner = () => {
             const achievementCount = yearAchievementDocs.length;
 
             return (
-              <TouchableOpacity
-                key={year}
-                style={[styles.yearCard, isCurrent && styles.yearCardActive]}
-                onPress={() => router.push({ pathname: '/year-detail', params: { year: year.toString() } })}
-                activeOpacity={0.85}
-              >
-                <View style={styles.yearCardHeader}>
-                  <Text style={styles.yearCardTitle}>{year}</Text>
+                <View key={year} style={{ width: screenWidth, paddingHorizontal: 16 }}>
+                <TouchableOpacity
+                  style={[styles.yearCard, isCurrent && styles.yearCardActive]}
+                  onPress={() => router.push({ pathname: '/year-detail', params: { year: year.toString() } })}
+                  activeOpacity={0.85}
+                >
+                  <View style={styles.yearCardHeader}>
+                    <Text style={styles.yearCardTitle}>{year}</Text>
                   <View style={{ flexDirection: isArabic ? 'row-reverse' : 'row', alignItems: 'center', gap: 8 }}>
                     {isCurrent && (
                       <Text style={styles.yearCardBadge}>{t.current}</Text>
@@ -348,6 +348,7 @@ const Planner = () => {
                   </Text>
                 )}
               </TouchableOpacity>
+              </View>
             );
           })}
         </ScrollView>

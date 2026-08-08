@@ -47,6 +47,7 @@ export default defineSchema({
     date: v.optional(v.number()), 
     parentId: v.optional(v.id("todos")),
     type: v.optional(v.string()), // 'task' | 'note' | 'reminder'
+    hashtags: v.optional(v.array(v.string())),
     completedAt: v.optional(v.number()),
   }).index("by_user", ["userId"])
     .index("by_parent", ["parentId"]),

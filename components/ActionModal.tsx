@@ -54,6 +54,8 @@ const ActionModal: React.FC<ActionModalProps> = ({ visible, onClose, options, ti
                       index === options.length - 1 && { borderBottomLeftRadius: 14, borderBottomRightRadius: 14 },
                       index < options.length - 1 && { borderBottomWidth: 1, borderBottomColor: colors.border }
                     ]}
+                    accessibilityRole="button"
+                    accessibilityLabel={option.label}
                     onPress={() => {
                       option.onPress();
                       onClose();
@@ -87,6 +89,8 @@ const ActionModal: React.FC<ActionModalProps> = ({ visible, onClose, options, ti
               <TouchableOpacity 
                 style={[styles.cancelButton, { backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 1 }]} 
                 onPress={onClose}
+                accessibilityRole="button"
+                accessibilityLabel={isArabic ? 'إلغاء' : 'Cancel'}
               >
                 <Text style={[styles.cancelText, { color: colors.text }]}>{isArabic ? 'إلغاء' : 'Cancel'}</Text>
               </TouchableOpacity>

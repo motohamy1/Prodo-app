@@ -90,7 +90,7 @@ const ConflictResolutionModal: React.FC<ConflictResolutionModalProps> = ({
       animationType="slide"
       onRequestClose={onClose}
     >
-        <View style={[styles.overlay, { backgroundColor: colors.text + '99' }]}>
+        <View style={[styles.overlay, { backgroundColor: 'rgba(0,0,0,0.6)' }]}>
         <View style={[styles.content, { backgroundColor: colors.bg }]}>
           {/* Header */}
           <View style={[styles.header, { borderBottomColor: colors.border }]}>

@@ -184,9 +184,15 @@ const TodoInput: React.FC<TodoInputProps> = ({ initialDate, projectId, onFocus }
                 <Ionicons name="timer-outline" size={28} color={colors.text} />
               )}
             </TouchableOpacity>
-            <TouchableOpacity onPress={handleAddTodo}>
-              <Ionicons name={isArabic ? "arrow-back-circle" : "arrow-up-circle"} size={28} color={newTodo.trim() ? colors.primary : colors.text} />
-
+            <TouchableOpacity
+              onPress={handleAddTodo}
+              disabled={!newTodo.trim()}
+              accessibilityRole="button"
+              accessibilityLabel="Add task"
+              accessibilityState={{ disabled: !newTodo.trim() }}
+              style={!newTodo.trim() ? { opacity: 0.4 } : undefined}
+            >
+              <Ionicons name={isArabic ? "arrow-back-circle" : "arrow-up-circle"} size={28} color={newTodo.trim() ? colors.primary : colors.textMuted} />
             </TouchableOpacity>
           </View>
         </View>
@@ -222,7 +228,7 @@ const TodoInput: React.FC<TodoInputProps> = ({ initialDate, projectId, onFocus }
           <Ionicons name={isArabic ? "return-down-back" : "return-down-forward"} size={16} color={colors.surfaceText} style={isArabic ? { marginLeft: 8 } : { marginRight: 8 }} />
 
           <TextInput
-            style={[homeStyles.addInput, { flex: 1, paddingVertical: Platform.OS === 'ios' ? 8 : 4, minHeight: 40, fontSize: 14, fontWeight: '600' }, isArabic && { textAlign: 'right' }]}
+            style={[homeStyles.addInput, { flex: 1, paddingVertical: Platform.OS === 'ios' ? 8 : 4, minHeight: 40, fontSize: 16, fontWeight: '500' }, isArabic && { textAlign: 'right' }]}
             placeholder={isArabic ? "...إضافة مهمة فرعية" : "Add a sub-task..."}
             placeholderTextColor={colors.surfaceText + '70'}
             multiline={true}

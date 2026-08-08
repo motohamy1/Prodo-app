@@ -649,7 +649,7 @@ export const createProjectsStyles = (colors: ColorScheme) => {
       borderRadius: colors.radii.sm,
     },
     taskStatusPillText: {
-      fontSize: 10,
+      fontSize: 11,
       fontWeight: '700',
     },
 

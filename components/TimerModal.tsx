@@ -45,9 +45,9 @@ const TimerModal: React.FC<TimerModalProps> = ({ visible, onClose, onSave, initi
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={[styles.overlay, { backgroundColor: colors.text + '80' }]}>
           <TouchableWithoutFeedback>
             <View style={[styles.modalContainer, { backgroundColor: colors.surface, shadowColor: colors.text }]}>
-              <Text style={[styles.title, { color: colors.text }]}>Timer & Deadline</Text>
+              <Text style={[styles.title, { color: colors.text }]}>Set timer & deadline</Text>
               
-              <Text style={[styles.sectionTitle, { color: colors.textMuted }]}>Timer Duration</Text>
+              <Text style={[styles.sectionTitle, { color: colors.textMuted }]}>Duration</Text>
               <View style={styles.inputRow}>
                 <View style={styles.inputGroup}>
                   <TextInput
@@ -74,14 +74,14 @@ const TimerModal: React.FC<TimerModalProps> = ({ visible, onClose, onSave, initi
                 </View>
               </View>
 
-              <Text style={[styles.sectionTitle, { color: colors.textMuted }]}>Due Date (Deadline)</Text>
+              <Text style={[styles.sectionTitle, { color: colors.textMuted }]}>Deadline</Text>
               <TouchableOpacity 
                 style={[styles.dateButton, { borderColor: colors.border }]} 
                 onPress={() => { setDatePickerMode('dueDate'); setShowDatePicker(true); }}
               >
                 <Ionicons name="calendar-outline" size={20} color={colors.primary} />
-                <Text style={[styles.dateButtonText, { color: colors.text }]}>
-                  {dueDate ? dueDate.toLocaleDateString() : 'Set Deadline'}
+                <Text style={[styles.dateButtonText, { color: dueDate ? colors.text : colors.textMuted }]}>
+                  {dueDate ? dueDate.toLocaleDateString() : 'No deadline'}
                 </Text>
                 {dueDate && (
                   <TouchableOpacity onPress={() => setDueDate(null)}>
@@ -90,7 +90,7 @@ const TimerModal: React.FC<TimerModalProps> = ({ visible, onClose, onSave, initi
                 )}
               </TouchableOpacity>
 
-              <Text style={[styles.sectionTitle, { color: colors.textMuted }]}>Planner Date (Schedule)</Text>
+              <Text style={[styles.sectionTitle, { color: colors.textMuted }]}>Plan for</Text>
               <TouchableOpacity 
                 style={[styles.dateButton, { borderColor: colors.border }]} 
                 onPress={() => { setDatePickerMode('plannerDate'); setShowDatePicker(true); }}
@@ -113,11 +113,11 @@ const TimerModal: React.FC<TimerModalProps> = ({ visible, onClose, onSave, initi
               )}
 
               <View style={styles.buttonRow}>
-                <TouchableOpacity style={[styles.button, styles.cancelButton, { borderColor: colors.border }]} onPress={onClose}>
+                <TouchableOpacity style={[styles.button, styles.cancelButton, { borderColor: colors.border }]} onPress={onClose} accessibilityRole="button" accessibilityLabel="Cancel">
                   <Text style={[styles.buttonText, { color: colors.textMuted }]}>Cancel</Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={[styles.button, styles.saveButton, { backgroundColor: colors.primary, shadowColor: colors.text }]} onPress={handleSave}>
-                  <Text style={[styles.buttonText, { color: colors.primaryText }]}>Save Settings</Text>
+                <TouchableOpacity style={[styles.button, styles.saveButton, { backgroundColor: colors.primary, shadowColor: colors.text }]} onPress={handleSave} accessibilityRole="button" accessibilityLabel="Save timer settings">
+                  <Text style={[styles.buttonText, { color: colors.primaryText }]}>Save settings</Text>
                 </TouchableOpacity>
               </View>
             </View>

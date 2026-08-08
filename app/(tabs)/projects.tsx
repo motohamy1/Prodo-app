@@ -126,7 +126,7 @@ const AddSubCategoryModal = ({ visible, onClose, colors, styles, onAdd, initialD
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <View style={{ flex: 1 }}>
         <TouchableWithoutFeedback onPress={onClose}>
-          <View style={[StyleSheet.absoluteFill, { backgroundColor: colors.text + '99' }]} />
+          <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(0,0,0,0.6)' }]} />
         </TouchableWithoutFeedback>
         <View pointerEvents="box-none" style={StyleSheet.absoluteFill}>
           <KeyboardAvoidingView style={{ flex: 1, justifyContent: 'flex-end' }} behavior="padding">
@@ -187,7 +187,7 @@ const AddCategoryModal = ({ visible, onClose, colors, styles, onAdd, initialData
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <View style={{ flex: 1 }}>
         <TouchableWithoutFeedback onPress={onClose}>
-          <View style={[StyleSheet.absoluteFill, { backgroundColor: colors.text + '99' }]} />
+          <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(0,0,0,0.6)' }]} />
         </TouchableWithoutFeedback>
         <View pointerEvents="box-none" style={StyleSheet.absoluteFill}>
           <KeyboardAvoidingView style={{ flex: 1, justifyContent: 'flex-end' }} behavior="padding">
@@ -251,7 +251,7 @@ const AddProjectModal = ({ visible, onClose, colors, styles, onAdd, initialData 
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <View style={{ flex: 1 }}>
         <TouchableWithoutFeedback onPress={onClose}>
-          <View style={[StyleSheet.absoluteFill, { backgroundColor: colors.text + '99' }]} />
+          <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(0,0,0,0.6)' }]} />
         </TouchableWithoutFeedback>
         <View pointerEvents="box-none" style={StyleSheet.absoluteFill}>
           <KeyboardAvoidingView style={{ flex: 1, justifyContent: 'flex-end' }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
@@ -293,7 +293,7 @@ const AddResourceModal = ({ visible, onClose, colors, styles, onAdd }: {
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <View style={{ flex: 1 }}>
         <TouchableWithoutFeedback onPress={onClose}>
-          <View style={[StyleSheet.absoluteFill, { backgroundColor: colors.text + '99' }]} />
+          <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(0,0,0,0.6)' }]} />
         </TouchableWithoutFeedback>
         <View pointerEvents="box-none" style={StyleSheet.absoluteFill}>
           <KeyboardAvoidingView style={{ flex: 1, justifyContent: 'flex-end' }} behavior="padding">
@@ -340,9 +340,13 @@ const CategoriesView = ({ styles, colors, onSelectCategory, onAddCategory, onEdi
     <ScrollView contentContainerStyle={styles.categoriesGrid} showsVerticalScrollIndicator={false}>
       {categories.length === 0 && (
         <View style={styles.emptyContainer}>
-          <Ionicons name="folder-open-outline" size={52} color={colors.border} />
+          <Ionicons name="folder-open-outline" size={42} color={colors.primary} />
           <Text style={styles.emptyText}>No categories yet</Text>
-          <Text style={styles.emptySubText}>Tap + to create your first category</Text>
+          <Text style={styles.emptySubText}>Tap the + button above to create your first category and organize projects.</Text>
+          <TouchableOpacity style={[styles.addCategoryCard, { marginTop: 16 }]} onPress={onAddCategory}>
+            <Ionicons name="add" size={20} color={colors.primary} />
+            <Text style={{ marginLeft: 8, fontSize: 15, fontWeight: '700', color: colors.primary }}>Create a category</Text>
+          </TouchableOpacity>
         </View>
       )}
       {categories.map((cat, i) => (
@@ -513,7 +517,8 @@ const CategoryDetailView = ({
 
           {subCategories.length === 0 && (
             <View style={[styles.emptyContainer, { paddingVertical: 20 }]}>
-              <Text style={{ color: colors.textMuted, fontSize: 13 }}>No sub-categories</Text>
+              <Text style={{ color: colors.text, fontSize: 14, fontWeight: '600', textAlign: 'center' }}>No sub-categories yet</Text>
+              <Text style={{ color: colors.textMuted, fontSize: 13, marginTop: 4, textAlign: 'center' }}>Add one to further organize this category.</Text>
             </View>
           )}
 
@@ -564,8 +569,9 @@ const CategoryDetailView = ({
 
           <View style={[styles.projectsGrid, { paddingHorizontal: 0 }]}>
             {directProjects.length === 0 && (
-              <View style={[styles.emptyContainer, { width: '100%', paddingVertical: 40 }]}>
-                 <Text style={{ color: colors.textMuted, fontSize: 13 }}>No direct projects</Text>
+              <View style={[styles.emptyContainer, { width: '100%', paddingVertical: 24 }]}>
+                 <Text style={{ color: colors.text, fontSize: 14, fontWeight: '600', textAlign: 'center' }}>No direct projects yet</Text>
+                 <Text style={{ color: colors.textMuted, fontSize: 13, marginTop: 4, textAlign: 'center' }}>Projects added here live directly under this category.</Text>
               </View>
             )}
 

@@ -39,9 +39,15 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ visible, onClose, tod
   const todo = useOfflineQuery<any>('todos.getById', api.todos.getById, currentTodoId ? { id: currentTodoId } : "skip");
   const subtasks = useOfflineQuery<any[]>('todos.getSubtasks', api.todos.getSubtasks, currentTodoId ? { parentId: currentTodoId } : "skip");
   const checklistItems = useOfflineQuery<any[]>('todos.getTaskChecklists', api.todos.getTaskChecklists, currentTodoId ? { todoId: currentTodoId } : "skip");
-  const project = useOfflineQuery<any>('projects.getProjectMetadata', api.projects.getProjectMetadata, todo?.projectId ? { id: todo.projectId } : "skip");
-  const linkedCategory = useOfflineQuery<any>('projects.getCategory', api.projects.getCategory, todo?.categoryId ? { id: todo.categoryId } : "skip");
-  const linkedSubCategory = useOfflineQuery<any>('projects.getSubCategory', api.projects.getSubCategory, todo?.subCategoryId ? { id: todo.subCategoryId } : "skip");
+  const [draftLink, setDraftLink] = useState<{ type: string; categoryId?: string; subCategoryId?: string; projectId?: string } | null>(null);
+
+  const resolvedProjectId = currentTodoId ? todo?.projectId : (draftLink?.projectId || projectId);
+  const resolvedCategoryId = currentTodoId ? todo?.categoryId : draftLink?.categoryId;
+  const resolvedSubCategoryId = currentTodoId ? todo?.subCategoryId : draftLink?.subCategoryId;
+
+  const project = useOfflineQuery<any>('projects.getProjectMetadata', api.projects.getProjectMetadata, resolvedProjectId ? { id: resolvedProjectId } : "skip");
+  const linkedCategory = useOfflineQuery<any>('projects.getCategory', api.projects.getCategory, resolvedCategoryId ? { id: resolvedCategoryId } : "skip");
+  const linkedSubCategory = useOfflineQuery<any>('projects.getSubCategory', api.projects.getSubCategory, resolvedSubCategoryId ? { id: resolvedSubCategoryId } : "skip");
 
   const updateTodo = useOfflineMutation(api.todos.updateTodo, "todos:updateTodo");
   const linkTask = useOfflineMutation(api.todos.linkTask, "todos:linkTask");
@@ -65,6 +71,8 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ visible, onClose, tod
   const [status, setStatus] = useState<string>("not_started");
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [newSubtaskText, setNewSubtaskText] = useState("");
+  const [hashtags, setHashtags] = useState<string[]>([]);
+  const [newHashtag, setNewHashtag] = useState("");
   const [timeLeft, setTimeLeft] = useState(0);
   const [isEditingTimer, setIsEditingTimer] = useState(false);
   const [timerDirection, setTimerDirection] = useState<'up'|'down'>('down');
@@ -125,6 +133,7 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ visible, onClose, tod
       setDueDate(todo.dueDate);
       setStatus(todo.status);
       setTimerDirection(todo.timerDirection || 'down');
+      setHashtags(todo.hashtags || []);
       setInitializedForId(todo._id);
     }
   }, [todo?._id]);
@@ -150,8 +159,11 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ visible, onClose, tod
       setTimerDirection('down');
       setInitializedForId(null);
       setPendingSubtasks([]);
+      setHashtags([]);
+      setNewHashtag("");
+      setDraftLink(projectId ? { type: 'project', projectId } : null);
     }
-  }, [visible, todoId]);
+  }, [visible, todoId, projectId]);
 
   useEffect(() => {
     if (visible && initialSection === 'subtask') {
@@ -181,7 +193,10 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ visible, onClose, tod
         date: initialDate || Date.now(),
         dueDate: dueDate,
         status: status,
-        ...(projectId ? { projectId } : {}),
+        ...(draftLink?.categoryId ? { categoryId: draftLink.categoryId as any } : {}),
+        ...(draftLink?.subCategoryId ? { subCategoryId: draftLink.subCategoryId as any } : {}),
+        ...(draftLink?.projectId ? { projectId: draftLink.projectId } : projectId ? { projectId } : {}),
+        ...(hashtags.length > 0 ? { hashtags } : {}),
         ...(timerDirection === 'up' ? { timerDirection: 'up' } : ms > 0 ? { timerDuration: ms, timerDirection: 'down' } : {}),
       });
 
@@ -222,7 +237,10 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ visible, onClose, tod
   };
 
   const handleSelectProject = (selection: { type: string; categoryId?: string; subCategoryId?: string; projectId?: string }) => {
-    if (!currentTodoId) return;
+    if (!currentTodoId) {
+      setDraftLink(selection.type === 'none' ? null : selection);
+      return;
+    }
     if (selection.type === 'none') {
       linkTask({ id: currentTodoId, categoryId: undefined, subCategoryId: undefined, projectId: undefined });
     } else if (selection.type === 'category') {
@@ -422,11 +440,12 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ visible, onClose, tod
     <Modal visible={visible} transparent animationType="slide" onRequestClose={handleBack}>
       <TouchableWithoutFeedback onPress={handleBack}>
         <View style={styles.overlay}>
-          <View style={[styles.container, { backgroundColor: colors.bg }]} onStartShouldSetResponder={() => true}>
-          <KeyboardAvoidingView 
-            behavior={Platform.OS === 'ios' ? 'padding' : 'height'} 
-            style={{ flex: 1 }}
-          >
+          <TouchableWithoutFeedback>
+            <View style={[styles.container, { backgroundColor: colors.bg }]}>
+              <KeyboardAvoidingView 
+                behavior={Platform.OS === 'ios' ? 'padding' : 'height'} 
+                style={{ flex: 1 }}
+              >
             {/* Header */}
            <View style={[styles.header, { borderBottomColor: colors.border + '40' }]}>
             <TouchableOpacity onPress={handleBack} style={styles.headerIcon}>
@@ -867,22 +886,90 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ visible, onClose, tod
                 />
               </View>
 
-              {/* Link Section */}
-              {currentTodoId && (
-                <View style={[styles.section]}>
-                  <Text style={[styles.sectionLabel, { color: colors.surfaceText }]}>{isArabic ? "الارتباط" : "Link"}</Text>
-                  <TouchableOpacity
-                    style={[styles.deadlineButton, { borderColor: linkedItem ? projectColor : colors.border, backgroundColor: linkedItem ? projectColor + '10' : 'transparent' }]}
-                    onPress={() => setProjectModalVisible(true)}
-                  >
-                    <Ionicons name="link-outline" size={20} color={linkedItem ? projectColor : colors.textMuted} />
-                    <Text style={[styles.deadlineButtonText, { color: linkedItem ? colors.text : colors.textMuted }]}>
-                      {linkedItemName || (isArabic ? 'ربط بمشروع / فئة' : 'Link to Project / Category')}
-                    </Text>
-                    <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+              {/* Hashtags Section */}
+              <View style={[styles.section]}>
+                <Text style={[styles.sectionLabel, { color: colors.surfaceText }]}>{isArabic ? "العلامات" : "Hashtags"}</Text>
+                
+                {hashtags.length > 0 && (
+                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 12 }}>
+                    {hashtags.map((tag, idx) => (
+                      <View key={idx} style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: projectColor + '20', borderRadius: 12, paddingHorizontal: 10, paddingVertical: 6, gap: 4 }}>
+                        <Text style={{ color: projectColor, fontSize: 13, fontWeight: '700' }}>#{tag}</Text>
+                        <TouchableOpacity onPress={() => {
+                          const newTags = hashtags.filter((_, i) => i !== idx);
+                          setHashtags(newTags);
+                          if (currentTodoId) updateTodo({ id: currentTodoId, hashtags: newTags });
+                        }}>
+                          <Ionicons name="close-circle" size={16} color={projectColor} />
+                        </TouchableOpacity>
+                      </View>
+                    ))}
+                  </View>
+                )}
+                
+                <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: colors.surface, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 8, borderWidth: 1, borderColor: colors.border, gap: 10 }}>
+                  <Text style={{ color: colors.textMuted, fontSize: 14, fontWeight: '700' }}>#</Text>
+                  <TextInput 
+                    style={{ flex: 1, fontSize: 14, color: colors.text, padding: 0, textAlign: isArabic ? 'right' : 'left' }}
+                    placeholder={isArabic ? "أضف علامة..." : "Add a hashtag..."}
+                    placeholderTextColor={colors.textMuted}
+                    value={newHashtag}
+                    onChangeText={setNewHashtag}
+                    onSubmitEditing={() => {
+                      const cleaned = newHashtag.trim().replace(/^#/, '').toLowerCase();
+                      if (cleaned && !hashtags.includes(cleaned)) {
+                        const newTags = [...hashtags, cleaned];
+                        setHashtags(newTags);
+                        if (currentTodoId) updateTodo({ id: currentTodoId, hashtags: newTags });
+                      }
+                      setNewHashtag('');
+                    }}
+                    returnKeyType="done"
+                  />
+                  <TouchableOpacity onPress={() => {
+                      const cleaned = newHashtag.trim().replace(/^#/, '').toLowerCase();
+                      if (cleaned && !hashtags.includes(cleaned)) {
+                        const newTags = [...hashtags, cleaned];
+                        setHashtags(newTags);
+                        if (currentTodoId) updateTodo({ id: currentTodoId, hashtags: newTags });
+                      }
+                      setNewHashtag('');
+                  }}>
+                    <Ionicons name="add-circle" size={24} color={newHashtag.trim() ? projectColor : colors.textMuted} />
                   </TouchableOpacity>
                 </View>
-              )}
+
+                {/* Presets */}
+                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 10 }}>
+                  {['urgent', 'important', 'idea', 'bug', 'personal', 'work'].map(preset => {
+                    if (hashtags.includes(preset)) return null;
+                    return (
+                      <TouchableOpacity key={preset} onPress={() => {
+                        const newTags = [...hashtags, preset];
+                        setHashtags(newTags);
+                        if (currentTodoId) updateTodo({ id: currentTodoId, hashtags: newTags });
+                      }} style={{ paddingHorizontal: 8, paddingVertical: 6, borderRadius: 8, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border }}>
+                        <Text style={{ fontSize: 12, color: colors.textMuted, fontWeight: '600' }}>+{preset}</Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              </View>
+
+              {/* Link Section */}
+              <View style={[styles.section]}>
+                <Text style={[styles.sectionLabel, { color: colors.surfaceText }]}>{isArabic ? "الارتباط" : "Link"}</Text>
+                <TouchableOpacity
+                  style={[styles.deadlineButton, { borderColor: linkedItem ? projectColor : colors.border, backgroundColor: linkedItem ? projectColor + '10' : 'transparent' }]}
+                  onPress={() => setProjectModalVisible(true)}
+                >
+                  <Ionicons name="link-outline" size={20} color={linkedItem ? projectColor : colors.textMuted} />
+                  <Text style={[styles.deadlineButtonText, { color: linkedItem ? colors.text : colors.textMuted }]}>
+                    {linkedItemName || (isArabic ? 'ربط بمشروع / فئة' : 'Link to Project / Category')}
+                  </Text>
+                  <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+                </TouchableOpacity>
+              </View>
 
               {/* Checklist Section */}
               {currentTodoId && (
@@ -1064,7 +1151,8 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ visible, onClose, tod
             onClose={() => setProjectModalVisible(false)}
             onSelect={handleSelectProject}
           />
-          </View>
+            </View>
+          </TouchableWithoutFeedback>
         </View>
       </TouchableWithoutFeedback>
     </Modal>
@@ -1338,7 +1426,7 @@ const styles = StyleSheet.create({
   descriptionInput: {
     borderRadius: 16,
     padding: 16,
-    fontSize: 15,
+    fontSize: 16,
     lineHeight: 22,
     minHeight: 100,
     borderWidth: 1,
@@ -1372,7 +1460,7 @@ const styles = StyleSheet.create({
   },
   addSubtaskInput: {
     flex: 1,
-    fontSize: 15,
+    fontSize: 16,
     fontWeight: '600',
     height: 40,
   },

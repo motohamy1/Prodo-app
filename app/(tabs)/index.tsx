@@ -328,29 +328,36 @@ const Index = () => {
 
                         {activeFilter === 'All' && displayedTodos.length === 0 && (
                           <View style={homeStyles.emptyContainer}>
-                             <Ionicons name="clipboard-outline" size={48} color={colors.border} />
-                             <Text style={homeStyles.emptyText}>{t.noTasksFound}</Text>
+                             <Ionicons name="clipboard-outline" size={42} color={colors.primary} />
+                             <Text style={homeStyles.emptyTitle}>{isArabic ? 'لا توجد مهام اليوم' : 'Nothing scheduled for today'}</Text>
+                             <Text style={homeStyles.emptyText}>{isArabic ? 'أضف مهمتك الأولى للبدء وستظهر هنا.' : 'Add your first task to get started. Use the button below.'}</Text>
+                             <TouchableOpacity style={homeStyles.emptyAction} onPress={() => setIsTaskModalVisible(true)} activeOpacity={0.9}>
+                               <Text style={homeStyles.emptyActionText}>{isArabic ? 'إضافة مهمة' : 'Add a task'}</Text>
+                             </TouchableOpacity>
                           </View>
                         )}
 
                        {activeFilter === 'In Progress' && displayedTodos.length === 0 && (
                          <View style={homeStyles.emptyContainer}>
-                            <Ionicons name="clipboard-outline" size={48} color={colors.border} />
-                            <Text style={homeStyles.emptyText}>{t.noTasksFound}</Text>
+                            <Ionicons name="play-circle-outline" size={42} color={colors.primary} />
+                            <Text style={homeStyles.emptyTitle}>{isArabic ? 'لا توجد مهام قيد التنفيذ' : 'No tasks in progress'}</Text>
+                            <Text style={homeStyles.emptyText}>{isArabic ? 'ابدأ أي مهمة من تبويب المهام لتظهر هنا.' : 'Start a task from the To-do list to see it here.'}</Text>
                          </View>
                        )}
 
                        {activeFilter === 'Done' && totalDoneCount === 0 && (
                          <View style={homeStyles.emptyContainer}>
-                            <Ionicons name="checkmark-done-circle-outline" size={48} color={colors.border} />
-                            <Text style={homeStyles.emptyText}>{t.noTasksFound}</Text>
+                            <Ionicons name="checkmark-done-circle-outline" size={42} color={colors.success} />
+                            <Text style={homeStyles.emptyTitle}>{isArabic ? 'لا توجد مهام مكتملة بعد' : 'No completed tasks yet'}</Text>
+                            <Text style={homeStyles.emptyText}>{isArabic ? 'أكمل مهامك وستظهر هنا.' : 'Complete tasks and they will appear here grouped by day.'}</Text>
                          </View>
                        )}
 
                        {activeFilter === 'Not Done' && todayNotDone.length === 0 && overdueTodos.length === 0 && (
                          <View style={homeStyles.emptyContainer}>
-                            <Ionicons name="close-circle-outline" size={48} color={colors.border} />
-                            <Text style={homeStyles.emptyText}>{t.noTasksFound}</Text>
+                            <Ionicons name="shield-checkmark-outline" size={42} color={colors.success} />
+                            <Text style={homeStyles.emptyTitle}>{isArabic ? 'كل شيء تحت السيطرة' : 'All clear'}</Text>
+                            <Text style={homeStyles.emptyText}>{isArabic ? 'لا توجد مهام متأخرة. أحسنت!' : 'No overdue tasks. Nice work keeping up.'}</Text>
                          </View>
                        )}
 

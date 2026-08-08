@@ -26,11 +26,11 @@ const AuthScreen = () => {
 
   const handleAuth = async () => {
     if (!email.trim() || !password || (!isLogin && !name.trim())) {
-      Alert.alert("Missing Fields", "Please fill in all required fields.");
+      Alert.alert(t.missingFields || "Missing fields", t.fillAll || "Please fill in all required fields.");
       return;
     }
     if (password.length < 6) {
-      Alert.alert("Weak Password", "Password must be at least 6 characters.");
+      Alert.alert(t.weakPassword || "Weak password", t.passwordLength || "Password must be at least 6 characters.");
       return;
     }
 
@@ -56,8 +56,8 @@ const AuthScreen = () => {
       router.back();
     } catch (error: any) {
       // Make Convex error messages more readable (they often include stack traces)
-      const msg = error?.message?.split('\n')[0] || "Authentication failed. Please try again.";
-      Alert.alert("Auth Error", msg);
+      const msg = error?.message?.split('\n')[0] || (t.authFailed || "Authentication failed. Please try again.");
+      Alert.alert(t.authError || "Authentication error", msg);
     } finally {
       setLoading(false);
     }
@@ -144,14 +144,17 @@ const AuthScreen = () => {
               </View>
  
               <TouchableOpacity 
-                style={[styles.button, { backgroundColor: colors.primary, shadowColor: colors.text }]}
+                style={[styles.button, { backgroundColor: loading ? colors.border : colors.primary, shadowColor: colors.text }, loading && { opacity: 0.7 }]}
                 onPress={handleAuth}
                 disabled={loading}
+                accessibilityRole="button"
+                accessibilityState={{ disabled: loading, busy: loading }}
+                accessibilityLabel={isLogin ? 'Sign in' : 'Create account'}
               >
                 {loading ? (
                   <ActivityIndicator color={colors.surfaceText} />
                 ) : (
-                  <Text style={[styles.buttonText, { color: colors.primaryText }]}>{isLogin ? (isArabic ? 'تسجيل الدخول' : 'Sign In') : (isArabic ? 'إنشاء حساب' : 'Sign Up')}</Text>
+                  <Text style={[styles.buttonText, { color: colors.primaryText }]}>{isLogin ? (isArabic ? 'تسجيل الدخول' : 'Sign in') : (isArabic ? 'إنشاء حساب' : 'Create account')}</Text>
                 )}
               </TouchableOpacity>
  
@@ -256,6 +259,7 @@ const styles = StyleSheet.create({
     marginLeft: 12,
     fontSize: 16,
     fontWeight: '500',
+    textAlignVertical: 'center',
   },
   button: {
     height: 56,

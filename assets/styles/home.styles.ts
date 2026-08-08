@@ -102,9 +102,10 @@ export const createHomeStyles = (colors: ColorScheme, isArabic: boolean = false)
       fontWeight: '600',
     },
     pillSubText: {
-      fontSize: 10,
+      fontSize: 11,
       fontWeight: '600',
       marginTop: 1,
+      letterSpacing: 0.2,
     },
 
     // Section
@@ -134,14 +135,14 @@ export const createHomeStyles = (colors: ColorScheme, isArabic: boolean = false)
       paddingEnd: 4,
     },
     timelineTimeTop: {
-      fontSize: 9,
+      fontSize: 11,
       fontWeight: '700',
       color: colors.textMuted,
       textAlign: 'center',
       flexWrap: 'wrap',
     },
     timelineTimeBottom: {
-      fontSize: 9,
+      fontSize: 11,
       fontWeight: '700',
       color: colors.textMuted,
       textAlign: 'center',
@@ -192,7 +193,7 @@ export const createHomeStyles = (colors: ColorScheme, isArabic: boolean = false)
       borderRadius: colors.radii.sm,
     },
     badgeText: {
-      fontSize: 11,
+      fontSize: 12,
       fontWeight: "600",
     },
     actionButtons: {
@@ -211,7 +212,7 @@ export const createHomeStyles = (colors: ColorScheme, isArabic: boolean = false)
       borderColor: colors.border,
     },
     actionBtnText: {
-      fontSize: 12,
+      fontSize: 13,
       fontWeight: '600',
     },
     iconBtn: {
@@ -268,14 +269,37 @@ export const createHomeStyles = (colors: ColorScheme, isArabic: boolean = false)
       alignItems: "center",
     },
     emptyContainer: {
-      paddingVertical: 60,
+      paddingVertical: 48,
+      paddingHorizontal: 24,
       alignItems: "center",
     },
-    emptyText: {
-      marginTop: 16,
+    emptyTitle: {
+      marginTop: 14,
       fontSize: 16,
+      color: colors.text,
+      fontWeight: "700",
+      textAlign: "center",
+    },
+    emptyText: {
+      marginTop: 6,
+      fontSize: 14,
       color: colors.textMuted,
       fontWeight: "500",
+      textAlign: "center",
+      lineHeight: 20,
+    },
+    emptyAction: {
+      marginTop: 16,
+      backgroundColor: colors.primary,
+      paddingHorizontal: 18,
+      paddingVertical: 10,
+      borderRadius: colors.radii.md,
+      ...colors.shadows.sm,
+    },
+    emptyActionText: {
+      color: colors.primaryText,
+      fontSize: 14,
+      fontWeight: "700",
     },
     addButton: {
       flexDirection: 'row',
@@ -307,7 +331,7 @@ export const createHomeStyles = (colors: ColorScheme, isArabic: boolean = false)
       ...colors.shadows.sm,
     },
     addInput: {
-      fontSize: 15,
+      fontSize: 16,
       color: colors.text,
       fontWeight: '500',
     },

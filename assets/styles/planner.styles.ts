@@ -274,12 +274,12 @@ export const createPlannerStyles = (colors: ColorScheme, isArabic: boolean = fal
       fontWeight: '600',
     },
     dayStats: {
-      fontSize: 10,
+      fontSize: 11,
       color: colors.textMuted,
       marginTop: 1,
     },
     todayStats: {
-      fontSize: 10,
+      fontSize: 11,
       color: colors.primaryText + '99',
       marginTop: 1,
     },

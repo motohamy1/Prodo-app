@@ -74,6 +74,7 @@ export const addTodo = mutation({
     categoryId: v.optional(v.id("projectCategories")),
     subCategoryId: v.optional(v.id("projectSubCategories")),
     type: v.optional(v.string()),
+    hashtags: v.optional(v.array(v.string())),
   },
   handler: async (ctx, args) => {
     let finalStatus = args.status;
@@ -99,6 +100,7 @@ export const addTodo = mutation({
       ...(args.categoryId !== undefined && { categoryId: args.categoryId }),
       ...(args.subCategoryId !== undefined && { subCategoryId: args.subCategoryId }),
       ...(args.type !== undefined && { type: args.type }),
+      ...(args.hashtags !== undefined && { hashtags: args.hashtags }),
       ...(args.status === 'done' && { completedAt: Date.now() }),
     });
 
@@ -461,6 +463,7 @@ export const updateTodo = mutation({
     projectId: v.optional(v.string()),
     parentId: v.optional(v.id("todos")),
     completedAt: v.optional(v.number()),
+    hashtags: v.optional(v.array(v.string())),
   },
   handler: async (ctx, args) => {
     const { id, ...updates } = args;
