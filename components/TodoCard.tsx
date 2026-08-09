@@ -527,8 +527,8 @@ const TodoCard: React.FC<TodoCardProps> = ({ todo, onSetTimer, onLongPress, onLi
             </View>
           )}
 
-          <View style={[{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 8 }]}>
-            <View style={[{ flexDirection: 'row', alignItems: 'center', gap: 12 }]}>
+          <View style={[{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12, rowGap: 12, marginBottom: 8, flexWrap: 'wrap' }]}>
+            <View style={[{ flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap', flex: 1 }]}>
               {!hasSubtaskTimers && (
                 <>
                   {!isTimerSet && (
@@ -634,7 +634,7 @@ const TodoCard: React.FC<TodoCardProps> = ({ todo, onSetTimer, onLongPress, onLi
                 </View>
               )}
             </View>
-            <View style={[{ flexDirection: 'row', alignItems: 'center', gap: 12 }]}>
+            <View style={[{ flexDirection: 'row', alignItems: 'center', gap: 12, flexShrink: 0 }]}>
               {hasSubtasks && (
                 <TouchableOpacity
                   onPress={toggleSubtasks}

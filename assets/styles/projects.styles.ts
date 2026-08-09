@@ -834,6 +834,107 @@ export const createProjectsStyles = (colors: ColorScheme) => {
       justifyContent: "center",
       alignItems: "center",
     },
+
+    // --- List Modal Styles ---
+    listModalSheet: {
+      backgroundColor: colors.surfaceHigh || colors.surface,
+      borderTopLeftRadius: 24,
+      borderTopRightRadius: 24,
+      padding: 20,
+      paddingBottom: 40,
+      maxHeight: '90%',
+    },
+    listModalTitle: {
+      fontSize: 20,
+      fontWeight: '700',
+      color: colors.text,
+      marginBottom: 4,
+    },
+    listModalSubtitle: {
+      fontSize: 14,
+      color: colors.textMuted,
+      marginBottom: 16,
+    },
+    emptyListContainer: {
+      paddingVertical: 32,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    emptyListText: {
+      fontSize: 15,
+      color: colors.textMuted,
+      marginTop: 12,
+    },
+    listItemRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingVertical: 12,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+      gap: 12,
+    },
+    listItemText: {
+      flex: 1,
+      fontSize: 15,
+      color: colors.text,
+    },
+    bulletDot: {
+      width: 6,
+      height: 6,
+      borderRadius: 3,
+      backgroundColor: colors.textMuted,
+    },
+    toggleHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingVertical: 12,
+      gap: 12,
+    },
+    toggleContent: {
+      paddingLeft: 32,
+      paddingRight: 12,
+      paddingBottom: 12,
+    },
+    toggleContentText: {
+      fontSize: 14,
+      color: colors.textMuted,
+      lineHeight: 20,
+    },
+    listAddRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: colors.bg,
+      borderRadius: colors.radii.md,
+      paddingHorizontal: 12,
+      borderWidth: 1,
+      borderColor: colors.border,
+      gap: 12,
+      marginTop: 8,
+    },
+    listInput: {
+      flex: 1,
+      minHeight: 44,
+      fontSize: 15,
+      color: colors.text,
+      paddingVertical: 12,
+    },
+    listAddButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingVertical: 12,
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderStyle: 'dashed',
+      borderRadius: colors.radii.md,
+      marginTop: 16,
+      gap: 8,
+    },
+    listAddButtonText: {
+      fontSize: 15,
+      fontWeight: '600',
+      color: colors.primary,
+    },
   });
 
   return styles;

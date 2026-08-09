@@ -65,3 +65,11 @@ export const clearMutationQueue = async () => {
     await AsyncStorage.removeItem('OFFLINE_MUTATION_QUEUE');
   } catch (err) {}
 };
+
+export const setMutationQueue = async (queue: any[]) => {
+  try {
+    await AsyncStorage.setItem('OFFLINE_MUTATION_QUEUE', JSON.stringify(queue));
+  } catch (err) {
+    console.warn('Failed to set mutation queue', err);
+  }
+};
