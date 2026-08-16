@@ -7,6 +7,10 @@ export const createPlannerStyles = (colors: ColorScheme, isArabic: boolean = fal
       flex: 1,
       backgroundColor: colors.bg,
     },
+    safeArea: {
+      flex: 1,
+      backgroundColor: colors.bg,
+    },
     header: {
       flexDirection: "row",
       alignItems: "center",
@@ -488,10 +492,6 @@ export const createPlannerStyles = (colors: ColorScheme, isArabic: boolean = fal
       fontSize: 14,
       color: colors.textMuted,
       marginTop: 8,
-    },
-    safeArea: {
-      flex: 1,
-      backgroundColor: colors.bg,
     },
     addDayTaskContainer: {
       marginHorizontal: 16,

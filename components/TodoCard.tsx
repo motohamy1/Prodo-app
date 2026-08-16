@@ -340,90 +340,92 @@ const TodoCard: React.FC<TodoCardProps> = ({ todo, onSetTimer, onLongPress, onLi
   const dueDateEnd = todo.dueDate ? new Date(todo.dueDate).setHours(23, 59, 59, 999) : 0;
   const isPastDue = todo.status === 'not_started' && todo.dueDate && dueDateEnd < Date.now();
 
-  let badgeText = t.notStarted;
-  let badgeBg = colors.border;
-  let badgeColor = colors.surfaceText;
-  let timerText = formatTime(timeLeft);
-  if (!isTimerSet && hasSubtasks) timerText = `${stats.done}/${stats.total}`;
-  
-  let cardBg = colors.surface;
-  let cardBorderColor = colors.border;
-  
-  // Claymorphism: status is communicated through background tint (clay surface).
-  // Borders are removed — clay depth (shadow + inner highlight) separates cards.
-  // Only overdue / not_done cards retain a subtle border as a functional signal.
-  if (isDarkMode) {
-    if (todo.status === "in_progress") { cardBg = colors.taskInProgressBg; }
-    else if (todo.status === "paused") { cardBg = colors.taskPausedBg; }
-    else if (todo.status === "done") { cardBg = colors.taskDoneBg; }
-    else if (todo.status === "not_done" || isPastDue) { cardBg = colors.taskNotDoneBg; cardBorderColor = colors.danger; }
-    else if (todo.status === "not_started") { cardBg = colors.taskNotStartedBg; }
-  } else {
-    if (todo.status === "in_progress") { cardBg = colors.taskInProgressBg; }
-    else if (todo.status === "paused") { cardBg = colors.taskPausedBg; }
-    else if (todo.status === "done") { cardBg = colors.taskDoneBg; }
-    else if (todo.status === "not_done" || isPastDue) { cardBg = colors.taskNotDoneBg; cardBorderColor = colors.danger; }
-    else if (todo.status === "not_started") { cardBg = colors.taskNotStartedBg; }
-  }
+  // Subtask progress calculation
+  const subtaskProgressPercent = useMemo(() => {
+    if (!hasSubtasks) return 0;
+    return Math.round(countProgress);
+  }, [hasSubtasks, countProgress]);
 
-  // Detect if the card background is bright enough to need dark text
-  const isBrightBg = getLuminance(cardBg) > 170;
-  
-  const contentColor = isBrightBg ? colors.text : colors.surfaceText;
-  const contentMutedColor = isBrightBg ? colors.text + '80' : colors.surfaceText + '80';
-
-  if (todo.status === "in_progress") { 
-    badgeText = t.inProgress; 
-    badgeBg = isBrightBg ? colors.text + '15' : colors.primary + '15'; 
-    badgeColor = isBrightBg ? colors.text : (isDarkMode ? colors.primary : colors.surfaceText); 
-  }
-  else if (todo.status === "paused") { 
-    badgeText = t.paused; 
-    badgeBg = isBrightBg ? colors.text + '10' : colors.surfaceText + '10'; 
-    badgeColor = isBrightBg ? colors.text : (isDarkMode ? colors.surfaceText : colors.surfaceText); 
-  }
-  else if (todo.status === "done") { 
-    badgeText = t.done; 
-    badgeBg = colors.success + '20'; 
-    badgeColor = colors.success; 
-    timerText = t.done; 
-  }
-  else if (todo.status === "not_done" || isPastDue) { 
-    badgeText = todo.status === "not_started" ? t.notStarted : t.notDone; 
-    badgeBg = isBrightBg ? colors.danger + '15' : colors.danger + '20'; 
-    badgeColor = colors.danger; 
-    timerText = "—"; 
-  }
-  else if (todo.status === "not_started") { 
-    badgeBg = isBrightBg ? colors.primary + '15' : colors.primary + '20'; 
-    badgeColor = colors.primary; 
-  }
-
-  if (!isTimerSet && hasSubtasks) {
-    // Already set above
-  }
-
+  // Timer circular progress calculation
   const timerCircularProgress = useMemo(() => {
     if (isTimerSet && todo.timerDuration) {
-      return Math.min(100, ((todo.timerDuration - timeLeft) / todo.timerDuration) * 100);
+      return Math.min(100, Math.max(0, ((todo.timerDuration - timeLeft) / todo.timerDuration) * 100));
     }
-    return 0;
-  }, [isTimerSet, todo.timerDuration, timeLeft]);
+    if (isTimerSet && todo.timerDirection === 'up' && timeLeft > 0) {
+      return 100;
+    }
+    return optimisticStatus === 'done' ? 100 : 0;
+  }, [isTimerSet, todo.timerDuration, todo.timerDirection, timeLeft, optimisticStatus]);
 
-  const circularProgressValue = isTimerSet ? timerCircularProgress : (hasSubtasks ? countProgress : 0);
-  const circularProgressColor = todo.status === 'done' ? colors.success
-    : (todo.status === 'not_done' || isPastDue) ? colors.danger
-    : todo.status === 'not_started' ? colors.primary
-    : todo.status === 'paused' ? (isBrightBg ? colors.text : colors.textMuted)
-    : todo.status === 'in_progress' ? colors.warning
-    : (isBrightBg ? colors.text + '40' : colors.surfaceText + '40');
+  const circularProgressColor = optimisticStatus === 'done' ? colors.success
+    : (optimisticStatus === 'not_done' || isPastDue) ? colors.danger
+    : optimisticStatus === 'in_progress' ? colors.warning
+    : optimisticStatus === 'paused' ? colors.textMuted
+    : colors.primary;
 
-  const anySubtaskRunning = hasSubtasks && subtasks.some((s: any) => s.status === 'in_progress' && !!s.timerDuration);
+  const timerText = useMemo(() => {
+    if (optimisticStatus === 'done') return t.done;
+    if (optimisticStatus === 'not_done' || isPastDue) return '—';
+    return formatTime(timeLeft);
+  }, [optimisticStatus, isPastDue, timeLeft, t.done]);
+
+  // Subtitle text (description or project or due date)
+  const subtitleText = todo.description 
+    || project?.name 
+    || linkedSubCategory?.name 
+    || linkedCategory?.name 
+    || (todo.dueDate ? `${isArabic ? 'الموعد: ' : 'Due: '}${new Date(todo.dueDate).toLocaleDateString(isArabic ? 'ar-SA' : 'en-US', { month: 'short', day: 'numeric' })}` : '');
+
+  // Status configuration matching the 4-color palette
+  let statusPillBg = colors.primary; // #dbd4fd
+  let statusPillText = '#23173D';
+  let statusPillLabel = isArabic ? 'للقيام بها' : 'To Do';
+
+  if (optimisticStatus === 'done') {
+    statusPillBg = colors.success; // #e5f19d
+    statusPillText = '#16270E';
+    statusPillLabel = isArabic ? 'مكتمل' : 'Complete';
+  } else if (optimisticStatus === 'in_progress') {
+    statusPillBg = colors.warning; // #f6e5c9
+    statusPillText = '#2D1E0C';
+    statusPillLabel = isArabic ? 'قيد التنفيذ' : 'In Progress';
+  } else if (optimisticStatus === 'paused') {
+    statusPillBg = isDarkMode ? '#252636' : '#E2E8F0';
+    statusPillText = isDarkMode ? '#dbd4fd' : '#0F172A';
+    statusPillLabel = isArabic ? 'مؤقت' : 'Paused';
+  } else if (optimisticStatus === 'not_done' || isPastDue) {
+    statusPillBg = colors.danger;
+    statusPillText = '#FFFFFF';
+    statusPillLabel = isArabic ? 'متأخر' : 'Overdue';
+  }
+
+  // Priority badge text & color
+  const priorityLabel = todo.priority || 'Medium';
+
+  const handleToggleNextStatus = () => {
+    if (optimisticStatus === 'not_started' || optimisticStatus === 'not_done') {
+      if (isTimerSet) {
+        handleStartTimer();
+      } else {
+        moveToStatus('in_progress');
+      }
+    } else if (optimisticStatus === 'in_progress') {
+      if (isTimerSet) {
+        handlePauseTimer();
+      } else {
+        moveToStatus('done');
+      }
+    } else if (optimisticStatus === 'paused') {
+      handleStartTimer();
+    } else if (optimisticStatus === 'done') {
+      moveToStatus('not_started');
+    }
+  };
 
   const coreCard = (
     <>
       <LivePress 
-        activeOpacity={0.95}
+        activeOpacity={0.94}
         onPress={() => openDetail()}
         onLongPress={() => { 
           setIsActionModalVisible(true);
@@ -434,282 +436,209 @@ const TodoCard: React.FC<TodoCardProps> = ({ todo, onSetTimer, onLongPress, onLi
           { 
             overflow: 'hidden', 
             position: 'relative', 
-            backgroundColor: cardBg, 
-            borderColor: (todo.status === 'not_done' || isPastDue) ? cardBorderColor : 'transparent', 
-            borderWidth: (todo.status === 'not_done' || isPastDue) ? 1 : 0, 
-            padding: isTimelineMode ? 18 : 14,
+            backgroundColor: isDarkMode ? '#16171E' : '#FFFFFF', 
+            borderColor: isDarkMode ? '#252733' : colors.border, 
+            borderWidth: 1, 
+            borderRadius: 20,
+            paddingHorizontal: 18,
+            paddingVertical: 16,
+            marginBottom: 12,
             ...getStatusShadow(colors, todo.status),
           }
         ]}
       >
-        {optimisticStatus === 'in_progress' && (
-          <Animated.View
-            pointerEvents="none"
-            style={[{ position: 'absolute', top: 0, bottom: 0, start: 0, width: 3, zIndex: 2 }, pulseStyle]}
-          >
-            <LinearGradient
-              colors={['#F2B544', '#4EE6C1']}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 0, y: 1 }}
-              style={{ flex: 1 }}
-            />
-          </Animated.View>
-        )}
-        {isTimelineMode && (
-          <View style={{
-            position: 'absolute',
-            start: 6,
-            top: 24, bottom: 24, width: 4, borderRadius: 2,
-            backgroundColor: todo.priority === 'High' ? colors.danger : todo.priority === 'Medium' ? colors.warning : colors.primary
-          }}/>
-        )}
-        <View style={{ zIndex: 1, paddingStart: isTimelineMode ? 8 : 0, flex: 1 }}>
-          <View style={[{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }]}>
-            <View style={[{ flex: 1, paddingEnd: 8 }, isArabic && { alignItems: 'flex-end' }]}>
-              {(
-                <Animated.View style={titleStyle}>
-                  <Text 
-                    style={[
-                      homeStyles.cardTitle,
-                      { marginBottom: 10 },
-                      {
-                        color: todo.status === 'done' ? contentMutedColor : contentColor,
-                        textDecorationLine: todo.status === 'done' ? 'line-through' : 'none',
-                      },
-                      isArabic && { textAlign: 'right' },
-                    ]} 
-                    numberOfLines={2}
-                    ellipsizeMode="tail"
-                  >
-                    {todo.text}
-                  </Text>
-                </Animated.View>
-              )}
-              <View style={[{ flexDirection: 'row', gap: 8 }]}>
-                <View style={[homeStyles.badge, { backgroundColor: badgeBg === colors.border ? colors.surfaceText + '15' : badgeBg, alignSelf: isArabic ? 'flex-end' : 'flex-start' }]}>
-                  <Text style={[homeStyles.badgeText, { color: (badgeColor === colors.text || badgeColor === colors.textMuted) ? colors.surfaceText : badgeColor }]}>{badgeText}</Text>
-                </View>
-              </View>
-            </View>
-            {isTimerSet && (
-            <View style={{ justifyContent: 'center', alignItems: 'center', width: 56 }}>
-              <CircularProgress
-                size={56} strokeWidth={4} progress={circularProgressValue}
-                color={circularProgressColor}
-                unfilledColor={isBrightBg ? colors.text + '14' : (isDarkMode ? colors.surfaceText + '1A' : colors.text + '0D')}
-              >
-                <Text style={{ fontSize: 10, fontWeight: "700", color: circularProgressColor, textAlign: 'center' }}>
-                  {timerText}
+        <View style={{ zIndex: 1, flex: 1 }}>
+          {/* Row 1: Title & Subtitle (left) + Round Timer & More Menu (right) */}
+          <View style={[{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }]}>
+            <View style={{ flex: 1, paddingEnd: 12 }}>
+              <Animated.View style={titleStyle}>
+                <Text 
+                  style={[
+                    homeStyles.cardTitle,
+                    {
+                      fontSize: 16,
+                      fontWeight: '700',
+                      color: todo.status === 'done' ? colors.textMuted : colors.text,
+                      textDecorationLine: todo.status === 'done' ? 'line-through' : 'none',
+                      letterSpacing: -0.2,
+                    },
+                    isArabic && { textAlign: 'right' },
+                  ]} 
+                  numberOfLines={1}
+                  ellipsizeMode="tail"
+                >
+                  {todo.text}
                 </Text>
-              </CircularProgress>
+              </Animated.View>
+
+              {subtitleText ? (
+                <Text 
+                  style={[{
+                    fontSize: 13,
+                    fontWeight: '400',
+                    color: colors.textMuted,
+                    marginTop: 3,
+                  }, isArabic && { textAlign: 'right' }]}
+                  numberOfLines={1}
+                  ellipsizeMode="tail"
+                >
+                  {subtitleText}
+                </Text>
+              ) : null}
             </View>
+
+            {/* Right Controls: Round Timer (if timer enabled) + More Menu */}
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              {isTimerSet && (
+                <CircularProgress
+                  size={46}
+                  strokeWidth={3.5}
+                  progress={timerCircularProgress}
+                  color={circularProgressColor}
+                  unfilledColor={isDarkMode ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.06)'}
+                >
+                  <Text style={{ fontSize: 8.5, fontWeight: "800", color: circularProgressColor, textAlign: 'center' }}>
+                    {timerText}
+                  </Text>
+                </CircularProgress>
+              )}
+
+              <TouchableOpacity 
+                onPress={() => setIsActionModalVisible(true)}
+                hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+                style={{ padding: 4 }}
+              >
+                <Ionicons name="ellipsis-horizontal" size={18} color={colors.textMuted} />
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          {/* Row 2: Priority & Status Pills (left) | Subtasks & Completion % (right) */}
+          <View style={[{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 2, marginBottom: hasSubtasks ? 10 : 0 }]}>
+            {/* Left Badges */}
+            <View style={[{ flexDirection: 'row', alignItems: 'center', gap: 8 }]}>
+              {/* Priority Pill */}
+              <View style={{
+                backgroundColor: isDarkMode ? '#242634' : '#F1F5F9',
+                paddingHorizontal: 12,
+                paddingVertical: 5,
+                borderRadius: 14,
+                borderWidth: 1,
+                borderColor: isDarkMode ? '#2F3244' : '#E2E8F0',
+              }}>
+                <Text style={{
+                  fontSize: 12,
+                  fontWeight: '600',
+                  color: todo.priority === 'High' ? colors.danger : todo.priority === 'Medium' ? colors.warning : (isDarkMode ? '#CBD5E1' : '#475569'),
+                }}>
+                  {priorityLabel}
+                </Text>
+              </View>
+
+              {/* Status Pill (Interactive toggle) */}
+              <TouchableOpacity 
+                activeOpacity={0.85}
+                onPress={handleToggleNextStatus}
+                style={{
+                  backgroundColor: statusPillBg,
+                  paddingHorizontal: 14,
+                  paddingVertical: 5,
+                  borderRadius: 14,
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: 4,
+                }}
+              >
+                {optimisticStatus === 'in_progress' && (
+                  <Ionicons name="play" size={11} color={statusPillText} />
+                )}
+                {optimisticStatus === 'paused' && (
+                  <Ionicons name="pause" size={11} color={statusPillText} />
+                )}
+                {optimisticStatus === 'done' && (
+                  <Ionicons name="checkmark" size={12} color={statusPillText} />
+                )}
+                <Text style={{
+                  fontSize: 12,
+                  fontWeight: '700',
+                  color: statusPillText,
+                }}>
+                  {statusPillLabel}
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* Right Info: Subtasks & Progression % */}
+            {hasSubtasks && (
+              <View style={[{ flexDirection: 'row', alignItems: 'center', gap: 8 }]}>
+                <TouchableOpacity 
+                  onPress={toggleSubtasks}
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    gap: 4,
+                    paddingHorizontal: 8,
+                    paddingVertical: 4,
+                    borderRadius: 10,
+                    backgroundColor: isDarkMode ? '#242634' : '#F1F5F9',
+                  }}
+                >
+                  <Ionicons name="list-outline" size={13} color={colors.textMuted} />
+                  <Text style={{ fontSize: 11, fontWeight: '600', color: colors.textMuted }}>
+                    {stats.done}/{stats.total}
+                  </Text>
+                  <Ionicons name={showSubtasks ? 'chevron-up' : 'chevron-down'} size={11} color={colors.textMuted} />
+                </TouchableOpacity>
+
+                {/* Subtasks Completion % */}
+                <Text style={{
+                  fontSize: 12,
+                  fontWeight: '700',
+                  color: subtaskProgressPercent >= 100 ? colors.success : colors.textMuted,
+                }}>
+                  {subtaskProgressPercent}%
+                </Text>
+              </View>
             )}
           </View>
 
-          {hasSubtasks && countProgress > 0 && (
-            <View style={{ marginTop: 8, marginBottom: 4 }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-                <Text style={[{ fontSize: 11, fontWeight: '700', color: contentMutedColor }, isArabic && { textAlign: 'right', flex: 1 }]}>
-                  {isArabic ? 'تقدم المهام الفرعية' : 'Subtask Progress'}
-                </Text>
-                <Text style={{ fontSize: 11, fontWeight: '800', color: countProgress >= 100 ? (isBrightBg ? colors.text : colors.success) : (isBrightBg ? colors.text : colors.primary) }}>
-                  {Math.round(countProgress)}%
-                </Text>
-              </View>
-              <View style={{ height: 6, borderRadius: 3, backgroundColor: isBrightBg ? colors.text + '1A' : (isDarkMode ? colors.surfaceText + '0F' : colors.text + '0F'), overflow: 'hidden' }}>
+          {/* Row 3: Horizontal Subtasks Progress Bar (Displays when task has subtasks) */}
+          {hasSubtasks && (
+            <View style={{
+              height: 4,
+              borderRadius: 2,
+              backgroundColor: isDarkMode ? '#252733' : '#E2E8F0',
+              position: 'relative',
+              marginTop: 4,
+              justifyContent: 'center',
+            }}>
+              <View style={{
+                height: 4,
+                borderRadius: 2,
+                backgroundColor: subtaskProgressPercent >= 100 ? colors.success : colors.primary,
+                width: `${Math.min(100, Math.max(0, subtaskProgressPercent))}%`,
+              }} />
+
+              {/* Glowing Thumb Dot at end of subtask progress */}
+              {subtaskProgressPercent > 0 && subtaskProgressPercent < 100 && (
                 <View style={{
-                  height: '100%',
-                  width: `${Math.min(100, countProgress)}%`,
-                  borderRadius: 3,
-                  backgroundColor: countProgress >= 100 ? (isBrightBg ? colors.text : colors.success) : (isBrightBg ? colors.text : colors.primary),
+                  position: 'absolute',
+                  start: `${Math.min(97, Math.max(0, subtaskProgressPercent))}%`,
+                  width: 9,
+                  height: 9,
+                  borderRadius: 4.5,
+                  backgroundColor: colors.primary,
+                  borderWidth: 2,
+                  borderColor: isDarkMode ? '#16171E' : '#FFFFFF',
+                  transform: [{ translateX: -4.5 }],
                 }} />
-              </View>
+              )}
             </View>
           )}
 
-          <View style={[{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12, rowGap: 12, marginBottom: 8, flexWrap: 'wrap' }]}>
-            <View style={[{ flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap', flex: 1 }]}>
-              {!hasSubtaskTimers && (
-                <>
-                  {!isTimerSet && (
-                    <View style={[{ flexDirection: 'row', alignItems: 'center', gap: 6 }]}>
-                      <LivePress 
-                        style={[homeStyles.iconBtn, { backgroundColor: optimisticStatus === 'not_started' || optimisticStatus === 'not_done' ? colors.primary + '20' : 'transparent', borderWidth: 1, borderColor: optimisticStatus === 'not_started' || optimisticStatus === 'not_done' ? colors.primary : colors.border }]}
-                        onPress={() => optimisticStatus !== 'not_started' && moveToStatus('not_started')}
-                      >
-                        <Ionicons name="ellipse-outline" size={16} color={optimisticStatus === 'not_started' || optimisticStatus === 'not_done' ? colors.primary : contentColor} />
-                      </LivePress>
-                      <LivePress 
-                        style={[homeStyles.iconBtn, { backgroundColor: optimisticStatus === 'in_progress' ? colors.warning + '20' : 'transparent', borderWidth: 1, borderColor: optimisticStatus === 'in_progress' ? colors.warning : colors.border }]}
-                        onPress={() => optimisticStatus !== 'in_progress' && moveToStatus('in_progress')}
-                      >
-                        <Ionicons name="play-outline" size={16} color={optimisticStatus === 'in_progress' ? colors.warning : contentColor} />
-                      </LivePress>
-                      <LivePress 
-                        style={[homeStyles.iconBtn, { backgroundColor: optimisticStatus === 'done' ? colors.success + '20' : 'transparent', borderWidth: 1, borderColor: optimisticStatus === 'done' ? colors.success : colors.border }]}
-                        onPress={() => optimisticStatus !== 'done' && moveToStatus('done')}
-                      >
-                        <Ionicons name="checkmark-circle-outline" size={16} color={optimisticStatus === 'done' ? colors.success : contentColor} />
-                      </LivePress>
-                    </View>
-                  )}
-                  {(optimisticStatus === 'not_started' || optimisticStatus === 'not_done') && (
-                    <View style={[{ flexDirection: 'row', alignItems: 'center', gap: 8 }]}>
-                      {!isTimerSet ? (
-                        <TouchableOpacity style={[homeStyles.actionBtn, { 
-                          backgroundColor: colors.surface,
-                          shadowColor: colors.text,
-                          shadowOffset: { width: 4, height: 4 },
-                          shadowOpacity: 0.1,
-                          shadowRadius: 8,
-                          elevation: 4,
-                        }]} onPress={() => onSetTimer(todo._id)}>
-                          <Ionicons name="timer-outline" size={16} color={contentColor} />
-                          <Text style={[homeStyles.actionBtnText, { color: contentColor }]}>{t.setTimer}</Text>
-                        </TouchableOpacity>
-                      ) : (
-                        <LivePress style={[homeStyles.actionBtn, { backgroundColor: isBrightBg ? colors.text : colors.primary }]} onPress={handleStartTimer}>
-                          <Ionicons name="play" size={16} color={isBrightBg ? colors.surface : (isDarkMode ? colors.text : colors.surfaceText)} />
-                          <Text style={[homeStyles.actionBtnText, { color: isBrightBg ? colors.surface : (isDarkMode ? colors.text : colors.surfaceText) }]}>{t.startTask}</Text>
-                        </LivePress>
-                      )}
-                    </View>
-                  )}
-                  {optimisticStatus === 'in_progress' && (
-                    <View style={[{ flexDirection: 'row', alignItems: 'center', gap: 8 }]}>
-                      <TouchableOpacity style={[homeStyles.iconBtn, { backgroundColor: isBrightBg ? colors.surfaceText + '66' : colors.surface, borderColor: isBrightBg ? colors.text + '1A' : colors.border, borderWidth: 1 }]} onPress={handlePauseTimer}>
-                        <Ionicons name="pause" size={16} color={isBrightBg ? colors.surface : contentColor} />
-                      </TouchableOpacity>
-                      {todo.timerDirection === 'up' && (
-                        <TouchableOpacity style={[homeStyles.iconBtn, { backgroundColor: isBrightBg ? colors.success + '4D' : colors.success + '26', borderColor: isBrightBg ? colors.text + '1A' : colors.success + '40', borderWidth: 1 }]} onPress={() => { updateStatus({ id: todo._id, status: 'done' }); showTaskCompletedNotification(todo.text, isArabic ? 'ar' : 'en'); }}>
-                          <Ionicons name="checkmark-circle" size={16} color={colors.success} />
-                        </TouchableOpacity>
-                      )}
-                    </View>
-                  )}
-                  {optimisticStatus === 'paused' && (
-                    <View style={[{ flexDirection: 'row', alignItems: 'center', gap: 8 }]}>
-                      <TouchableOpacity style={[homeStyles.iconBtn, { backgroundColor: isBrightBg ? colors.text : colors.primary }]} onPress={handleStartTimer}>
-                        <Ionicons name="play" size={16} color={isBrightBg ? colors.surface : (isDarkMode ? colors.text : colors.surfaceText)} />
-                      </TouchableOpacity>
-                      {todo.timerDirection === 'up' && (
-                        <TouchableOpacity style={[homeStyles.iconBtn, { backgroundColor: isBrightBg ? colors.success + '4D' : colors.success + '26', borderColor: isBrightBg ? colors.text + '1A' : colors.success + '40', borderWidth: 1 }]} onPress={() => { updateStatus({ id: todo._id, status: 'done' }); showTaskCompletedNotification(todo.text, isArabic ? 'ar' : 'en'); }}>
-                          <Ionicons name="checkmark-circle" size={16} color={colors.success} />
-                        </TouchableOpacity>
-                      )}
-                    </View>
-                  )}
-                </>
-              )}
-              {hasSubtaskTimers && (
-                <View style={[{ flexDirection: 'row', alignItems: 'center', gap: 6 }]}>
-                  {!isTimerSet && (
-                    <>
-                      <LivePress 
-                        style={[homeStyles.iconBtn, { backgroundColor: optimisticStatus === 'not_started' || optimisticStatus === 'not_done' ? colors.primary + '20' : 'transparent', borderWidth: 1, borderColor: optimisticStatus === 'not_started' || optimisticStatus === 'not_done' ? colors.primary : colors.border }]}
-                        onPress={() => optimisticStatus !== 'not_started' && moveToStatus('not_started')}
-                      >
-                        <Ionicons name="ellipse-outline" size={16} color={optimisticStatus === 'not_started' || optimisticStatus === 'not_done' ? colors.primary : contentColor} />
-                      </LivePress>
-                      <LivePress 
-                        style={[homeStyles.iconBtn, { backgroundColor: optimisticStatus === 'in_progress' ? colors.warning + '20' : 'transparent', borderWidth: 1, borderColor: optimisticStatus === 'in_progress' ? colors.warning : colors.border }]}
-                        onPress={() => optimisticStatus !== 'in_progress' && moveToStatus('in_progress')}
-                      >
-                        <Ionicons name="play-outline" size={16} color={optimisticStatus === 'in_progress' ? colors.warning : contentColor} />
-                      </LivePress>
-                      <LivePress 
-                        style={[homeStyles.iconBtn, { backgroundColor: optimisticStatus === 'done' ? colors.success + '20' : 'transparent', borderWidth: 1, borderColor: optimisticStatus === 'done' ? colors.success : colors.border }]}
-                        onPress={() => optimisticStatus !== 'done' && moveToStatus('done')}
-                      >
-                        <Ionicons name="checkmark-circle-outline" size={16} color={optimisticStatus === 'done' ? colors.success : contentColor} />
-                      </LivePress>
-                    </>
-                  )}
-                  {anySubtaskRunning && (
-                    <View style={[{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: isBrightBg ? colors.text + '1A' : colors.warning + '15', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 8, borderWidth: 1, borderColor: isBrightBg ? colors.text + '33' : colors.warning + '30' }]}>
-                      <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: isBrightBg ? colors.text : colors.warning }} />
-                      <Text style={{ fontSize: 11, fontWeight: '800', color: isBrightBg ? colors.text : colors.warning }}>{t.timerRunning}</Text>
-                    </View>
-                  )}
-                </View>
-              )}
-            </View>
-            <View style={[{ flexDirection: 'row', alignItems: 'center', gap: 12, flexShrink: 0 }]}>
-              {hasSubtasks && (
-                <TouchableOpacity
-                  onPress={toggleSubtasks}
-                  style={[homeStyles.actionBtn, { backgroundColor: isBrightBg ? colors.text + '0D' : colors.primary + '15', borderColor: isBrightBg ? colors.text + '1A' : colors.primary + '30', borderWidth: 1 }]}
-                >
-                  <Text style={{ color: contentColor, fontSize: 13, fontWeight: '700' }}>
-                    {stats.total} {stats.total === 1 ? t.subtask : t.subtasks} {showSubtasks ? '▼' : '▶'}
-                  </Text>
-                </TouchableOpacity>
-              )}
-              <TouchableOpacity
-                style={[homeStyles.actionBtn, {
-                  paddingHorizontal: hasSubtasks ? 10 : 14,
-                  backgroundColor: hasSubtasks ? 'transparent' : (isBrightBg ? colors.text + '0D' : colors.primary + '12'),
-                  borderWidth: hasSubtasks ? 0 : 1,
-                  borderColor: isBrightBg ? colors.text + '1A' : colors.primary + '40',
-                  borderStyle: 'dashed',
-                }]}
-                onPress={() => openDetail('subtask')}
-              >
-                <Ionicons name="add-circle-outline" size={16} color={contentMutedColor} />
-                {!hasSubtasks && (
-                  <Text style={{ color: contentColor, fontSize: 12, fontWeight: '700' }}>{t.addSubtask}</Text>
-                )}
-              </TouchableOpacity>
-            </View>
-          </View>
-
-          <View style={[{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }]}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-              {todo.dueDate && (
-                <View style={[{ flexDirection: 'row', alignItems: 'center', gap: 4 }]}>
-                  <Ionicons name="calendar-outline" size={14} color={isDueSoon ? (isBrightBg ? colors.danger : colors.danger) : contentMutedColor} />
-                  <Text style={[{ fontSize: 12, color: isDueSoon ? (isBrightBg ? colors.danger : colors.danger) : contentMutedColor, fontWeight: '600' }, isArabic && { textAlign: 'right' }]}>
-                    {new Date(todo.dueDate).toLocaleDateString(isArabic ? 'ar-SA' : 'en-US')}
-                  </Text>
-                </View>
-              )}
-              {todo.date && (
-                <View style={[{ flexDirection: 'row', alignItems: 'center', gap: 4 }]}>
-                  <Ionicons name="calendar-clear-outline" size={14} color={contentMutedColor} />
-                  <Text style={[{ fontSize: 12, color: contentMutedColor, fontWeight: '600' }, isArabic && { textAlign: 'right' }]}>
-                    {new Date(todo.date).toLocaleDateString(isArabic ? 'ar-SA' : 'en-US', { month: 'short', day: 'numeric' })}
-                  </Text>
-                </View>
-              )}
-            </View>
-          </View>
-
-          <TouchableOpacity style={[homeStyles.projectRow, { marginBottom: 12 }]} onPress={() => openDetail()}>
-            <Ionicons name="link-outline" size={16} color={(todo.projectId || todo.subCategoryId || todo.categoryId) ? (isBrightBg ? colors.text : colors.primary) : contentMutedColor} />
-            <Text style={[homeStyles.projectText, { color: contentMutedColor }, (todo.projectId || todo.subCategoryId || todo.categoryId) && { color: contentColor, fontStyle: 'normal', fontWeight: '700' }, isArabic && { textAlign: 'right' }]}>
-              {project?.name || linkedSubCategory?.name || linkedCategory?.name || todo.projectId || t.noProject}
-            </Text>
-          </TouchableOpacity>
-
-          <View style={[{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }]}>
-            <View style={[{ flexDirection: 'row', alignItems: 'center', gap: 15 }]}>
-              {hasSubtasks && (
-                <View style={[{ flexDirection: 'row', alignItems: 'center', gap: 4 }]}>
-                  <Ionicons name="list-outline" size={15} color={contentMutedColor} />
-                  <Text style={{ fontSize: 12, color: contentMutedColor, fontWeight: '700' }}>{stats.done}/{stats.total} {isArabic ? 'مهام' : 'Subtasks'}</Text>
-                </View>
-              )}
-              <TouchableOpacity onPress={() => openDetail()}>
-                <Ionicons name="create-outline" size={18} color={contentColor} />
-              </TouchableOpacity>
-            </View>
-            <TouchableOpacity onPress={() => deleteTodo({ id: todo._id })}>
-              <Ionicons name="trash-outline" size={18} color={colors.danger} />
-            </TouchableOpacity>
-          </View>
-
+          {/* Subtasks Expanded List */}
           {showSubtasks && hasSubtasks && (
-            <View style={{ marginTop: 12, paddingTop: 8, gap: 8 }}>
+            <View style={{ marginTop: 14, paddingTop: 12, borderTopWidth: 1, borderTopColor: isDarkMode ? '#252733' : '#E2E8F0', gap: 8 }}>
               {subtasks.map((sub: any) => (
                 <SubtaskRow
                   key={sub._id}

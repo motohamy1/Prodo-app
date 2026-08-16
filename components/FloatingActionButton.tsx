@@ -1,6 +1,7 @@
 import { useAuth } from '@/hooks/useAuth';
 import useTheme from '@/hooks/useTheme';
 import { useTranslation } from '@/utils/i18n';
+import { Ionicons } from '@expo/vector-icons';
 import { useEffect } from 'react';
 import { StyleProp, StyleSheet, Text, TouchableWithoutFeedback, View, ViewStyle } from 'react-native';
 import Animated, {
@@ -18,11 +19,12 @@ import { PRESS_SPRING } from './LivePress';
 interface FloatingActionButtonProps {
   onPress: () => void;
   style?: StyleProp<ViewStyle>;
+  label?: string;
 }
 
-const FAB_RADIUS = 20;
+const FAB_RADIUS = 22;
 
-export default function FloatingActionButton({ onPress, style }: FloatingActionButtonProps) {
+export default function FloatingActionButton({ onPress, style, label }: FloatingActionButtonProps) {
   const { colors } = useTheme();
   const { language } = useAuth();
   const { isArabic } = useTranslation(language);
@@ -49,15 +51,15 @@ export default function FloatingActionButton({ onPress, style }: FloatingActionB
   }));
 
   return (
-    <Animated.View style={[styles.wrapper, { ...colors.shadows.glow, shadowColor: colors.primary }, animatedStyle, style]}>
+    <Animated.View style={[styles.wrapper, { ...colors.shadows.glow, shadowColor: colors.secondary }, animatedStyle, style]}>
       <TouchableWithoutFeedback
         onPress={onPress}
         onPressIn={() => { press.value = withSpring(0.96, PRESS_SPRING); }}
         onPressOut={() => { press.value = withSpring(1, PRESS_SPRING); }}
       >
-        <View style={[styles.fab, { backgroundColor: colors.primary }]}>
-          <Text style={[styles.text, { color: colors.primaryText }]}>
-            {isArabic ? 'إضافة مهمة' : 'Add a Task'}
+        <View style={[styles.fab, { backgroundColor: colors.secondary }]}>
+          <Text style={[styles.text, { color: '#0E0F14' }]}>
+            {label || (isArabic ? 'إضافة مهمة' : 'Add Task')}
           </Text>
         </View>
       </TouchableWithoutFeedback>
@@ -72,8 +74,8 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   fab: {
-    height: 44,
-    paddingHorizontal: 8,
+    height: 38,
+    paddingHorizontal: 14,
     borderRadius: FAB_RADIUS,
     overflow: 'hidden',
     justifyContent: 'center',

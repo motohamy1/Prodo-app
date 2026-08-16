@@ -1,0 +1,532 @@
+import { ColorScheme } from "@/hooks/useTheme";
+import { Platform, StyleSheet } from "react-native";
+
+export const createAddScreenStyles = (colors: ColorScheme, isArabic: boolean = false) => {
+  return StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.bg,
+    },
+    safeArea: {
+      flex: 1,
+      backgroundColor: colors.bg,
+    },
+    scrollContent: {
+      paddingBottom: 120,
+    },
+
+    // ─── Top Status Bar ─────────────────────────────────────────
+    topStatusBar: {
+      flexDirection: isArabic ? 'row-reverse' : 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      paddingHorizontal: 20,
+      paddingTop: Platform.OS === 'android' ? 8 : 4,
+      paddingBottom: 12,
+    },
+    statusBadge: {
+      flexDirection: isArabic ? 'row-reverse' : 'row',
+      alignItems: 'center',
+      gap: 7,
+      backgroundColor: 'rgba(255, 255, 255, 0.05)',
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+      borderRadius: 14,
+      borderWidth: 1,
+      borderColor: 'rgba(255, 255, 255, 0.08)',
+    },
+    statusDot: {
+      width: 7,
+      height: 7,
+      borderRadius: 4,
+      backgroundColor: '#22C55E',
+    },
+    statusText: {
+      fontSize: 13,
+      fontWeight: '700',
+      color: '#FFFFFF',
+      letterSpacing: -0.2,
+    },
+    topMenuBtn: {
+      width: 36,
+      height: 36,
+      borderRadius: 18,
+      backgroundColor: 'rgba(255, 255, 255, 0.06)',
+      justifyContent: 'center',
+      alignItems: 'center',
+      borderWidth: 1,
+      borderColor: 'rgba(255, 255, 255, 0.08)',
+    },
+
+    // ─── Input Mode Selector (Voice vs Type) ─────────────────────
+    modeSelectorRow: {
+      flexDirection: isArabic ? 'row-reverse' : 'row',
+      justifyContent: 'center',
+      alignItems: 'center',
+      gap: 12,
+      paddingHorizontal: 20,
+      marginBottom: 10,
+    },
+    modePill: {
+      flexDirection: isArabic ? 'row-reverse' : 'row',
+      alignItems: 'center',
+      gap: 6,
+      paddingHorizontal: 16,
+      paddingVertical: 7,
+      borderRadius: 20,
+      backgroundColor: 'rgba(255, 255, 255, 0.04)',
+      borderWidth: 1,
+      borderColor: 'rgba(255, 255, 255, 0.06)',
+    },
+    modePillActive: {
+      backgroundColor: 'rgba(219, 212, 253, 0.18)',
+      borderColor: 'rgba(219, 212, 253, 0.45)',
+    },
+    modePillText: {
+      fontSize: 13,
+      fontWeight: '600',
+      color: '#9CA3AF',
+    },
+    modePillTextActive: {
+      color: '#FFFFFF',
+      fontWeight: '700',
+    },
+
+    // ─── Voice / Waveform Hero Section ───────────────────────────
+    heroSection: {
+      paddingHorizontal: 20,
+      paddingTop: 8,
+      paddingBottom: 20,
+      alignItems: 'center',
+    },
+    heroStatusRow: {
+      width: '100%',
+      flexDirection: isArabic ? 'row-reverse' : 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: 12,
+    },
+    waveformIconBtn: {
+      padding: 8,
+      borderRadius: 12,
+      backgroundColor: 'rgba(255, 255, 255, 0.05)',
+      borderWidth: 1,
+      borderColor: 'rgba(255, 255, 255, 0.08)',
+    },
+    listeningPill: {
+      flexDirection: isArabic ? 'row-reverse' : 'row',
+      alignItems: 'center',
+      gap: 7,
+      backgroundColor: 'rgba(239, 68, 68, 0.12)',
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+      borderRadius: 14,
+      borderWidth: 1,
+      borderColor: 'rgba(239, 68, 68, 0.25)',
+    },
+    idlePill: {
+      flexDirection: isArabic ? 'row-reverse' : 'row',
+      alignItems: 'center',
+      gap: 7,
+      backgroundColor: 'rgba(255, 255, 255, 0.05)',
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+      borderRadius: 14,
+      borderWidth: 1,
+      borderColor: 'rgba(255, 255, 255, 0.08)',
+    },
+    listeningText: {
+      fontSize: 13,
+      fontWeight: '600',
+      color: '#F87171',
+    },
+    idleText: {
+      fontSize: 13,
+      fontWeight: '600',
+      color: '#9CA3AF',
+    },
+    recordingDot: {
+      width: 7,
+      height: 7,
+      borderRadius: 4,
+      backgroundColor: '#EF4444',
+    },
+    idleDot: {
+      width: 7,
+      height: 7,
+      borderRadius: 4,
+      backgroundColor: '#6B7280',
+    },
+
+    // Siri Waveform Box
+    waveformBox: {
+      width: '100%',
+      height: 110,
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginVertical: 4,
+      position: 'relative',
+    },
+    waveformAmbientGlow: {
+      position: 'absolute',
+      width: 260,
+      height: 60,
+      borderRadius: 30,
+      backgroundColor: 'rgba(219, 212, 253, 0.22)',
+      filter: 'blur(30px)',
+    },
+
+    // Speech Transcript Card
+    transcriptContainer: {
+      width: '100%',
+      marginTop: 8,
+      alignItems: 'center',
+      paddingHorizontal: 12,
+    },
+    transcriptPreviousText: {
+      fontSize: 16,
+      fontWeight: '500',
+      color: 'rgba(255, 255, 255, 0.4)',
+      textAlign: 'center',
+      marginBottom: 3,
+      letterSpacing: -0.2,
+    },
+    transcriptFocusText: {
+      fontSize: 20,
+      fontWeight: '700',
+      color: '#FFFFFF',
+      textAlign: 'center',
+      letterSpacing: -0.3,
+      marginBottom: 3,
+      textShadowColor: 'rgba(255, 255, 255, 0.2)',
+      textShadowOffset: { width: 0, height: 1 },
+      textShadowRadius: 6,
+    },
+    transcriptNextText: {
+      fontSize: 14,
+      fontWeight: '400',
+      color: 'rgba(255, 255, 255, 0.22)',
+      textAlign: 'center',
+      letterSpacing: -0.2,
+    },
+
+    // Tap to Speak Button
+    tapToSpeakBtn: {
+      flexDirection: isArabic ? 'row-reverse' : 'row',
+      alignItems: 'center',
+      gap: 8,
+      backgroundColor: 'rgba(219, 212, 253, 0.16)',
+      paddingHorizontal: 18,
+      paddingVertical: 10,
+      borderRadius: 20,
+      borderWidth: 1,
+      borderColor: 'rgba(219, 212, 253, 0.35)',
+      marginTop: 14,
+    },
+    tapToSpeakBtnActive: {
+      backgroundColor: 'rgba(239, 68, 68, 0.16)',
+      borderColor: 'rgba(239, 68, 68, 0.4)',
+    },
+    tapToSpeakText: {
+      fontSize: 13,
+      fontWeight: '700',
+      color: '#dbd4fd',
+    },
+    tapToSpeakTextActive: {
+      color: '#F87171',
+    },
+
+    // ─── Direct Type Input Box ────────────────────────────────────
+    typingCard: {
+      width: '100%',
+      backgroundColor: colors.surface,
+      borderRadius: 20,
+      borderWidth: 1,
+      borderColor: 'rgba(255, 255, 255, 0.08)',
+      padding: 16,
+      marginTop: 4,
+    },
+    typingTypeToggles: {
+      flexDirection: isArabic ? 'row-reverse' : 'row',
+      alignItems: 'center',
+      gap: 10,
+      marginBottom: 12,
+    },
+    typeToggleBtn: {
+      paddingHorizontal: 12,
+      paddingVertical: 5,
+      borderRadius: 12,
+      backgroundColor: 'rgba(255, 255, 255, 0.05)',
+      borderWidth: 1,
+      borderColor: 'rgba(255, 255, 255, 0.06)',
+    },
+    typeToggleBtnActive: {
+      backgroundColor: 'rgba(219, 212, 253, 0.2)',
+      borderColor: '#dbd4fd',
+    },
+    typeToggleText: {
+      fontSize: 12,
+      fontWeight: '600',
+      color: '#8E92A0',
+    },
+    typeToggleTextActive: {
+      color: '#FFFFFF',
+      fontWeight: '700',
+    },
+    typingInput: {
+      fontSize: 16,
+      color: '#FFFFFF',
+      lineHeight: 22,
+      minHeight: 60,
+      textAlignVertical: 'top',
+      paddingVertical: 4,
+    },
+    typingFooterRow: {
+      flexDirection: isArabic ? 'row-reverse' : 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginTop: 12,
+      paddingTop: 12,
+      borderTopWidth: 1,
+      borderTopColor: 'rgba(255, 255, 255, 0.05)',
+    },
+    typingReminderBtn: {
+      flexDirection: isArabic ? 'row-reverse' : 'row',
+      alignItems: 'center',
+      gap: 6,
+      paddingHorizontal: 10,
+      paddingVertical: 6,
+      borderRadius: 10,
+      backgroundColor: 'rgba(246, 229, 201, 0.15)',
+      borderWidth: 1,
+      borderColor: 'rgba(246, 229, 201, 0.35)',
+    },
+    typingReminderText: {
+      fontSize: 12,
+      fontWeight: '600',
+      color: '#f6e5c9',
+    },
+    typingSaveBtn: {
+      backgroundColor: '#dbd4fd',
+      paddingHorizontal: 16,
+      paddingVertical: 8,
+      borderRadius: 12,
+    },
+    typingSaveBtnDisabled: {
+      backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    },
+    typingSaveText: {
+      fontSize: 13,
+      fontWeight: '700',
+      color: '#23173D',
+    },
+
+    // ─── Search & Controls Row ──────────────────────────────────
+    controlsRow: {
+      flexDirection: isArabic ? 'row-reverse' : 'row',
+      alignItems: 'center',
+      paddingHorizontal: 20,
+      gap: 10,
+      marginBottom: 20,
+    },
+    searchBarContainer: {
+      flex: 1,
+      height: 48,
+      borderRadius: 16,
+      backgroundColor: colors.surface,
+      flexDirection: isArabic ? 'row-reverse' : 'row',
+      alignItems: 'center',
+      paddingHorizontal: 14,
+      borderWidth: 1,
+      borderColor: 'rgba(255, 255, 255, 0.08)',
+      gap: 10,
+    },
+    searchInput: {
+      flex: 1,
+      fontSize: 15,
+      color: '#FFFFFF',
+      fontWeight: '500',
+      paddingVertical: 0,
+    },
+    controlIconButton: {
+      width: 48,
+      height: 48,
+      borderRadius: 16,
+      backgroundColor: colors.surface,
+      justifyContent: 'center',
+      alignItems: 'center',
+      borderWidth: 1,
+      borderColor: 'rgba(255, 255, 255, 0.08)',
+    },
+    controlIconButtonActive: {
+      backgroundColor: 'rgba(219, 212, 253, 0.18)',
+      borderColor: 'rgba(219, 212, 253, 0.4)',
+    },
+
+    // ─── Recent Section ──────────────────────────────────────────
+    sectionHeader: {
+      flexDirection: isArabic ? 'row-reverse' : 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      paddingHorizontal: 20,
+      marginBottom: 14,
+    },
+    sectionTitle: {
+      fontSize: 22,
+      fontWeight: '700',
+      color: '#FFFFFF',
+      letterSpacing: -0.4,
+    },
+    sectionBadge: {
+      backgroundColor: colors.surface,
+      paddingHorizontal: 10,
+      paddingVertical: 3,
+      borderRadius: 10,
+      borderWidth: 1,
+      borderColor: 'rgba(255, 255, 255, 0.08)',
+    },
+    sectionBadgeText: {
+      fontSize: 12,
+      fontWeight: '700',
+      color: '#dbd4fd',
+    },
+
+    // ─── Recent Cards ────────────────────────────────────────────
+    cardsList: {
+      paddingHorizontal: 20,
+      gap: 12,
+    },
+    cardOuter: {
+      borderRadius: 20,
+      backgroundColor: colors.surface,
+      borderWidth: 1,
+      borderColor: 'rgba(255, 255, 255, 0.07)',
+      padding: 18,
+      overflow: 'hidden',
+    },
+    cardHeaderRow: {
+      flexDirection: isArabic ? 'row-reverse' : 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: 10,
+    },
+    categoryPill: {
+      backgroundColor: 'rgba(255, 255, 255, 0.06)',
+      paddingHorizontal: 10,
+      paddingVertical: 4,
+      borderRadius: 10,
+      borderWidth: 1,
+      borderColor: 'rgba(255, 255, 255, 0.06)',
+    },
+    categoryPillText: {
+      fontSize: 11,
+      fontWeight: '700',
+      color: '#9CA3AF',
+    },
+    cardTimestamp: {
+      fontSize: 12,
+      fontWeight: '500',
+      color: '#6B7280',
+    },
+    cardTitle: {
+      fontSize: 16,
+      fontWeight: '700',
+      color: '#FFFFFF',
+      letterSpacing: -0.2,
+      marginBottom: 6,
+      lineHeight: 22,
+    },
+    cardSnippet: {
+      fontSize: 14,
+      fontWeight: '400',
+      color: '#8E92A0',
+      lineHeight: 20,
+    },
+
+    // Active Reminder Highlight Badge inside card
+    reminderBadge: {
+      flexDirection: isArabic ? 'row-reverse' : 'row',
+      alignItems: 'center',
+      gap: 5,
+      backgroundColor: 'rgba(246, 229, 201, 0.15)',
+      paddingHorizontal: 10,
+      paddingVertical: 4,
+      borderRadius: 10,
+      borderWidth: 1,
+      borderColor: 'rgba(246, 229, 201, 0.35)',
+      marginTop: 10,
+      alignSelf: 'flex-start',
+    },
+    reminderBadgeText: {
+      fontSize: 11,
+      fontWeight: '700',
+      color: '#f6e5c9',
+    },
+
+    // ─── Modals & Bottom Sheets ──────────────────────────────────
+    modalOverlay: {
+      flex: 1,
+      backgroundColor: 'rgba(0, 0, 0, 0.75)',
+      justifyContent: 'flex-end',
+    },
+    modalSheet: {
+      backgroundColor: colors.surfaceHigh,
+      borderTopLeftRadius: 28,
+      borderTopRightRadius: 28,
+      paddingHorizontal: 20,
+      paddingTop: 16,
+      paddingBottom: Platform.OS === 'ios' ? 40 : 24,
+      borderWidth: 1,
+      borderColor: 'rgba(255, 255, 255, 0.1)',
+    },
+    modalHandle: {
+      width: 40,
+      height: 4,
+      borderRadius: 2,
+      backgroundColor: 'rgba(255, 255, 255, 0.2)',
+      alignSelf: 'center',
+      marginBottom: 18,
+    },
+    modalHeader: {
+      flexDirection: isArabic ? 'row-reverse' : 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: 20,
+    },
+    modalTitle: {
+      fontSize: 18,
+      fontWeight: '700',
+      color: '#FFFFFF',
+      letterSpacing: -0.3,
+    },
+    modalCloseBtn: {
+      padding: 4,
+    },
+    filterOption: {
+      flexDirection: isArabic ? 'row-reverse' : 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      paddingVertical: 14,
+      borderBottomWidth: 1,
+      borderBottomColor: 'rgba(255, 255, 255, 0.05)',
+    },
+    filterOptionText: {
+      fontSize: 15,
+      fontWeight: '600',
+      color: '#E5E7EB',
+    },
+    modalActionBtn: {
+      marginTop: 20,
+      height: 50,
+      borderRadius: 16,
+      backgroundColor: '#dbd4fd',
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    modalActionBtnText: {
+      fontSize: 16,
+      fontWeight: '700',
+      color: '#23173D',
+    },
+  });
+};

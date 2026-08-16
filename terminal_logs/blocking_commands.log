@@ -1,0 +1,651 @@
+--- Executing blocking command at Wed Aug 12 18:45:48 2026 ---
+> call "C:\Users\mtoha\.eigent\user_43072\spaces\space_75f1ba984c6f4666a81ef71de4fae5df\projects\1786549460009-7831\runs\1786549460276-8995\single_agent\.venv\Scripts\activate.bat" && dir "C:\Dev\Dev_World\Mobile_Projects\Prodo-app" /b /a:d
+--- Output ---
+.agent
+.agents
+.claude
+.commandcode
+.expo
+.git
+.github
+.idea
+.impeccable
+.junie
+.planning
+.qodo
+.specify
+.vscode
+android
+app
+assets
+build
+competitor_analysis.dir
+components
+config
+convex
+dist
+graphify-out
+hooks
+ls
+node_modules
+specs
+src
+terminal_logs
+utils
+
+
+
+--- Executing blocking command at Wed Aug 12 18:45:52 2026 ---
+> call "C:\Users\mtoha\.eigent\user_43072\spaces\space_75f1ba984c6f4666a81ef71de4fae5df\projects\1786549460009-7831\runs\1786549460276-8995\single_agent\.venv\Scripts\activate.bat" && dir "C:\Dev\Dev_World\Mobile_Projects\Prodo-app" /b /a:d src/
+--- Output ---
+Invalid switch - "".
+
+
+
+--- Executing blocking command at Wed Aug 12 18:45:56 2026 ---
+> call "C:\Users\mtoha\.eigent\user_43072\spaces\space_75f1ba984c6f4666a81ef71de4fae5df\projects\1786549460009-7831\runs\1786549460276-8995\single_agent\.venv\Scripts\activate.bat" && dir "C:\Dev\Dev_World\Mobile_Projects\Prodo-app\src" /b /a:d
+--- Output ---
+hooks
+utils
+
+
+
+--- Executing blocking command at Wed Aug 12 18:46:02 2026 ---
+> call "C:\Users\mtoha\.eigent\user_43072\spaces\space_75f1ba984c6f4666a81ef71de4fae5df\projects\1786549460009-7831\runs\1786549460276-8995\single_agent\.venv\Scripts\activate.bat" && dir "C:\Dev\Dev_World\Mobile_Projects\Prodo-app" /b | head -50
+--- Output ---
+.agent
+.agents
+.claude
+.commandcode
+.env
+.env.local
+.expo
+.git
+.github
+.gitignore
+.idea
+.impeccable
+.junie
+.planning
+.qodo
+.specify
+.todo.json
+.vscode
+AGENTS.md
+android
+app
+app.json
+assets
+build
+CLAUDE.md
+competitor_analysis.dir
+competitor_analysis.md
+components
+config
+convex
+DESIGN.md
+dist
+eas.json
+eslint.config.js
+expo-env.d.ts
+fix01.md
+fix02.md
+graphify-out
+hooks
+ls
+node_modules
+ONBOARDING.md
+package-lock.json
+package.json
+patch_modal.js
+PLAN.md
+PRODUCT.md
+README.md
+skills-lock.json
+specs
+
+
+
+--- Executing blocking command at Wed Aug 12 18:46:23 2026 ---
+> call "C:\Users\mtoha\.eigent\user_43072\spaces\space_75f1ba984c6f4666a81ef71de4fae5df\projects\1786549460009-7831\runs\1786549460276-8995\single_agent\.venv\Scripts\activate.bat" && type "C:\Dev\Dev_World\Mobile_Projects\Prodo-app\README.md"
+--- Output ---
+# ToDoIt 👋
+
+ToDoIt is a mobile productivity application built with **Expo + React Native** and powered by **Convex**.
+
+It helps users manage tasks, projects, planning, and reminders in one place, with support for:
+- real-time sync,
+- offline-first behavior,
+- task timers,
+- notifications,
+- localization (including RTL),
+- and theme customization.
+
+---
+
+## What this project provides
+
+- A complete **To-Do management workflow** (create, update, organize, and track tasks).
+- **Project-based organization** for grouping related work.
+- **Daily planning** and structured productivity flows.
+- **Timer-based focus tracking** for tasks and subtasks.
+- **Reminder and notification support** with sound preferences.
+- **Offline-first data handling** and sync conflict management utilities.
+- **Cross-platform mobile app** experience through Expo (Android/iOS development workflow).
+
+---
+
+## Core Features
+
+- ✅ Task creation and editing
+- ✅ Priority / status oriented task handling
+- ✅ Subtasks support
+- ✅ Project grouping
+- ✅ Daily planner flows
+- ✅ Reminder/notification flows
+- ✅ Timer utilities for productivity tracking
+- ✅ Dark/light theme support
+- ✅ i18n support (English and Arabic with RTL)
+- ✅ Convex-backed real-time sync
+
+---
+
+## Tech Stack
+
+- **Mobile App**: [React Native](https://reactnative.dev/) + [Expo](https://expo.dev/)
+- **Routing**: [Expo Router](https://docs.expo.dev/router/introduction/)
+- **Backend / Realtime Data**: [Convex](https://www.convex.dev/)
+- **Localization**: `i18next`, `react-i18next`
+- **Notifications & Device APIs**: Expo APIs
+- **Persistence/Secure Storage**: `expo-secure-store`
+- **Language**: TypeScript
+
+---
+
+## Project Structure (high level)
+
+- `app/` – Application screens and route structure (Expo Router)
+- `components/` – Reusable UI components (cards, modals, inputs, etc.)
+- `hooks/` – Custom hooks (theme, auth, sync, timers, onboarding, notifications)
+- `convex/` – Backend schema and serverless functions
+- `utils/` – Supporting utilities (notifications, local storage, i18n, sync helpers)
+- `assets/` – Images, icons, sounds, and style modules
+
+---
+
+## Getting Started
+
+### 1) Prerequisites
+- [Node.js](https://nodejs.org/) (LTS recommended)
+- npm
+- Expo Go app (or Android/iOS emulator)
+
+### 2) Install dependencies
+```bash
+npm install
+```
+
+### 3) Run Convex (backend)
+```bash
+npx convex dev
+```
+
+### 4) Start Expo app
+```bash
+npx expo start -c
+```
+
+---
+
+## Notes
+
+- This repository includes product/design/spec documentation files (`PRODUCT.md`, `DESIGN.md`, `PLAN.md`, and `specs/`) used to guide development.
+- Convex setup is required for full real-time backend behavior.
+
+---
+
+## License
+
+This project is licensed under the [MIT License](LICENSE).
+
+---
+
+Developed by [dr-tohamy](https://github.com/dr-tohamy)
+
+
+
+--- Executing blocking command at Wed Aug 12 18:46:43 2026 ---
+> call "C:\Users\mtoha\.eigent\user_43072\spaces\space_75f1ba984c6f4666a81ef71de4fae5df\projects\1786549460009-7831\runs\1786549460276-8995\single_agent\.venv\Scripts\activate.bat" && type "C:\Dev\Dev_World\Mobile_Projects\Prodo-app\DESIGN.md"
+--- Output ---
+---
+name: ToDoIt
+description: Warm charcoal workspace — amber directional light, precision typography, zero decoration
+colors:
+  base-charcoal: "#141518"
+  surface: "#1E1F23"
+  surface-high: "#26272C"
+  ink: "#F0EFEA"
+  muted: "#7A7B7E"
+  border: "#2A2B30"
+  amber: "#E8960C"
+  emerald: "#4ADE80"
+  rose: "#F87171"
+typography:
+  display:
+    fontFamily: System
+    fontSize: "32px"
+    fontWeight: 700
+    lineHeight: 1.15
+  title:
+    fontFamily: System
+    fontSize: "20px"
+    fontWeight: 600
+    lineHeight: 1.25
+  body:
+    fontFamily: System
+    fontSize: "16px"
+    fontWeight: 400
+    lineHeight: 1.6
+  label:
+    fontFamily: System
+    fontSize: "12px"
+    fontWeight: 600
+    lineHeight: 1.3
+rounded:
+  sm: "6px"
+  md: "10px"
+  lg: "14px"
+  xl: "20px"
+  full: "24px"
+  tab: "20px"
+spacing:
+  xs: "4px"
+  sm: "8px"
+  md: "16px"
+  lg: "24px"
+  xl: "32px"
+  xxl: "48px"
+  xxxl: "64px"
+components:
+  button-primary:
+    backgroundColor: "{colors.amber}"
+    textColor: "{colors.base-charcoal}"
+    rounded: "{rounded.lg}"
+    padding: "16px 24px"
+  button-secondary:
+    backgroundColor: "{colors.surface}"
+    textColor: "{colors.ink}"
+    rounded: "{rounded.md}"
+    padding: "12px 16px"
+    border: "1px {colors.border}"
+  card-task:
+    backgroundColor: "{colors.surface}"
+    rounded: "{rounded.lg}"
+    padding: "16px"
+    border: "1px {colors.border}"
+  input-field:
+    backgroundColor: "{colors.surface}"
+    textColor: "{colors.ink}"
+    rounded: "{rounded.lg}"
+    padding: "16px"
+    border: "1px {colors.border}"
+---
+
+# Design System: ToDoIt (v2)
+
+## 1. Overview
+
+**Creative North Star: "The Warm Command"**
+
+ToDoIt v2 is a dark-first precision workspace. Like a finely lit desk at night — focused, warm, intentional. The system replaces the v1 neomorphic monochrome with a warm charcoal palette anchored by a single amber accent. Every surface is deliberate; every interaction feels like engaging a tool, not operating a machine.
+
+The old system relied on extrusion depth to carry information (neomorphism). The new system relies on typographic hierarchy, a disciplined color palette, and one signature visual move: the active trace — a 3px amber edge on the currently focused item that says "this one."
+
+**Key Characteristics:**
+- Dark-first warm charcoal palette (`#141518` base), not pure black
+- Single amber accent (`#E8960C`) reserved for CTAs and the active trace
+- Emerald success, rose danger — semantic colors with real hue
+- Tight, directional shadows (not neomorphic opposing shadows)
+- Clean bordered surfaces instead of extrusion depth
+- System fonts only — no Google Fonts, no decorative faces
+- Proper modular type scale: 12/14/16/20/24/32
+- Strict spacing scale: 4/8/16/24/32/48/64
+- RTL first-class support preserved
+
+## 2. Colors
+
+### Dark Mode (Default)
+
+| Token | Hex | Role |
+|-------|-----|------|
+| bg | #141518 | Page background — warm deep charcoal |
+| surface | #1E1F23 | Cards, elevated surfaces |
+| surfaceHigh | #26272C | Modals, sheets |
+| text | #F0EFEA | Warm off-white ink |
+| textMuted | #7A7B7E | Secondary, placeholders |
+| border | #2A2B30 | Subtle separators |
+| primary | #E8960C | Amber — CTAs, active trace |
+| primaryText | #141518 | Dark text on amber |
+| success | #4ADE80 | Emerald — done, completed |
+| warning | #E8960C | Amber — in progress |
+| danger | #F87171 | Rose — overdue, destructive |
+| shadow | #0A0A0C | Shadow base color |
+
+### Light Mode
+
+| Token | Hex | Role |
+|-------|-----|------|
+| bg | #FAF8F5 | Warm cream |
+| surface | #FFFFFF | Cards |
+| surfaceHigh | #FFFFFF | Modals |
+| text | #1E1F23 | Near-black ink |
+| textMuted | #8B8D91 | Muted |
+| border | #E8E5E0 | Subtle borders |
+| primary | #D68D0A | Amber |
+| primaryText | #FFFFFF | White on amber |
+| success | #16A34A | Green |
+| warning | #D68D0A | Amber |
+| danger | #DC2626 | Red |
+
+### The Single Accent Rule
+
+Exactly one accent color: amber. Used for primary CTAs, the active trace, and progress indicators. Never used for decoration.
+
+### No Pure Black
+
+Background is warm charcoal `#141518` in dark mode, never `#000000`. Text is `#F0EFEA` (warm off-white), never pure white.
+
+## 3. Typography
+
+System fonts only (SF Pro on iOS, Roboto on Android). No Inter, no Google Fonts, no decorative faces.
+
+| Level | Size | Weight | Line | Use |
+|-------|------|--------|------|-----|
+| Display | 32px | 700 | 1.15 | Screen headings |
+| Title | 20px | 600 | 1.25 | Card titles, modals |
+| Body | 16px | 400 | 1.6 | Task text, descriptions |
+| Label | 12px | 600 | 1.3 | Status, meta, tabs |
+
+## 4. Elevation
+
+Directional, tight, color-matched shadows. Three levels:
+
+| Level | Value | Use |
+|-------|-------|-----|
+| sm | `0 1px 3px rgba(0,0,0,0.25)` | Cards, inputs |
+| md | `0 2px 8px rgba(0,0,0,0.35)` | FAB, dropdowns |
+| lg | `0 4px 16px rgba(0,0,0,0.45)` | Modals, sheets |
+
+No neomorphic opposing shadows. No glow. No blur. Single-direction, single-color shadows that sit tight to the element.
+
+## 5. The Signature: Active Trace
+
+The currently focused item gets a 3px amber edge on one side (left in LTR, right in RTL). Like a highlighter stripe that says "this one." Applied to:
+- Active task cards
+- Active filter pills
+- Active navigation tab (underline variant)
+
+This is the single visual signature that makes ToDoIt recognizable.
+
+## 6. Spacing Scale
+
+Strict multiples: 4, 8, 16, 24, 32, 48, 64. No 12px. No 6px spacing (radius only, not spacing).
+
+## 7. Components
+
+### Buttons
+- Primary: Amber fill, charcoal text, 20px radius, md shadow
+- Secondary: Surface fill, ink text, 1px border, 10px radius
+- Icon: 36x36, surface fill, border, 10px radius
+
+### Cards
+- Surface background, 14px radius, 1px border, sm shadow
+- Active card gets 3px amber left/right edge
+
+### Inputs
+- Surface background, 1px border, 14px radius
+- Focus: amber border, no ring
+
+### Tab Bar
+- Background matches page bg
+- Active tab: amber color
+- No shadow, no extrusion
+
+## 8. Do's and Don'ts
+
+### Do
+- Do use amber exclusively for CTAs and the active trace
+- Do use the spacing scale strictly (4/8/16/24/32/48/64)
+- Do use system fonts only
+- Do use bordered surfaces, not shadow-only separation
+- Do keep body text at 65-75 characters per line
+- Do support RTL with mirrored active trace
+
+### Don't
+- Don't use pure black `#000000` anywhere
+- Don't use neomorphic opposing shadows
+- Don't introduce second accent colors
+- Don't use decorative gradients, glows, or pills
+- Don't use Google Fonts or decorative faces
+- Don't use 12px spacing
+
+
+
+--- Executing blocking command at Wed Aug 12 18:46:52 2026 ---
+> call "C:\Users\mtoha\.eigent\user_43072\spaces\space_75f1ba984c6f4666a81ef71de4fae5df\projects\1786549460009-7831\runs\1786549460276-8995\single_agent\.venv\Scripts\activate.bat" && type "C:\Dev\Dev_World\Mobile_Projects\Prodo-app\PLAN.md"
+--- Output ---
+# Add Reminder Screen — Spec-Kit Plan
+
+## Executive Summary
+
+This document defines the specification plan for introducing a new **Add Reminder** screen in the React Native to-do application.
+
+The goal of this feature is to enable users to quickly create a reminder by entering a title, selecting a date, and choosing a time, all within a focused, distraction-free screen. The screen design and interaction patterns are inspired by a modern mobile reminder workflow, prioritizing clarity, speed, and accessibility.
+
+This spec follows **Spec-Kit’s phased approach** to ensure:
+- Clear intent and scope definition
+- Strong UX and interaction clarity
+- Implementation-ready specifications
+- Smooth handoff between product, design, and engineering
+
+---
+
+## Phase 1 — Discovery & Intent
+
+### Objective
+Define why this screen exists and what problem it solves.
+
+### Key Questions
+- What user need does this screen address?
+- When and how is it accessed?
+- What is explicitly in scope vs out of scope?
+
+### Outputs
+- Feature purpose and success criteria
+- Platform targets (iOS / Android)
+- Constraints and assumptions
+
+---
+
+## Phase 2 — User Flow Definition
+
+### Objective
+Map how users move into, through, and out of the Add Reminder screen.
+
+### Focus Areas
+- Entry points (from list, note, or action button)
+- Primary happy path
+- Cancellation and back navigation
+- Completion behavior after reminder creation
+
+### Outputs
+- Linear user flow steps
+- Defined exit conditions
+- Navigation expectations
+
+---
+
+## Phase 3 — Layout & Structure Specification
+
+### Objective
+Define the screen’s structural layout in a platform-agnostic way.
+
+### Screen Regions
+- Header (navigation + title)
+- Title input section
+- Date selection section
+- Time selection section
+- Footer with primary action
+
+### Outputs
+- Screen anatomy description
+- Section hierarchy
+- Scroll and safe-area behavior
+
+---
+
+## Phase 4 — Interaction & State Specification
+
+### Objective
+Describe how the screen behaves in response to user actions.
+
+### Covered Behaviors
+- Text input focus and validation
+- Date selection rules
+- Time selection rules
+- Button enable/disable logic
+- Loading, error, and empty states
+
+### Outputs
+- Interaction rules
+- UI states and transitions
+- Validation conditions
+
+---
+
+## Phase 5 — Data & State Model
+
+### Objective
+Define what data the screen owns and how it is structured.
+
+### Data Considerations
+- Local state (title, date, time)
+- Derived values (timestamps, formatted strings)
+- Persistence and event emission
+
+### Outputs
+- Data shape definitions
+- State ownership clarity
+- Integration touchpoints
+
+---
+
+## Phase 6 — React Native Implementation Mapping
+
+### Objective
+Translate specs into implementation-ready guidance.
+
+### Mapping Areas
+- Screen component responsibilities
+- Subcomponents and reuse opportunities
+- Hooks and state management
+- Styling and theming alignment
+
+### Outputs
+- Component breakdown
+- Implementation notes
+- Platform parity considerations
+
+---
+
+## Phase 7 — Validation & Review
+
+### Objective
+Ensure the feature matches the spec before merge.
+
+### Validation Checklist
+- Layout matches spec
+- All states implemented
+- Navigation behaves correctly
+- Accessibility considerations met
+- iOS and Android parity verified
+
+### Outputs
+- Pre-merge validation checklist
+- QA reference points
+
+---
+
+## Phase 8 — Handoff & Future Extensions
+
+### Objective
+Provide clarity for future contributors and extensions.
+
+### Notes
+- Design inspiration is directional, not literal
+- Feature is intentionally scoped to single reminders
+- Future enhancements should be additive, not breaking
+
+### Potential Extensions
+- Recurring reminders
+- Custom time picker
+- Reminder editing flow
+- Notification preview
+
+---
+
+## Status
+- Spec: Draft
+- Owner: TBD
+- Last Updated: YYYY-MM-DD
+
+
+--- Executing blocking command at Wed Aug 12 18:46:56 2026 ---
+> call "C:\Users\mtoha\.eigent\user_43072\spaces\space_75f1ba984c6f4666a81ef71de4fae5df\projects\1786549460009-7831\runs\1786549460276-8995\single_agent\.venv\Scripts\activate.bat" && type "C:\Dev\Dev_World\Mobile_Projects\Prodo-app\PRODUCT.md"
+--- Output ---
+# Product
+
+## Register
+
+product
+
+## Users
+
+Personal productivity users and knowledge workers who manage tasks across work and personal life. Mobile-first: they capture, organize, and act on tasks throughout the day, often on the go. They move between quick captures and focused planning sessions. Context spans everything from grocery lists to sprint deadlines.
+
+## Product Purpose
+
+ToDoIt transforms scattered intentions into clear action. Success means the user trusts the app as their external brain: nothing falls through cracks, everything has its moment, and completing tasks feels genuinely rewarding rather than mechanical.
+
+## Brand Personality
+
+Bold, energetic, playful. The app has presence without shouting. It energizes the user to act rather than passively listing what they haven't done. The tone is supportive and direct — never corporate, never cutesy. Think confidence, not arrogance; playfulness, not childishness.
+
+## Anti-references
+
+- Cluttered enterprise tools (Jira, Asana density): too many fields, tables, dropdowns
+- Generic SaaS aesthetic (white cards on gray, blue CTAs, stock illustrations)
+- Gamified/toy-like apps (Habitica-style points, cartoon mascots, exaggerated animations)
+- Brutalist/tech-bro aesthetic (monospace-only, dark-only, terminal nostalgia)
+
+## Design Principles
+
+1. **Clarity over density.** Every screen should feel breathable. If the user has to scan, the layout failed. Information hierarchy must be instant, not discovered.
+
+2. **Momentum matters.** Interactions should create forward motion. Completion is a moment, not a checkbox. Transitions should feel like moving forward, not appearing and disappearing.
+
+3. **Personality without gamification.** Delight through craft — typography, motion, color — not through points, streaks, or mascots. The interface itself is rewarding to use.
+
+4. **Confidence through craft.** Every pixel intentional. No placeholder spacing, no default system components. The app should feel like it was designed, not assembled.
+
+5. **Inclusive by design.** RTL is native, not an afterthought. Motion respects system preferences. Touch targets work for real fingers. The interface adapts to the user, not the other way around.
+
+## Accessibility & Inclusion
+
+- RTL (Arabic) is a first-class language with full bidirectional layout support
+- Respect `prefers-reduced-motion` — no animation that carries essential information
+- Target WCAG AA contrast minimums for all text content
+- Touch targets minimum 44x44pt on iOS, 48x48dp on Android
+
+
+

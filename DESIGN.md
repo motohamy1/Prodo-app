@@ -1,16 +1,23 @@
 ---
-name: ToDoIt
-description: Warm charcoal workspace — amber directional light, precision typography, zero decoration
+name: Prodo
+description: Modern dark obsidian workspace — 4-color palette system (#f6e5c9, #e5f19d, #defef9, #dbd4fd), clean typography, rich contrast
 colors:
-  base-charcoal: "#141518"
-  surface: "#1E1F23"
-  surface-high: "#26272C"
-  ink: "#F0EFEA"
-  muted: "#7A7B7E"
-  border: "#2A2B30"
-  amber: "#E8960C"
-  emerald: "#4ADE80"
-  rose: "#F87171"
+  bg: "#0E0F14"
+  surface: "#181922"
+  surface-high: "#222432"
+  text: "#FFFFFF"
+  muted: "#8E92A0"
+  border: "#282A38"
+  primary: "#dbd4fd"
+  success: "#e5f19d"
+  warning: "#f6e5c9"
+  info: "#defef9"
+  danger: "#FB7185"
+  palette:
+    cream: "#f6e5c9"
+    lime: "#e5f19d"
+    mint: "#defef9"
+    lavender: "#dbd4fd"
 typography:
   display:
     fontFamily: System
@@ -35,10 +42,10 @@ typography:
 rounded:
   sm: "6px"
   md: "10px"
-  lg: "14px"
-  xl: "20px"
-  full: "24px"
-  tab: "20px"
+  lg: "16px"
+  xl: "22px"
+  full: "28px"
+  tab: "24px"
 spacing:
   xs: "4px"
   sm: "8px"
@@ -47,90 +54,46 @@ spacing:
   xl: "32px"
   xxl: "48px"
   xxxl: "64px"
-components:
-  button-primary:
-    backgroundColor: "{colors.amber}"
-    textColor: "{colors.base-charcoal}"
-    rounded: "{rounded.lg}"
-    padding: "16px 24px"
-  button-secondary:
-    backgroundColor: "{colors.surface}"
-    textColor: "{colors.ink}"
-    rounded: "{rounded.md}"
-    padding: "12px 16px"
-    border: "1px {colors.border}"
-  card-task:
-    backgroundColor: "{colors.surface}"
-    rounded: "{rounded.lg}"
-    padding: "16px"
-    border: "1px {colors.border}"
-  input-field:
-    backgroundColor: "{colors.surface}"
-    textColor: "{colors.ink}"
-    rounded: "{rounded.lg}"
-    padding: "16px"
-    border: "1px {colors.border}"
 ---
 
-# Design System: ToDoIt (v2)
+# Design System: Prodo (Modern Dark Precision)
 
 ## 1. Overview
 
-**Creative North Star: "The Warm Command"**
+**Creative North Star: "Precision Obsidian Quartet"**
 
-ToDoIt v2 is a dark-first precision workspace. Like a finely lit desk at night — focused, warm, intentional. The system replaces the v1 neomorphic monochrome with a warm charcoal palette anchored by a single amber accent. Every surface is deliberate; every interaction feels like engaging a tool, not operating a machine.
-
-The old system relied on extrusion depth to carry information (neomorphism). The new system relies on typographic hierarchy, a disciplined color palette, and one signature visual move: the active trace — a 3px amber edge on the currently focused item that says "this one."
-
-**Key Characteristics:**
-- Dark-first warm charcoal palette (`#141518` base), not pure black
-- Single amber accent (`#E8960C`) reserved for CTAs and the active trace
-- Emerald success, rose danger — semantic colors with real hue
-- Tight, directional shadows (not neomorphic opposing shadows)
-- Clean bordered surfaces instead of extrusion depth
-- System fonts only — no Google Fonts, no decorative faces
-- Proper modular type scale: 12/14/16/20/24/32
-- Strict spacing scale: 4/8/16/24/32/48/64
-- RTL first-class support preserved
+Prodo uses a deep OLED dark theme (`#0E0F14`) anchored by a curated 4-color palette that appears immediately after the background:
+- **Warm Cream (`#f6e5c9`)** — Warmth, elevated FAB action button, in-progress indicator, warm category theme
+- **Pastel Lime (`#e5f19d`)** — Energy, completion/done status, streak/productivity metrics, chartreuse theme
+- **Ice Mint (`#defef9`)** — Glacial serenity, upcoming events, calendar chips, checklist accents, aqua theme
+- **Soft Lavender (`#dbd4fd`)** — Brand primary accent, To-Do status, active tabs, focus mode, lilac theme
 
 ## 2. Colors
 
 ### Dark Mode (Default)
 
-| Token | Hex | Role |
-|-------|-----|------|
-| bg | #141518 | Page background — warm deep charcoal |
-| surface | #1E1F23 | Cards, elevated surfaces |
-| surfaceHigh | #26272C | Modals, sheets |
-| text | #F0EFEA | Warm off-white ink |
-| textMuted | #7A7B7E | Secondary, placeholders |
-| border | #2A2B30 | Subtle separators |
-| primary | #E8960C | Amber — CTAs, active trace |
-| primaryText | #141518 | Dark text on amber |
-| success | #4ADE80 | Emerald — done, completed |
-| warning | #E8960C | Amber — in progress |
-| danger | #F87171 | Rose — overdue, destructive |
-| shadow | #0A0A0C | Shadow base color |
+| Token | Hex | Role | Text Contrast |
+|-------|-----|------|---------------|
+| bg | #0E0F14 | Obsidian base background (Preserved) | - |
+| surface | #181922 | Cards and elevated containers | #FFFFFF |
+| surfaceHigh | #222432 | Modals, sheets, inputs | #FFFFFF |
+| text | #FFFFFF | Crisp pure white text | - |
+| textMuted | #8E92A0 | Secondary & placeholder text | - |
+| border | #282A38 | Subtle dark border / divider | - |
+| primary / lavender | #dbd4fd | Soft Lavender — To Do, active tabs, focus | #23173D (Dark Plum) |
+| success / lime | #e5f19d | Pastel Lime — Done, streak, completion | #16270E (Dark Forest) |
+| warning / cream | #f6e5c9 | Warm Cream — In Progress, FAB, milestones | #2D1E0C (Dark Espresso) |
+| info / mint | #defef9 | Ice Mint — Upcoming events, calendar chips | #0A2B3A (Dark Teal) |
+| danger | #FB7185 | Coral Rose — overdue, critical alert | #FFFFFF |
 
-### Light Mode
+### Harmonic Combinations
 
-| Token | Hex | Role |
-|-------|-----|------|
-| bg | #FAF8F5 | Warm cream |
-| surface | #FFFFFF | Cards |
-| surfaceHigh | #FFFFFF | Modals |
-| text | #1E1F23 | Near-black ink |
-| textMuted | #8B8D91 | Muted |
-| border | #E8E5E0 | Subtle borders |
-| primary | #D68D0A | Amber |
-| primaryText | #FFFFFF | White on amber |
-| success | #16A34A | Green |
-| warning | #D68D0A | Amber |
-| danger | #DC2626 | Red |
-
-### The Single Accent Rule
-
-Exactly one accent color: amber. Used for primary CTAs, the active trace, and progress indicators. Never used for decoration.
+1. **Lavender + Lime (`#dbd4fd` & `#e5f19d`)**: Productivity Card (Lavender focus CTA + Lime streak flame).
+2. **Lavender + Mint (`#dbd4fd` & `#defef9`)**: Upcoming Events Card (Lavender badge + Mint time chip) & Voice Hero Glow.
+3. **Cream + Lavender (`#f6e5c9` & `#dbd4fd`)**: Monthly Overview Card (Cream badge + Lavender progress bar) & Bottom Bar (Cream FAB + Lavender tab active).
+4. **Mint + Lime (`#defef9` & `#e5f19d`)**: Today's Checklist Card (Mint badge + Lime completion checks).
+5. **Cream + Lime (`#f6e5c9` & `#e5f19d`)**: Dynamic progress pairing for task state workflows.
+6. **Quad Aurora Gradient**: `['#f6e5c9', '#e5f19d', '#defef9', '#dbd4fd']` for ambient glows and project swatches.
 
 ### No Pure Black
 

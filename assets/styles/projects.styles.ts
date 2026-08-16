@@ -1,382 +1,487 @@
 import { ColorScheme } from "@/hooks/useTheme";
-import { StyleSheet } from "react-native";
+import { StyleSheet, Platform } from "react-native";
 
-export const createProjectsStyles = (colors: ColorScheme) => {
-  const styles = StyleSheet.create({
+// Preset palettes using the 4 core colors (#f6e5c9, #e5f19d, #defef9, #dbd4fd) and their combinations
+export const CATEGORY_THEMES = [
+  {
+    bg: '#e5f19d', // Pastel Lime
+    ink: '#16270E',
+    subInk: '#334A23',
+    diamond: '#1E2E14',
+    icon: '#e5f19d',
+    status: 'Completed',
+  },
+  {
+    bg: '#defef9', // Ice Mint
+    ink: '#0A2B3A',
+    subInk: '#1D4D63',
+    diamond: '#0F3547',
+    icon: '#defef9',
+    status: 'Running',
+  },
+  {
+    bg: '#dbd4fd', // Soft Lavender
+    ink: '#23173D',
+    subInk: '#4C3463',
+    diamond: '#2A1D44',
+    icon: '#dbd4fd',
+    status: 'In Progress',
+  },
+  {
+    bg: '#f6e5c9', // Warm Cream
+    ink: '#302010',
+    subInk: '#5C3E25',
+    diamond: '#3B2716',
+    icon: '#f6e5c9',
+    status: 'Active',
+  },
+  {
+    bg: '#dbd4fd', // Lavender + Lime Combination
+    ink: '#1F1436',
+    subInk: '#43315B',
+    diamond: '#1A290E',
+    icon: '#e5f19d',
+    status: 'Planning',
+  },
+  {
+    bg: '#defef9', // Mint + Cream Combination
+    ink: '#082522',
+    subInk: '#1C4944',
+    diamond: '#3A2818',
+    icon: '#f6e5c9',
+    status: 'Review',
+  },
+];
+
+export const getCategoryTheme = (index: number) => {
+  return CATEGORY_THEMES[index % CATEGORY_THEMES.length];
+};
+
+export const createProjectsStyles = (colors: ColorScheme, isArabic: boolean = false) => {
+  return StyleSheet.create({
     container: {
       flex: 1,
       backgroundColor: colors.bg,
     },
-    header: {
-      flexDirection: "row",
-      alignItems: "center",
-      justifyContent: "space-between",
-      paddingHorizontal: 16,
-      paddingTop: 8,
-      paddingBottom: 16,
-    },
-    headerTitle: {
-      fontSize: 24,
-      fontWeight: "700",
-      color: colors.text,
-    },
-    headerActions: {
-      flexDirection: 'row',
-      gap: 8,
-    },
-    headerActionBtn: {
-      width: 44,
-      height: 44,
-      borderRadius: colors.radii.md,
-      backgroundColor: colors.surface,
-      justifyContent: 'center',
-      alignItems: 'center',
-      borderWidth: 1,
-      borderColor: colors.border,
-    },
-    scrollContent: {
-      paddingHorizontal: 16,
-      paddingBottom: 32,
-    },
-    sectionTitle: {
-      fontSize: 16,
-      fontWeight: '700',
-      color: colors.text,
-      marginBottom: 12,
-    },
-    sectionHeaderRow: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      marginBottom: 12,
-    },
-    sectionCount: {
-      fontSize: 13,
-      color: colors.textMuted,
+    safeArea: {
+      flex: 1,
+      backgroundColor: colors.bg,
     },
 
-    // --- Categories ---
-    categoriesGrid: {
-      paddingHorizontal: 16,
-      paddingBottom: 32,
+    // ─── Top Header ─────────────────────────────────────────────
+    header: {
+      flexDirection: isArabic ? 'row-reverse' : 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingHorizontal: 20,
+      paddingTop: Platform.OS === 'android' ? 10 : 4,
+      paddingBottom: 16,
     },
-    categoryCard: {
+    headerLeft: {
+      flex: 1,
+    },
+    headerTitle: {
+      fontSize: 28,
+      fontWeight: '800',
+      color: colors.text,
+      letterSpacing: -0.4,
+    },
+    headerSubtitle: {
+      fontSize: 13,
+      color: colors.textMuted,
+      marginTop: 2,
+    },
+    headerActions: {
+      flexDirection: isArabic ? 'row-reverse' : 'row',
+      gap: 10,
+    },
+    headerActionBtn: {
+      width: 42,
+      height: 42,
+      borderRadius: 14,
       backgroundColor: colors.surface,
-      borderRadius: colors.radii.lg,
-      padding: 16,
-      marginBottom: 12,
-      flexDirection: 'row',
+      justifyContent: 'center',
       alignItems: 'center',
       borderWidth: 1,
       borderColor: colors.border,
       ...colors.shadows.sm,
     },
-    categoryCardInner: {
-      flex: 1,
-      flexDirection: 'row',
-      alignItems: 'center',
-    },
-    categoryAddBtn: {
-      flex: 1,
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
-    categoryIconWrap: {
-      width: 48,
-      height: 48,
-      borderRadius: colors.radii.md,
+    headerBtn: {
+      width: 42,
+      height: 42,
+      borderRadius: 14,
+      backgroundColor: colors.surface,
       justifyContent: 'center',
       alignItems: 'center',
-      marginRight: 14,
+      borderWidth: 1,
+      borderColor: colors.border,
+      ...colors.shadows.sm,
     },
-    categoryInfo: {
-      flex: 1,
+
+    // ─── Categories List ─────────────────────────────────────────
+    categoriesGrid: {
+      paddingHorizontal: 20,
+      paddingBottom: 110,
+      paddingTop: 8,
     },
-    categoryCardName: {
-      fontSize: 16,
-      fontWeight: '600',
-      color: colors.text,
-      marginBottom: 2,
+    categoryItemContainer: {
+      marginBottom: 20,
     },
-    categoryCardCount: {
-      fontSize: 12,
-      color: colors.textMuted,
-    },
-    categoryDeleteBtn: {
-      width: 36,
-      height: 36,
-      borderRadius: colors.radii.sm,
-      justifyContent: 'center',
-      alignItems: 'center',
-    },
-    categoryGrid: {
-      flexDirection: 'row',
-      flexWrap: 'wrap',
-      gap: 12,
-      marginBottom: 24,
-    },
-    categoryIconContainer: {
-      width: 40,
-      height: 40,
-      borderRadius: colors.radii.md,
-      backgroundColor: colors.primary + '15',
-      justifyContent: 'center',
-      alignItems: 'center',
-      marginBottom: 12,
-    },
-    categoryName: {
-      fontSize: 15,
-      fontWeight: '600',
-      color: colors.text,
+    dashedDivider: {
+      width: '100%',
+      height: 1,
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderStyle: 'dashed',
+      marginTop: 20,
       marginBottom: 4,
     },
-    categoryCount: {
-      fontSize: 12,
-      color: colors.textMuted,
+
+    // Notched Stepped Card Geometry
+    cardTopRow: {
+      flexDirection: isArabic ? 'row-reverse' : 'row',
+      alignItems: 'flex-end',
+      justifyContent: 'space-between',
     },
-    addCategoryCard: {
-      backgroundColor: 'transparent',
-      borderRadius: colors.radii.lg,
+    cardTabNotch: {
+      borderTopLeftRadius: 20,
+      borderTopRightRadius: 18,
+      paddingHorizontal: 16,
+      paddingVertical: 7,
+      minWidth: 110,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    cardTabNotchText: {
+      fontSize: 13,
+      fontWeight: '700',
+      letterSpacing: -0.1,
+    },
+    cardStepInfo: {
+      flexDirection: isArabic ? 'row-reverse' : 'row',
+      alignItems: 'center',
+      gap: 10,
+      paddingBottom: 6,
+      paddingRight: 6,
+      paddingLeft: 6,
+    },
+    cardProgressTrack: {
+      width: 48,
+      height: 4,
+      borderRadius: 2,
+      backgroundColor: colors.border,
+      overflow: 'hidden',
+    },
+    cardProgressFill: {
+      height: '100%',
+      borderRadius: 2,
+    },
+    cardProgressText: {
+      fontSize: 13,
+      fontWeight: '800',
+      color: colors.text,
+      letterSpacing: -0.2,
+    },
+
+    cardMainBody: {
+      borderBottomLeftRadius: 22,
+      borderBottomRightRadius: 22,
+      borderTopRightRadius: 22,
+      paddingVertical: 18,
+      paddingHorizontal: 18,
+      flexDirection: isArabic ? 'row-reverse' : 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+    },
+    cardDiamondBadge: {
+      width: 46,
+      height: 46,
+      borderRadius: 14,
+      transform: [{ rotate: '45deg' }],
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginRight: isArabic ? 0 : 16,
+      marginLeft: isArabic ? 16 : 0,
+    },
+    cardDiamondInner: {
+      transform: [{ rotate: '-45deg' }],
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    cardContentBox: {
+      flex: 1,
+      paddingRight: isArabic ? 0 : 10,
+      paddingLeft: isArabic ? 10 : 0,
+    },
+    cardTitleText: {
+      fontSize: 18,
+      fontWeight: '800',
+      letterSpacing: -0.3,
+      marginBottom: 3,
+    },
+    cardSubtitleText: {
+      fontSize: 13,
+      fontWeight: '500',
+      letterSpacing: -0.1,
+    },
+    cardMenuBtn: {
+      padding: 6,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+
+    // Add Category Button
+    addCategoryCardWrapper: {
+      marginTop: 4,
+      marginBottom: 20,
+    },
+    addCategoryBtn: {
+      backgroundColor: colors.surface,
+      borderRadius: 22,
       padding: 20,
       borderWidth: 1,
       borderColor: colors.border,
       borderStyle: 'dashed',
+      flexDirection: isArabic ? 'row-reverse' : 'row',
       justifyContent: 'center',
       alignItems: 'center',
-      minHeight: 110,
+      gap: 10,
+      ...colors.shadows.sm,
     },
-    addCategoryText: {
-      fontSize: 13,
-      color: colors.textMuted,
-      fontWeight: '600',
-      marginTop: 8,
+    addCategoryBtnText: {
+      fontSize: 16,
+      fontWeight: '700',
+      color: colors.text,
     },
 
-    // --- Sub-categories ---
-    subCategoriesList: {
-      marginBottom: 20,
-      paddingHorizontal: 16,
+    // Empty state
+    emptyContainer: {
+      paddingVertical: 48,
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingHorizontal: 24,
     },
-    sectionLabel: {
-      fontSize: 14,
+    emptyText: {
+      fontSize: 18,
       fontWeight: '700',
+      color: colors.text,
+      marginTop: 14,
+      textAlign: 'center',
+    },
+    emptySubText: {
+      fontSize: 14,
       color: colors.textMuted,
-      marginBottom: 12,
-      paddingHorizontal: 16,
+      marginTop: 6,
+      textAlign: 'center',
+      lineHeight: 20,
+    },
+
+    // ─── Sub-Categories & Projects Grid (Level 2 & 3) ────────────
+    sectionLabel: {
+      fontSize: 15,
+      fontWeight: '700',
+      color: colors.text,
+      letterSpacing: -0.2,
+      marginBottom: 14,
+    },
+    subCategoriesList: {
+      paddingHorizontal: 20,
+      marginBottom: 20,
     },
     subCategoryCard: {
       backgroundColor: colors.surface,
-      borderRadius: colors.radii.md,
+      borderRadius: 16,
       padding: 14,
       marginBottom: 10,
-      flexDirection: 'row',
+      flexDirection: isArabic ? 'row-reverse' : 'row',
       alignItems: 'center',
       borderWidth: 1,
       borderColor: colors.border,
       ...colors.shadows.sm,
     },
     subCategoryIconWrap: {
-      width: 36,
-      height: 36,
-      borderRadius: colors.radii.sm,
+      width: 38,
+      height: 38,
+      borderRadius: 10,
       justifyContent: 'center',
       alignItems: 'center',
-      marginRight: 12,
+      marginRight: isArabic ? 0 : 12,
+      marginLeft: isArabic ? 12 : 0,
     },
     subCategoryName: {
-      fontSize: 14,
-      fontWeight: '600',
+      fontSize: 15,
+      fontWeight: '700',
       color: colors.text,
       flex: 1,
     },
-    subCategoryGrid: {
-      flexDirection: 'row',
-      flexWrap: 'wrap',
-      gap: 10,
-      marginBottom: 24,
+
+    // ─── Category Detail Space Hero ──────────────────────────────
+    categoryHero: {
+      marginHorizontal: 20,
+      marginTop: 4,
+      marginBottom: 18,
+      backgroundColor: colors.surface,
+      borderRadius: 20,
+      padding: 16,
+      borderWidth: 1,
+      borderColor: colors.border,
+      ...colors.shadows.sm,
     },
-    subCategoryIconContainer: {
-      width: 32,
-      height: 32,
-      borderRadius: colors.radii.sm,
-      backgroundColor: colors.primary + '12',
+    categoryHeroTop: {
+      flexDirection: isArabic ? 'row-reverse' : 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+    },
+    categoryHeroLeft: {
+      flexDirection: isArabic ? 'row-reverse' : 'row',
+      alignItems: 'center',
+      gap: 12,
+      flex: 1,
+    },
+    categoryHeroIconWrap: {
+      width: 44,
+      height: 44,
+      borderRadius: 14,
       justifyContent: 'center',
       alignItems: 'center',
-      marginBottom: 8,
+    },
+    categoryHeroTitle: {
+      fontSize: 18,
+      fontWeight: '800',
+      color: colors.text,
+      letterSpacing: -0.3,
+    },
+    categoryHeroSubtitle: {
+      fontSize: 13,
+      fontWeight: '600',
+      color: colors.textMuted,
+      marginTop: 2,
+    },
+    categoryHeroActions: {
+      flexDirection: isArabic ? 'row-reverse' : 'row',
+      alignItems: 'center',
+      gap: 8,
     },
 
-    // --- Projects grid ---
+    // ─── 3D Folder Pockets Grid ──────────────────────────────────
     projectsGrid: {
-      flexDirection: 'row',
+      flexDirection: isArabic ? 'row-reverse' : 'row',
       flexWrap: 'wrap',
-      paddingHorizontal: 16,
-      gap: 12,
+      paddingHorizontal: 20,
+      justifyContent: 'space-between',
     },
     projectGridCard: {
-      width: '47%',
+      width: '48%',
       backgroundColor: colors.surface,
-      borderRadius: colors.radii.lg,
+      borderRadius: 18,
       padding: 16,
       borderWidth: 1,
       borderColor: colors.border,
       ...colors.shadows.sm,
     },
     projectGridIcon: {
-      width: 48,
-      height: 48,
-      borderRadius: colors.radii.md,
+      width: 44,
+      height: 44,
+      borderRadius: 12,
       justifyContent: 'center',
       alignItems: 'center',
-      marginBottom: 10,
+      marginBottom: 12,
     },
     projectGridName: {
       fontSize: 15,
-      fontWeight: '600',
+      fontWeight: '700',
       color: colors.text,
-      marginBottom: 8,
+      marginBottom: 10,
     },
     projectGridFooter: {
-      flexDirection: 'row',
+      flexDirection: isArabic ? 'row-reverse' : 'row',
       alignItems: 'center',
       justifyContent: 'space-between',
-      marginTop: 4,
     },
     gridProgressBarTrack: {
       flex: 1,
-      height: 5,
-      backgroundColor: colors.border,
-      borderRadius: 3,
-      overflow: 'hidden',
-      marginRight: 8,
-    },
-    gridProgressBarFill: {
-      height: '100%',
-      borderRadius: 3,
-    },
-    gridProgressText: {
-      fontSize: 11,
-      color: colors.textMuted,
-      fontWeight: '600',
-    },
-    projectCard: {
-      width: '47%',
-      backgroundColor: colors.surface,
-      borderRadius: colors.radii.lg,
-      padding: 16,
-      borderWidth: 1,
-      borderColor: colors.border,
-      ...colors.shadows.sm,
-    },
-    projectIconContainer: {
-      width: 36,
-      height: 36,
-      borderRadius: colors.radii.sm,
-      backgroundColor: colors.primary + '12',
-      justifyContent: 'center',
-      alignItems: 'center',
-      marginBottom: 10,
-    },
-    projectName: {
-      fontSize: 15,
-      fontWeight: '600',
-      color: colors.text,
-      marginBottom: 8,
-    },
-    projectStatusBadge: {
-      alignSelf: 'flex-start',
-      paddingHorizontal: 8,
-      paddingVertical: 3,
-      borderRadius: colors.radii.sm,
-      backgroundColor: colors.primary + '15',
-      marginBottom: 8,
-    },
-    projectStatusText: {
-      fontSize: 11,
-      fontWeight: '600',
-      color: colors.primary,
-    },
-    projectProgressContainer: {
       height: 4,
       backgroundColor: colors.border,
       borderRadius: 2,
       overflow: 'hidden',
-      marginBottom: 8,
+      marginRight: isArabic ? 0 : 8,
+      marginLeft: isArabic ? 8 : 0,
     },
-    projectProgressFill: {
+    gridProgressBarFill: {
       height: '100%',
-      backgroundColor: colors.primary,
       borderRadius: 2,
     },
-    projectProgressText: {
+    gridProgressText: {
       fontSize: 11,
+      fontWeight: '700',
       color: colors.textMuted,
     },
 
-    // --- Category lists ---
+    // ─── Category Lists Section ──────────────────────────────────
     categoryListsSection: {
-      marginTop: 20,
-      marginBottom: 16,
-      paddingHorizontal: 16,
+      marginTop: 24,
+      marginBottom: 20,
+      paddingHorizontal: 20,
     },
     categoryListsGrid: {
-      flexDirection: 'row',
+      flexDirection: isArabic ? 'row-reverse' : 'row',
       flexWrap: 'wrap',
-      gap: 10,
+      gap: 12,
     },
     categoryListCard: {
-      width: '47%',
+      width: '48%',
       backgroundColor: colors.surface,
-      borderRadius: colors.radii.md,
+      borderRadius: 16,
       padding: 14,
       borderWidth: 1,
       borderColor: colors.border,
+      ...colors.shadows.sm,
     },
     categoryListCardInner: {
       width: '100%',
     },
     categoryListCardIconWrap: {
-      width: 32,
-      height: 32,
-      borderRadius: colors.radii.sm,
+      width: 34,
+      height: 34,
+      borderRadius: 10,
       justifyContent: 'center',
       alignItems: 'center',
-      marginBottom: 8,
+      marginBottom: 10,
     },
     categoryListCardTitle: {
-      fontSize: 13,
-      fontWeight: '600',
+      fontSize: 14,
+      fontWeight: '700',
       color: colors.text,
     },
     categoryListCardCount: {
-      fontSize: 11,
+      fontSize: 12,
       color: colors.textMuted,
-      marginTop: 2,
+      marginTop: 3,
     },
 
-    // --- Project detail ---
+    // ─── Project Detail Hero & Tabs ─────────────────────────────
     projectDetailCard: {
       backgroundColor: colors.surface,
-      borderRadius: colors.radii.lg,
+      borderRadius: 20,
       padding: 20,
       borderWidth: 1,
       borderColor: colors.border,
       marginBottom: 16,
-      marginHorizontal: 16,
+      marginHorizontal: 20,
       ...colors.shadows.sm,
     },
     detailHeroCard: {
       backgroundColor: colors.surface,
-      borderRadius: colors.radii.lg,
+      borderRadius: 20,
       padding: 20,
       borderWidth: 1,
       borderColor: colors.border,
       marginBottom: 16,
-      marginHorizontal: 16,
+      marginHorizontal: 20,
       ...colors.shadows.sm,
     },
     detailHeroHeader: {
-      flexDirection: 'row',
+      flexDirection: isArabic ? 'row-reverse' : 'row',
       justifyContent: 'space-between',
       alignItems: 'flex-start',
       marginBottom: 16,
@@ -384,34 +489,34 @@ export const createProjectsStyles = (colors: ColorScheme) => {
     projectIconWrap: {
       width: 48,
       height: 48,
-      borderRadius: colors.radii.md,
+      borderRadius: 14,
       justifyContent: 'center',
       alignItems: 'center',
     },
     projectDescription: {
       fontSize: 14,
       color: colors.textMuted,
-      lineHeight: 22,
+      lineHeight: 20,
       marginBottom: 16,
     },
     projectStatusPill: {
       alignSelf: 'flex-start',
       paddingHorizontal: 12,
       paddingVertical: 4,
-      borderRadius: colors.radii.sm,
+      borderRadius: 10,
       marginBottom: 12,
     },
     projectProgressSection: {
       marginBottom: 16,
     },
     progressInfo: {
-      flexDirection: 'row',
+      flexDirection: isArabic ? 'row-reverse' : 'row',
       justifyContent: 'space-between',
       marginBottom: 6,
     },
     progressPercent: {
       fontSize: 13,
-      fontWeight: '600',
+      fontWeight: '700',
       color: colors.text,
     },
     progressBarTrack: {
@@ -426,20 +531,21 @@ export const createProjectsStyles = (colors: ColorScheme) => {
       borderRadius: 3,
     },
     detailTabsRow: {
-      flexDirection: 'row',
+      flexDirection: isArabic ? 'row-reverse' : 'row',
       marginBottom: 16,
       backgroundColor: colors.bg,
-      borderRadius: colors.radii.md,
+      borderRadius: 14,
       padding: 4,
     },
     detailTab: {
       flex: 1,
       paddingVertical: 8,
       alignItems: 'center',
-      borderRadius: colors.radii.sm,
+      borderRadius: 10,
     },
     detailTabActive: {
       backgroundColor: colors.surface,
+      ...colors.shadows.sm,
     },
     detailTabText: {
       fontSize: 12,
@@ -447,262 +553,85 @@ export const createProjectsStyles = (colors: ColorScheme) => {
       color: colors.textMuted,
     },
     detailTabTextActive: {
-      color: colors.primary,
+      color: colors.text,
+      fontWeight: '700',
     },
 
-    // --- Project detail: resources ---
+    // Resources Section
     resourcesSection: {
       marginBottom: 16,
     },
     resourcesHeader: {
-      flexDirection: 'row',
+      flexDirection: isArabic ? 'row-reverse' : 'row',
       justifyContent: 'space-between',
       alignItems: 'center',
       marginBottom: 12,
     },
     addResourceBtn: {
-      width: 44,
-      height: 44,
-      borderRadius: colors.radii.md,
+      width: 40,
+      height: 40,
+      borderRadius: 12,
       backgroundColor: colors.surface,
       justifyContent: 'center',
       alignItems: 'center',
       borderWidth: 1,
       borderColor: colors.border,
+      ...colors.shadows.sm,
     },
     resourcesList: {
       gap: 8,
     },
     resourceItem: {
       backgroundColor: colors.bg,
-      borderRadius: colors.radii.md,
+      borderRadius: 12,
       padding: 12,
-      flexDirection: 'row',
+      flexDirection: isArabic ? 'row-reverse' : 'row',
       alignItems: 'center',
-    },
-    resourceItemType: {
-      width: 8,
-      height: 8,
-      borderRadius: 4,
-      marginRight: 10,
     },
     resourceItemText: {
       flex: 1,
       fontSize: 14,
-      fontWeight: '500',
-      color: colors.text,
-    },
-    resourceIconWrap: {
-      width: 32,
-      height: 32,
-      borderRadius: colors.radii.sm,
-      justifyContent: 'center',
-      alignItems: 'center',
-    },
-    resourceCard: {
-      backgroundColor: colors.bg,
-      borderRadius: colors.radii.md,
-      padding: 12,
-      marginBottom: 8,
-    },
-    resourceTitle: {
-      fontSize: 14,
       fontWeight: '600',
       color: colors.text,
-      marginBottom: 2,
-    },
-    resourceUrl: {
-      fontSize: 12,
-      color: colors.primary,
-    },
-    resourceNote: {
-      fontSize: 12,
-      color: colors.textMuted,
-      marginTop: 4,
     },
 
-    // --- Project detail: add resource modal ---
-    addResourceTypeRow: {
-      flexDirection: 'row',
-      gap: 8,
-      marginBottom: 12,
-    },
-    resourceTypeBtn: {
-      paddingHorizontal: 14,
-      paddingVertical: 8,
-      borderRadius: colors.radii.sm,
-      backgroundColor: colors.bg,
-      borderWidth: 1,
-      borderColor: colors.border,
-    },
-    resourceTypeBtnSelected: {
-      backgroundColor: colors.primary + '20',
-      borderColor: colors.primary,
-    },
-    resourceTypeBtnText: {
-      fontSize: 13,
-      fontWeight: '600',
-      color: colors.textMuted,
-    },
-    resourceTypeBtnTextSelected: {
-      color: colors.primary,
-    },
-
-    // --- Project detail: checklists ---
-    checklistSection: {
-      marginBottom: 16,
-    },
-    checklistHeader: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      marginBottom: 12,
-    },
-    checklistItemRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      paddingVertical: 10,
-      paddingHorizontal: 4,
-      gap: 10,
-      borderBottomWidth: 1,
-      borderBottomColor: colors.border,
-    },
-    checklistItemText: {
-      flex: 1,
-      fontSize: 14,
-      color: colors.text,
-    },
-    checklistItemTextDone: {
-      textDecorationLine: 'line-through',
-      color: colors.textMuted,
-    },
-    checklistAddRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 8,
-      paddingVertical: 12,
-      paddingHorizontal: 4,
-    },
-    checklistAddInput: {
-      flex: 1,
-      backgroundColor: colors.bg,
-      borderRadius: colors.radii.sm,
-      padding: 10,
-      fontSize: 14,
-      color: colors.text,
-    },
-    checklistAddBtn: {
-      width: 36,
-      height: 36,
-      borderRadius: colors.radii.sm,
-      backgroundColor: colors.surface,
-      justifyContent: 'center',
-      alignItems: 'center',
-      borderWidth: 1,
-      borderColor: colors.border,
-    },
-    checklistItem: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      paddingVertical: 10,
-      paddingHorizontal: 4,
-      gap: 10,
-      borderBottomWidth: 1,
-      borderBottomColor: colors.border,
-    },
-    checklistItemDone: {
-      textDecorationLine: 'line-through',
-      color: colors.textMuted,
-    },
-    checklistAddText: {
-      fontSize: 13,
-      color: colors.textMuted,
-      fontWeight: '600',
-    },
-
-    // --- Task list items (in project detail) ---
-    taskListItem: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      paddingVertical: 10,
-      paddingHorizontal: 12,
-      backgroundColor: colors.surface,
-      borderRadius: colors.radii.md,
-      marginBottom: 8,
-      borderWidth: 1,
-      borderColor: colors.border,
-    },
-    taskStatusDot: {
-      width: 8,
-      height: 8,
-      borderRadius: 4,
-      marginRight: 10,
-    },
-    taskItemText: {
-      flex: 1,
-      fontSize: 14,
-      color: colors.text,
-    },
-    taskStatusPill: {
-      paddingHorizontal: 8,
-      paddingVertical: 3,
-      borderRadius: colors.radii.sm,
-    },
-    taskStatusPillText: {
-      fontSize: 11,
-      fontWeight: '700',
-    },
-
-    // --- Delete ---
-    deleteProjectBtn: {
-      backgroundColor: colors.dangerBg,
-      borderRadius: colors.radii.md,
-      padding: 16,
-      alignItems: 'center',
-      borderWidth: 1,
-      borderColor: colors.danger + '30',
-      marginTop: 16,
-      marginHorizontal: 16,
-    },
-    deleteProjectBtnText: {
-      fontSize: 14,
-      fontWeight: '700',
-      color: colors.danger,
-    },
-
-    // --- Modals ---
+    // Modals
     modalSheet: {
-      backgroundColor: colors.surfaceHigh,
-      borderTopLeftRadius: 24,
-      borderTopRightRadius: 24,
-      padding: 20,
-      paddingBottom: 40,
-      maxHeight: '80%',
+      backgroundColor: colors.surface,
+      borderTopLeftRadius: 28,
+      borderTopRightRadius: 28,
+      paddingHorizontal: 20,
+      paddingTop: 16,
+      paddingBottom: Platform.OS === 'ios' ? 40 : 24,
+      borderWidth: 1,
+      borderColor: colors.border,
+      ...colors.shadows.lg,
     },
     modalHandle: {
       width: 40,
-      height: 5,
-      borderRadius: 3,
+      height: 4,
+      borderRadius: 2,
       backgroundColor: colors.border,
       alignSelf: 'center',
-      marginBottom: 20,
+      marginBottom: 18,
     },
     modalTitle: {
       fontSize: 20,
-      fontWeight: '700',
+      fontWeight: '800',
       color: colors.text,
+      letterSpacing: -0.3,
       marginBottom: 16,
     },
     modalLabel: {
       fontSize: 13,
-      fontWeight: '600',
+      fontWeight: '700',
       color: colors.textMuted,
       marginBottom: 6,
       marginTop: 12,
     },
     modalInput: {
       backgroundColor: colors.bg,
-      borderRadius: colors.radii.md,
+      borderRadius: 14,
       padding: 14,
       fontSize: 15,
       color: colors.text,
@@ -717,7 +646,7 @@ export const createProjectsStyles = (colors: ColorScheme) => {
     iconOption: {
       width: 44,
       height: 44,
-      borderRadius: colors.radii.sm,
+      borderRadius: 12,
       justifyContent: 'center',
       alignItems: 'center',
       backgroundColor: colors.bg,
@@ -726,7 +655,7 @@ export const createProjectsStyles = (colors: ColorScheme) => {
     },
     iconOptionSelected: {
       borderColor: colors.primary,
-      backgroundColor: colors.primary + '15',
+      backgroundColor: colors.primary + '20',
     },
     colorPicker: {
       flexDirection: 'row',
@@ -745,15 +674,16 @@ export const createProjectsStyles = (colors: ColorScheme) => {
     },
     modalPrimaryBtn: {
       backgroundColor: colors.primary,
-      borderRadius: colors.radii.md,
+      borderRadius: 16,
       padding: 16,
       alignItems: 'center',
       marginTop: 20,
+      ...colors.shadows.md,
     },
     modalPrimaryBtnText: {
       fontSize: 16,
       fontWeight: '700',
-      color: colors.primaryText,
+      color: colors.primaryText || '#FFFFFF',
     },
     modalSecondaryBtn: {
       padding: 14,
@@ -766,9 +696,9 @@ export const createProjectsStyles = (colors: ColorScheme) => {
       color: colors.textMuted,
     },
 
-    // --- Back button ---
+    // Back button
     backButton: {
-      flexDirection: 'row',
+      flexDirection: isArabic ? 'row-reverse' : 'row',
       alignItems: 'center',
       gap: 8,
       paddingVertical: 8,
@@ -776,166 +706,8 @@ export const createProjectsStyles = (colors: ColorScheme) => {
     },
     backButtonText: {
       fontSize: 15,
-      fontWeight: '600',
-      color: colors.text,
-    },
-
-    // --- Safe / Header extras ---
-    safeArea: {
-      flex: 1,
-      backgroundColor: colors.bg,
-    },
-    headerLeft: {
-      flex: 1,
-    },
-    headerSubtitle: {
-      fontSize: 14,
-      color: colors.textMuted,
-    },
-    headerBtn: {
-      width: 44,
-      height: 44,
-      borderRadius: colors.radii.md,
-      backgroundColor: colors.surface,
-      justifyContent: 'center',
-      alignItems: 'center',
-      borderWidth: 1,
-      borderColor: colors.border,
-    },
-
-    // --- Empty / loading ---
-    emptyContainer: {
-      paddingVertical: 40,
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
-    emptySubText: {
-      fontSize: 13,
-      color: colors.textMuted,
-      marginTop: 4,
-    },
-    emptyState: {
-      paddingVertical: 40,
-      alignItems: 'center',
-    },
-    emptyStateText: {
-      fontSize: 14,
-      color: colors.textMuted,
-      marginTop: 8,
-    },
-    emptyText: {
-      fontSize: 15,
-      color: colors.textMuted,
-      fontWeight: '500',
-      marginTop: 10,
-    },
-    loadingContainer: {
-      flex: 1,
-      justifyContent: "center",
-      alignItems: "center",
-    },
-
-    // --- List Modal Styles ---
-    listModalSheet: {
-      backgroundColor: colors.surfaceHigh || colors.surface,
-      borderTopLeftRadius: 24,
-      borderTopRightRadius: 24,
-      padding: 20,
-      paddingBottom: 40,
-      maxHeight: '90%',
-    },
-    listModalTitle: {
-      fontSize: 20,
       fontWeight: '700',
       color: colors.text,
-      marginBottom: 4,
-    },
-    listModalSubtitle: {
-      fontSize: 14,
-      color: colors.textMuted,
-      marginBottom: 16,
-    },
-    emptyListContainer: {
-      paddingVertical: 32,
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
-    emptyListText: {
-      fontSize: 15,
-      color: colors.textMuted,
-      marginTop: 12,
-    },
-    listItemRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      paddingVertical: 12,
-      borderBottomWidth: 1,
-      borderBottomColor: colors.border,
-      gap: 12,
-    },
-    listItemText: {
-      flex: 1,
-      fontSize: 15,
-      color: colors.text,
-    },
-    bulletDot: {
-      width: 6,
-      height: 6,
-      borderRadius: 3,
-      backgroundColor: colors.textMuted,
-    },
-    toggleHeader: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      paddingVertical: 12,
-      gap: 12,
-    },
-    toggleContent: {
-      paddingLeft: 32,
-      paddingRight: 12,
-      paddingBottom: 12,
-    },
-    toggleContentText: {
-      fontSize: 14,
-      color: colors.textMuted,
-      lineHeight: 20,
-    },
-    listAddRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      backgroundColor: colors.bg,
-      borderRadius: colors.radii.md,
-      paddingHorizontal: 12,
-      borderWidth: 1,
-      borderColor: colors.border,
-      gap: 12,
-      marginTop: 8,
-    },
-    listInput: {
-      flex: 1,
-      minHeight: 44,
-      fontSize: 15,
-      color: colors.text,
-      paddingVertical: 12,
-    },
-    listAddButton: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'center',
-      paddingVertical: 12,
-      borderWidth: 1,
-      borderColor: colors.border,
-      borderStyle: 'dashed',
-      borderRadius: colors.radii.md,
-      marginTop: 16,
-      gap: 8,
-    },
-    listAddButtonText: {
-      fontSize: 15,
-      fontWeight: '600',
-      color: colors.primary,
     },
   });
-
-  return styles;
 };

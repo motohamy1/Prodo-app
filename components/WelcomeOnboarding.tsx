@@ -28,7 +28,7 @@ const SLIDES: Slide[] = [
     titleAr: 'مرحباً بك في ToDoIt',
     descEn: 'Your premium task manager. Stay focused, organized, and on top of everything.',
     descAr: 'مدير مهامك المتميز. ابقَ مركزاً ومنظماً وفوق كل شيء.',
-    accentColor: '#F2B544',
+    accentColor: '#dbd4fd',
   },
   {
     icon: 'timer-outline',
@@ -36,7 +36,7 @@ const SLIDES: Slide[] = [
     titleAr: 'مؤقتات ذكية',
     descEn: 'Set countdown or count-up timers on any task. Get notified when time is up.',
     descAr: 'ضع مؤقتات تنازلية أو تصاعدية على أي مهمة. احصل على إشعار عند انتهاء الوقت.',
-    accentColor: '#4EE6C1',
+    accentColor: '#defef9',
   },
   {
     icon: 'git-branch-outline',
@@ -44,7 +44,7 @@ const SLIDES: Slide[] = [
     titleAr: 'مهام فرعية متداخلة',
     descEn: 'Break big goals into subtasks, each with their own timer and status.',
     descAr: 'قسّم الأهداف الكبيرة إلى مهام فرعية، لكل منها مؤقتها وحالتها.',
-    accentColor: '#A89CFF',
+    accentColor: '#e5f19d',
   },
   {
     icon: 'folder-open-outline',
@@ -52,7 +52,7 @@ const SLIDES: Slide[] = [
     titleAr: 'المشاريع والتخطيط',
     descEn: 'Group tasks into projects. Use the Daily Planner to organize your day.',
     descAr: 'جمّع المهام في مشاريع. استخدم المخطط اليومي لتنظيم يومك.',
-    accentColor: '#F2B544',
+    accentColor: '#f6e5c9',
   },
   {
     icon: 'notifications-outline',
@@ -60,7 +60,7 @@ const SLIDES: Slide[] = [
     titleAr: 'التذكيرات والملاحظات',
     descEn: 'Create rich notes and schedule reminders with custom alarm tones.',
     descAr: 'أنشئ ملاحظات غنية وجدول تذكيرات مع نغمات تنبيه مخصصة.',
-    accentColor: '#F4789C',
+    accentColor: '#dbd4fd',
   },
 ];
 

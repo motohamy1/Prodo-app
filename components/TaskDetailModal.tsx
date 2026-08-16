@@ -818,8 +818,8 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ visible, onClose, tod
                     }}
                     style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4, paddingVertical: 8, borderRadius: 8, borderWidth: 1, borderColor: status === 'in_progress' ? colors.warning : 'transparent', backgroundColor: status === 'in_progress' ? colors.warning : 'transparent' }}
                   >
-                    <Ionicons name="play" size={14} color={status === 'in_progress' ? '#FFF' : colors.textMuted} />
-                    <Text style={{ fontSize: 11, fontWeight: '700', color: status === 'in_progress' ? '#FFF' : colors.textMuted }}>{t.inProgress}</Text>
+                    <Ionicons name="play" size={14} color={status === 'in_progress' ? '#000' : colors.textMuted} />
+                    <Text style={{ fontSize: 11, fontWeight: '700', color: status === 'in_progress' ? '#000' : colors.textMuted }}>{t.inProgress}</Text>
                   </TouchableOpacity>
 
                   <TouchableOpacity
@@ -832,8 +832,8 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ visible, onClose, tod
                     }}
                     style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4, paddingVertical: 8, borderRadius: 8, borderWidth: 1, borderColor: status === 'done' ? colors.success : 'transparent', backgroundColor: status === 'done' ? colors.success : 'transparent' }}
                   >
-                    <Ionicons name="checkmark-circle" size={14} color={status === 'done' ? '#FFF' : colors.textMuted} />
-                    <Text style={{ fontSize: 11, fontWeight: '700', color: status === 'done' ? '#FFF' : colors.textMuted }}>{t.done}</Text>
+                    <Ionicons name="checkmark-circle" size={14} color={status === 'done' ? '#000' : colors.textMuted} />
+                    <Text style={{ fontSize: 11, fontWeight: '700', color: status === 'done' ? '#000' : colors.textMuted }}>{t.done}</Text>
                   </TouchableOpacity>
 
                   <TouchableOpacity
@@ -843,8 +843,8 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ visible, onClose, tod
                     }}
                     style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4, paddingVertical: 8, borderRadius: 8, borderWidth: 1, borderColor: status === 'not_done' ? colors.danger : 'transparent', backgroundColor: status === 'not_done' ? colors.danger : 'transparent' }}
                   >
-                    <Ionicons name="close-circle" size={14} color={status === 'not_done' ? '#FFF' : colors.textMuted} />
-                    <Text style={{ fontSize: 11, fontWeight: '700', color: status === 'not_done' ? '#FFF' : colors.textMuted }}>{t.notDone}</Text>
+                    <Ionicons name="close-circle" size={14} color={status === 'not_done' ? '#000' : colors.textMuted} />
+                    <Text style={{ fontSize: 11, fontWeight: '700', color: status === 'not_done' ? '#000' : colors.textMuted }}>{t.notDone}</Text>
                   </TouchableOpacity>
                 </View>
               </View>

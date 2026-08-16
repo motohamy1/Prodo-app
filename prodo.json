@@ -1,0 +1,22 @@
+[
+  {
+    "content": "Analyze Prodo app features and capabilities",
+    "active_form": "Analyzing Prodo features",
+    "status": "completed"
+  },
+  {
+    "content": "Research competitor task management apps and their unique features",
+    "active_form": "Researching competitors",
+    "status": "completed"
+  },
+  {
+    "content": "Identify gaps and opportunities for Prodo improvement",
+    "active_form": "Identifying improvements",
+    "status": "completed"
+  },
+  {
+    "content": "Create competitor analysis report with recommendations",
+    "active_form": "Creating analysis report",
+    "status": "completed"
+  }
+]

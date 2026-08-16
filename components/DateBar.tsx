@@ -1,0 +1,210 @@
+import { useAuth } from '@/hooks/useAuth';
+import useTheme from '@/hooks/useTheme';
+import { useTranslation } from '@/utils/i18n';
+import { Ionicons } from '@expo/vector-icons';
+import DateTimePicker from '@react-native-community/datetimepicker';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { FlatList, Platform, Text, View } from 'react-native';
+import Animated, { Easing, FadeInDown } from 'react-native-reanimated';
+import LivePress from './LivePress';
+
+interface DateBarProps {
+  selectedDate: number;
+  todayStart: number;
+  onSelectDate: (dayStart: number) => void;
+  homeStyles: any;
+  isArabic?: boolean;
+  taskCounts?: Map<number, number>;
+}
+
+const ITEM_WIDTH = 48;
+const ITEM_GAP = 8;
+const ITEM_TOTAL_SIZE = ITEM_WIDTH + ITEM_GAP;
+
+const startOfDay = (ts: number) => {
+  const d = new Date(ts);
+  d.setHours(0, 0, 0, 0);
+  return d.getTime();
+};
+
+const DateBar: React.FC<DateBarProps> = ({
+  selectedDate,
+  todayStart,
+  onSelectDate,
+  homeStyles,
+  isArabic = false,
+  taskCounts,
+}) => {
+  const { colors, isDarkMode } = useTheme();
+  const { language } = useAuth();
+  const { t } = useTranslation(language);
+  const flatListRef = useRef<FlatList>(null);
+  const [showDatePicker, setShowDatePicker] = useState(false);
+
+  const selectedDateObj = useMemo(() => new Date(selectedDate), [selectedDate]);
+  const selectedYear = selectedDateObj.getFullYear();
+  const selectedMonth = selectedDateObj.getMonth();
+
+  // Generate days strictly for the selected month (Day 1 to Last Day of Month)
+  const daysList = useMemo(() => {
+    const totalDays = new Date(selectedYear, selectedMonth + 1, 0).getDate();
+    const days: number[] = [];
+    for (let day = 1; day <= totalDays; day++) {
+      days.push(new Date(selectedYear, selectedMonth, day, 0, 0, 0, 0).getTime());
+    }
+    return days;
+  }, [selectedYear, selectedMonth]);
+
+  const selectedIndex = useMemo(() => {
+    const dayNum = new Date(selectedDate).getDate();
+    return Math.max(0, Math.min(daysList.length - 1, dayNum - 1));
+  }, [daysList.length, selectedDate]);
+
+  // Center on the selected day when day, month, or year changes
+  useEffect(() => {
+    if (selectedIndex >= 0 && flatListRef.current) {
+      const timer = setTimeout(() => {
+        flatListRef.current?.scrollToIndex({
+          index: selectedIndex,
+          animated: true,
+          viewPosition: 0.5,
+        });
+      }, 60);
+
+      return () => clearTimeout(timer);
+    }
+  }, [selectedIndex, selectedMonth, selectedYear]);
+
+  const isSelectedToday = startOfDay(selectedDate) === startOfDay(todayStart);
+
+  const monthLabel = useMemo(() => {
+    return new Date(selectedDate).toLocaleDateString(
+      isArabic ? 'ar-SA' : 'en-US',
+      { month: 'long', year: 'numeric' }
+    );
+  }, [selectedDate, isArabic]);
+
+  const renderDay = ({ item: dayStart, index }: { item: number; index: number }) => {
+    const d = new Date(dayStart);
+    const isActive = dayStart === startOfDay(selectedDate);
+    const hasTasks = (taskCounts?.get(dayStart) || 0) > 0;
+    const weekdayStr = d.toLocaleDateString(isArabic ? 'ar-SA' : 'en-US', { weekday: 'short' });
+    const dayNum = d.getDate();
+
+    return (
+      <LivePress
+        key={dayStart}
+        onPress={() => {
+          onSelectDate(dayStart);
+          flatListRef.current?.scrollToIndex({
+            index,
+            animated: true,
+            viewPosition: 0.5,
+          });
+        }}
+        style={[homeStyles.dateBarDay, isActive && homeStyles.dateBarDayActive]}
+      >
+        <Text
+          style={[homeStyles.dateBarWeekday, isActive && homeStyles.dateBarWeekdayActive]}
+          numberOfLines={1}
+        >
+          {weekdayStr}
+        </Text>
+        <Text
+          style={[homeStyles.dateBarDayNum, isActive && homeStyles.dateBarDayNumActive]}
+        >
+          {dayNum}
+        </Text>
+        {hasTasks && (
+          <View
+            style={[
+              homeStyles.dateBarDot,
+              isActive && { backgroundColor: colors.secondaryText },
+            ]}
+          />
+        )}
+      </LivePress>
+    );
+  };
+
+  return (
+    <Animated.View
+      entering={FadeInDown.duration(400).easing(Easing.out(Easing.cubic))}
+      style={homeStyles.dateBarContainer}
+    >
+      {/* Header: Month Year with Dropdown Chevron & Today Reset Button */}
+      <View style={[homeStyles.dateBarHeader, isArabic && { flexDirection: 'row-reverse' }]}>
+        <LivePress
+          style={[homeStyles.dateBarMonthWrapper, isArabic && { flexDirection: 'row-reverse' }]}
+          onPress={() => setShowDatePicker(true)}
+        >
+          <Text style={homeStyles.dateBarMonth}>{monthLabel}</Text>
+          <Ionicons
+            name="chevron-down"
+            size={16}
+            color={colors.textMuted}
+            style={homeStyles.dateBarChevron}
+          />
+        </LivePress>
+
+        {!isSelectedToday && (
+          <LivePress
+            style={homeStyles.dateBarReset}
+            onPress={() => {
+              onSelectDate(todayStart);
+            }}
+          >
+            <Text style={homeStyles.dateBarResetText}>{t.today}</Text>
+          </LivePress>
+        )}
+      </View>
+
+      {/* Horizontally Scrollable Month Days Carousel */}
+      <FlatList
+        ref={flatListRef}
+        data={daysList}
+        renderItem={renderDay}
+        keyExtractor={item => item.toString()}
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        initialScrollIndex={selectedIndex >= 0 ? selectedIndex : undefined}
+        getItemLayout={(_data, index) => ({
+          length: ITEM_TOTAL_SIZE,
+          offset: ITEM_TOTAL_SIZE * index,
+          index,
+        })}
+        onScrollToIndexFailed={info => {
+          setTimeout(() => {
+            flatListRef.current?.scrollToIndex({
+              index: info.index,
+              animated: false,
+              viewPosition: 0.5,
+            });
+          }, 100);
+        }}
+        contentContainerStyle={[
+          homeStyles.dateBarStrip,
+          isArabic && { flexDirection: 'row-reverse' },
+        ]}
+      />
+
+      {/* Date Picker Dialog */}
+      {showDatePicker && (
+        <DateTimePicker
+          value={new Date(selectedDate)}
+          mode="date"
+          display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+          themeVariant={isDarkMode ? 'dark' : 'light'}
+          onChange={(event, date) => {
+            setShowDatePicker(Platform.OS === 'ios');
+            if (date && (Platform.OS === 'ios' || event.type === 'set')) {
+              onSelectDate(startOfDay(date.getTime()));
+            }
+          }}
+        />
+      )}
+    </Animated.View>
+  );
+};
+
+export default DateBar;

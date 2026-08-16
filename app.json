@@ -1,15 +1,15 @@
 {
   "expo": {
-    "name": "ToDoIt",
-    "slug": "do-it",
+    "name": "Prodo",
+    "slug": "prodo",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/app_logo.png",
-    "scheme": "todoapp",
+    "scheme": "prodoapp",
     "userInterfaceStyle": "automatic",
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.motohamy.todoapp"
+      "bundleIdentifier": "com.motohamy.prodoapp"
     },
     "android": {
       "softwareKeyboardLayoutMode": "resize",
@@ -20,7 +20,7 @@
         "monochromeImage": "./assets/images/app_logo.png"
       },
       "predictiveBackGestureEnabled": false,
-      "package": "com.motohamy.todoapp",
+      "package": "com.motohamy.prodoapp",
       "permissions": [
         "android.permission.SCHEDULE_EXACT_ALARM",
         "android.permission.USE_EXACT_ALARM",
@@ -31,7 +31,7 @@
     },
     "web": {
       "output": "static",
-      "favicon": "./assets/images/favicon.png"
+      "favicon": "./assets/images/app_logo.png"
     },
     "plugins": [
       "expo-router",

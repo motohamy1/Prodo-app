@@ -99,7 +99,7 @@ export const SubtaskRow = ({
 
   // Live countdown for running subtasks
   useEffect(() => {
-    let interval: NodeJS.Timeout;
+    let interval: ReturnType<typeof setInterval> | undefined;
     if (sub.status === 'in_progress' && sub.timerStartTime) {
       if (sub.timerDirection === 'up') {
         const calc = () => {
@@ -142,15 +142,10 @@ export const SubtaskRow = ({
   const isPaused = sub.status === 'paused';
   const hasTimer = !!sub.timerDuration;
 
-  const cardBg = sub.status === 'in_progress' ? colors.taskInProgressBg 
-               : sub.status === 'paused' ? colors.taskPausedBg 
-               : sub.status === 'done' ? colors.taskDoneBg 
-               : sub.status === 'not_done' ? colors.taskNotDoneBg 
-               : colors.taskNotStartedBg;
-
-  const isBrightBg = getLuminance(cardBg) > 170;
-  const contentColor = isBrightBg ? colors.text : colors.surfaceText;
-  const contentMutedColor = isBrightBg ? colors.text + '80' : colors.surfaceText + '80';
+  const cardBg = isDarkMode ? colors.surfaceHigh : colors.surfaceHigh;
+  const contentColor = colors.text;
+  const contentMutedColor = colors.textMuted;
+  const isBrightBg = false;
 
   if (isEditing) {
     return (

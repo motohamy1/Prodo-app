@@ -1,22 +1,28 @@
 export const LIST_TYPE_COLORS: Record<string, string> = {
-  checklist: '#4EE6C1',
-  todo: '#A89CFF',
-  bullet: '#F4789C',
-  toggle: '#F2B544',
+  checklist: '#defef9', // Ice Mint
+  todo: '#dbd4fd',      // Soft Lavender
+  bullet: '#e5f19d',    // Pastel Lime
+  toggle: '#f6e5c9',    // Warm Cream
+};
+
+export const CORE_PALETTE = {
+  cream: '#f6e5c9',
+  lime: '#e5f19d',
+  mint: '#defef9',
+  lavender: '#dbd4fd',
 };
 
 export const PROJECT_COLORS = [
-  '#F2B544', '#F08C3A', '#F4789C', '#D264B8',
-  '#C084FC', '#A89CFF', '#8B7CF6', '#6F6AE8',
-  '#5E7CE8', '#4E9BF4', '#38BDF8', '#3ED6E0',
-  '#4EE6C1', '#2DC9A8', '#3BC97E', '#6FCB77',
-  '#A5CE62', '#D9C94F', '#B48BE0', '#8FA3D8',
-  '#E88A6A', '#E85D8A', '#9B8CE8', '#7BD8C0',
+  '#f6e5c9', '#e5f19d', '#defef9', '#dbd4fd',
+  '#fbe8d5', '#e9f5a8', '#e5fffa', '#e4deff',
+  '#eeddbf', '#dbec8c', '#d3fcf6', '#d2c8fb',
+  '#f4dec0', '#cde37d', '#bdfbf1', '#c4b6f7',
 ];
 
-export const GUIDE_TIP_ACCENTS = ['#F2B544', '#4EE6C1', '#A89CFF'];
+export const GUIDE_TIP_ACCENTS = ['#dbd4fd', '#e5f19d', '#defef9', '#f6e5c9'];
 
-export const JEWEL_DARK = ['#231838', '#14232B', '#2B1D2E', '#16281F', '#2B1626', '#1D1A38'];
-export const JEWEL_LIGHT = ['#F3EBFF', '#E3F6F9', '#FDEFF7', '#E7F6EC', '#FDEDF3', '#EDECFF'];
+export const JEWEL_DARK = ['#1D1A38', '#16281F', '#14232B', '#231838', '#2B1D2E', '#201C16'];
+export const JEWEL_LIGHT = ['#F5EEDB', '#E8F5A6', '#E4FFFA', '#E2DCFE', '#F3EBFF', '#E7F6EC'];
 
-export const AURORA_GRADIENT = ['#F2B544', '#F4789C', '#A89CFF', '#4EE6C1'];
+export const AURORA_GRADIENT = ['#f6e5c9', '#e5f19d', '#defef9', '#dbd4fd'];
+

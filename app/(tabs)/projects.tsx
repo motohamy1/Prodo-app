@@ -40,6 +40,8 @@ import ScreenGuide from '@/components/ScreenGuide';
 import type { GuideTip } from '@/components/ScreenGuide';
 import { LIST_TYPE_COLORS, PROJECT_COLORS } from '@/utils/magicColors';
 import Reanimated, { FadeInDown } from 'react-native-reanimated';
+import CategoryCard from '@/components/CategoryCard';
+import ProjectFolderCard, { AddProjectFolderCard } from '@/components/ProjectFolderCard';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -325,85 +327,117 @@ const AddResourceModal = ({ visible, onClose, colors, styles, onAdd }: {
 
 // ─── Layer 1: Categories View (Full Width) ───────────────────────────────────
 
-const CategoriesView = ({ styles, colors, onSelectCategory, onAddCategory, onEditCategory, onOpenAction, userId }: {
+const CategoriesView = ({ styles, colors, onSelectCategory, onAddCategory, onEditCategory, onOpenAction, userId, isArabic = false }: {
   styles: any; colors: any;
   onSelectCategory: (id: Id<'projectCategories'>, name: string, color: string) => void;
   onAddCategory: () => void;
   onEditCategory: (cat: any) => void;
   onOpenAction: (config: any) => void;
   userId: Id<'users'> | null;
+  isArabic?: boolean;
 }) => {
   const categories = useOfflineQuery<any[]>('projects.getCategories', api.projects.getCategories, userId ? { userId } : 'skip');
+  const allTodos = useOfflineQuery<any[]>('todos', api.todos.get, userId ? { userId } : 'skip');
   const deleteCategory = useMutation(api.projects.deleteCategory);
-  if (!categories) return <View style={styles.emptyContainer}><Ionicons name="hourglass-outline" size={40} color={colors.border} /></View>;
+
+  if (!categories) return <View style={styles.emptyContainer}><Ionicons name="hourglass-outline" size={40} color="#8E9AAB" /></View>;
+
+  const getProgress = (catId: string) => {
+    if (!allTodos) return 0;
+    const linked = allTodos.filter((t: any) => t.categoryId === catId);
+    if (linked.length === 0) return 0;
+    const done = linked.filter((t: any) => t.status === 'done').length;
+    return Math.round((done / linked.length) * 100);
+  };
+
+  const getTaskCount = (catId: string) => {
+    if (!allTodos) return 0;
+    return allTodos.filter((t: any) => t.categoryId === catId).length;
+  };
+
   return (
     <ScrollView contentContainerStyle={styles.categoriesGrid} showsVerticalScrollIndicator={false}>
       {categories.length === 0 && (
         <View style={styles.emptyContainer}>
-          <Ionicons name="folder-open-outline" size={42} color={colors.primary} />
-          <Text style={styles.emptyText}>No categories yet</Text>
-          <Text style={styles.emptySubText}>Tap the + button above to create your first category and organize projects.</Text>
-          <TouchableOpacity style={[styles.addCategoryCard, { marginTop: 16 }]} onPress={onAddCategory}>
-            <Ionicons name="add" size={20} color={colors.primary} />
-            <Text style={{ marginLeft: 8, fontSize: 15, fontWeight: '700', color: colors.primary }}>Create a category</Text>
+          <Ionicons name="folder-open-outline" size={48} color="#dbd4fd" />
+          <Text style={styles.emptyText}>{isArabic ? 'لا توجد فئات مشاريع بعد' : 'No project categories yet'}</Text>
+          <Text style={styles.emptySubText}>
+            {isArabic ? 'اضغط أدناه لإنشاء أول مساحة عمل وتنظيم مشاريعك.' : 'Create your first category workspace to organize projects and tasks.'}
+          </Text>
+          <TouchableOpacity style={[styles.addCategoryBtn, { marginTop: 20, width: '100%' }]} onPress={onAddCategory}>
+            <Ionicons name="add" size={20} color="#FFFFFF" />
+            <Text style={styles.addCategoryBtnText}>{isArabic ? 'إنشاء فئة جديدة' : 'Create Category'}</Text>
           </TouchableOpacity>
         </View>
       )}
-      {categories.map((cat, i) => (
-        <Reanimated.View key={cat._id} entering={FadeInDown.duration(450).delay(i * 70)} style={[styles.categoryCard, { shadowColor: cat.color }]}>
-          <TouchableOpacity style={styles.categoryCardInner} onPress={() => onSelectCategory(cat._id, cat.name, cat.color)} activeOpacity={0.82}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
-              <View style={[styles.categoryIconWrap, { backgroundColor: cat.color + '20' }]}>
-                <Ionicons name={cat.icon as any} size={28} color={cat.color} />
-              </View>
-              <View style={styles.categoryInfo}>
-                <Text style={styles.categoryCardName}>{cat.name}</Text>
-                <Text style={styles.categoryCardCount}>Tap to explore</Text>
-              </View>
-            </View>
-          </TouchableOpacity>
+
+      {categories.map((cat, i) => {
+        const progressPct = getProgress(cat._id);
+        const taskCount = getTaskCount(cat._id);
+        const subtitle = taskCount > 0 
+          ? (isArabic ? `${taskCount} مهام مرتبطة` : `${taskCount} task${taskCount !== 1 ? 's' : ''} linked`)
+          : (isArabic ? 'مساحة عمل المشروع' : 'Workspace category');
+        
+        const status = progressPct === 100 
+          ? (isArabic ? 'مكتمل' : 'Completed') 
+          : (progressPct > 0 ? (isArabic ? 'قيد العمل' : 'Running') : (isArabic ? 'نشط' : 'Active'));
+
+        return (
+          <Reanimated.View key={cat._id} entering={FadeInDown.duration(450).delay(i * 60)}>
+            <CategoryCard
+              id={cat._id}
+              name={cat.name}
+              icon={cat.icon || 'briefcase-outline'}
+              index={i}
+              subtitle={subtitle}
+              status={status}
+              progressPct={progressPct}
+              isArabic={isArabic}
+              onPress={() => onSelectCategory(cat._id, cat.name, cat.color)}
+              onMenuPress={() => onOpenAction({
+                title: cat.name,
+                options: [
+                  {
+                    label: isArabic ? 'تعديل الفئة' : 'Edit Category',
+                    icon: 'create-outline',
+                    onPress: () => onEditCategory(cat)
+                  },
+                  {
+                    label: isArabic ? 'مشاركة' : 'Share Category',
+                    icon: 'share-social-outline',
+                    onPress: () => Share.share({ message: `Check out my project category: ${cat.name}` })
+                  },
+                  {
+                    label: isArabic ? 'حذف الفئة' : 'Delete Category',
+                    icon: 'trash-outline',
+                    variant: 'destructive',
+                    onPress: () => deleteCategory({ id: cat._id })
+                  }
+                ]
+              })}
+            />
+          </Reanimated.View>
+        );
+      })}
+
+      {categories.length > 0 && (
+        <Reanimated.View entering={FadeInDown.duration(450).delay(categories.length * 50)} style={styles.addCategoryCardWrapper}>
           <TouchableOpacity 
-            style={styles.categoryDeleteBtn} 
-            onPress={() => onOpenAction({
-              title: cat.name,
-              options: [
-                {
-                  label: 'Edit Category',
-                  icon: 'create-outline',
-                  onPress: () => onEditCategory(cat)
-                },
-                {
-                  label: 'Share Category',
-                  icon: 'share-social-outline',
-                  onPress: () => Share.share({ message: `Check out my project category: ${cat.name}` })
-                },
-                {
-                  label: 'Delete Category',
-                  icon: 'trash-outline',
-                  variant: 'destructive',
-                  onPress: () => deleteCategory({ id: cat._id })
-                }
-              ]
-            })}
+            style={styles.addCategoryBtn}
+            onPress={onAddCategory}
+            activeOpacity={0.82}
           >
-            <Ionicons name="ellipsis-vertical" size={16} color={colors.textMuted} />
+            <Ionicons name="add-circle-outline" size={24} color="#8E9AAB" />
+            <Text style={styles.addCategoryBtnText}>{isArabic ? 'إضافة فئة جديدة' : 'Add New Category'}</Text>
           </TouchableOpacity>
         </Reanimated.View>
-      ))}
-      <Reanimated.View entering={FadeInDown.duration(450).delay(categories.length * 70)} style={[styles.categoryCard, { borderStyle: 'dashed', backgroundColor: 'transparent', shadowOpacity: 0, elevation: 0 }]}>
-        <TouchableOpacity 
-          style={styles.categoryAddBtn}
-          onPress={onAddCategory}
-        >
-          <Ionicons name="add-circle-outline" size={28} color={colors.textMuted} />
-          <Text style={{ marginLeft: 12, fontSize: 16, fontWeight: '700', color: colors.textMuted }}>Add New Category</Text>
-        </TouchableOpacity>
-      </Reanimated.View>
+      )}
     </ScrollView>
   );
 };
 
 // ─── Layer 2: Category Detail View (Sub-categories & Direct Projects) ────────
+// ─── Layer 2: Category Detail View (3D Folder Pockets for Projects) ──────────
 
 const LIST_TYPE_CARDS = [
   { key: 'checklist', label: 'Checklists', icon: 'checkbox-outline', color: LIST_TYPE_COLORS.checklist },
@@ -413,27 +447,36 @@ const LIST_TYPE_CARDS = [
 ];
 
 const CategoryDetailView = ({
-  styles, colors, categoryId, categoryName, userId, onSelectSubCategory, onSelectProject, onAddSubCategory, onAddProject, onEditCategory, onEditSubCategory, onEditProject, onDeleteCategory, onDeleteSubCategory, onDeleteProject, onOpenAction
+  styles,
+  colors,
+  categoryId,
+  categoryName,
+  userId,
+  onSelectProject,
+  onAddProject,
+  onEditCategory,
+  onEditProject,
+  onDeleteCategory,
+  onDeleteProject,
+  onOpenAction,
+  isArabic = false,
 }: {
   styles: any;
   colors: any;
   categoryId: Id<'projectCategories'>;
   categoryName: string;
-  onSelectSubCategory: (id: Id<'projectSubCategories'>, name: string) => void;
   onSelectProject: (id: Id<'projects'>) => void;
-  onAddSubCategory: () => void;
   onAddProject: () => void;
   onEditCategory: (cat: any) => void;
-  onEditSubCategory: (sub: any) => void;
   onEditProject: (proj: any) => void;
   onDeleteCategory: (id: Id<'projectCategories'>) => void;
-  onDeleteSubCategory: (id: Id<'projectSubCategories'>) => void;
   onDeleteProject: (id: Id<'projects'>) => void;
   onOpenAction: (config: any) => void;
   userId: Id<'users'> | null;
+  isArabic?: boolean;
 }) => {
   const { t } = useTranslation();
-  const subCategories = useOfflineQuery<any[]>('projects.getSubCategories', api.projects.getSubCategories, { categoryId });
+  const category = useOfflineQuery<any>('projects.getCategory', api.projects.getCategory, { id: categoryId });
   const directProjects = useOfflineQuery<any[]>('projects.getProjectsByCategory', api.projects.getProjectsByCategory, { categoryId });
   const allTodos = useOfflineQuery<any[]>('todos', api.todos.get, userId ? { userId } : 'skip');
   const checklistItems = useOfflineQuery<any[]>('categoryItems_checklist', api.projects.getCategoryItems, { categoryId, listType: 'checklist' });
@@ -442,14 +485,6 @@ const CategoryDetailView = ({
 
   const [listModalVisible, setListModalVisible] = useState(false);
   const [activeListType, setActiveListType] = useState<string>('checklist');
-
-  const getProgress = (projectId: string) => {
-    if (!allTodos) return { done: 0, total: 0, pct: 0 };
-    const linked = allTodos.filter(t => t.projectId === projectId);
-    const done = linked.filter(t => t.status === 'done').length;
-    const total = linked.length;
-    return { done, total, pct: total > 0 ? Math.round((done / total) * 100) : 0 };
-  };
 
   const getListCount = (key: string) => {
     if (key === 'todo') {
@@ -466,168 +501,176 @@ const CategoryDetailView = ({
     setListModalVisible(true);
   };
 
-  if (!subCategories || !directProjects) return <View style={styles.emptyContainer}><Ionicons name="hourglass-outline" size={40} color={colors.border} /></View>;
+  if (!directProjects) {
+    return (
+      <View style={styles.emptyContainer}>
+        <Ionicons name="hourglass-outline" size={40} color={colors.border} />
+      </View>
+    );
+  }
+
+  // Calculate total tasks across all projects in this category
+  const totalCategoryTasks = allTodos?.filter((t: any) => t.categoryId === categoryId || directProjects.some(p => p._id === t.projectId)).length || 0;
 
   return (
     <>
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 120 }}>
-        {/* Category Header Actions */}
-        <View style={{ paddingHorizontal: 24, paddingVertical: 12, flexDirection: 'row', justifyContent: 'flex-end', gap: 12 }}>
-           <TouchableOpacity
-             style={[styles.headerBtn, { borderColor: colors.border }]}
-             onPress={() => onOpenAction({
-               title: categoryName,
-               options: [
-                 {
-                   label: 'Edit Category',
-                   icon: 'create-outline',
-                   onPress: () => onEditCategory({ _id: categoryId, name: categoryName })
-                 },
-                 {
-                   label: 'Share Category',
-                   icon: 'share-social-outline',
-                   onPress: () => Share.share({ message: `Category: ${categoryName}` })
-                 },
-                 {
-                   label: t.delete || 'Delete Category',
-                   icon: 'trash-outline',
-                   variant: 'destructive',
-                   onPress: () => {
-                     Alert.alert(
-                       t.confirmDeleteTitle || "Confirm Delete",
-                       "Are you sure you want to delete this category and all its contents?",
-                       [
-                         { text: t.cancel || "Cancel", style: "cancel" },
-                         { text: t.delete || "Delete", style: "destructive", onPress: () => onDeleteCategory(categoryId) }
-                       ]
-                     );
-                   }
-                 }
-               ]
-             })}
-           >
-             <Ionicons name="ellipsis-vertical" size={20} color={colors.textMuted} />
-           </TouchableOpacity>
-        </View>
-        {/* Sub-categories Section */}
-        <View style={styles.subCategoriesList}>
-          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-            <Text style={[styles.sectionLabel, { paddingHorizontal: 0, marginBottom: 0 }]}>Sub-Categories</Text>
-          </View>
-
-          {subCategories.length === 0 && (
-            <View style={[styles.emptyContainer, { paddingVertical: 20 }]}>
-              <Text style={{ color: colors.text, fontSize: 14, fontWeight: '600', textAlign: 'center' }}>No sub-categories yet</Text>
-              <Text style={{ color: colors.textMuted, fontSize: 13, marginTop: 4, textAlign: 'center' }}>Add one to further organize this category.</Text>
+        {/* ─── Space Hero Summary Bar ───────────────────────────────── */}
+        <View style={styles.categoryHero}>
+          <View style={styles.categoryHeroTop}>
+            <View style={styles.categoryHeroLeft}>
+              <View style={[styles.categoryHeroIconWrap, { backgroundColor: (category?.color || colors.primary) + '22' }]}>
+                <Ionicons name={(category?.icon || 'briefcase-outline') as any} size={24} color={category?.color || colors.primary} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.categoryHeroTitle} numberOfLines={1}>
+                  {category?.name || categoryName}
+                </Text>
+                <Text style={styles.categoryHeroSubtitle}>
+                  {isArabic
+                    ? `${directProjects.length} ${directProjects.length === 1 ? 'مشروع' : 'مشاريع'} • ${totalCategoryTasks} ${totalCategoryTasks === 1 ? 'مهمة' : 'مهام'}`
+                    : `${directProjects.length} project${directProjects.length !== 1 ? 's' : ''} • ${totalCategoryTasks} task${totalCategoryTasks !== 1 ? 's' : ''}`}
+                </Text>
+              </View>
             </View>
-          )}
 
-          {subCategories.map(sub => (
-            <TouchableOpacity
-              key={sub._id} style={styles.subCategoryCard}
-              onPress={() => onSelectSubCategory(sub._id, sub.name)}
-              onLongPress={() => onOpenAction({
-                title: sub.name,
-                options: [
-                  { label: t.edit || 'Edit', icon: 'create-outline', onPress: () => onEditSubCategory(sub) },
-                  {
-                    label: t.delete || 'Delete',
-                    icon: 'trash-outline',
-                    variant: 'destructive',
-                    onPress: () => {
-                      Alert.alert(
-                        t.confirmDeleteTitle || "Confirm Delete",
-                        t.confirmDeleteSubCategory || "Are you sure you want to delete this sub-category and all its child projects?",
-                        [
-                          { text: t.cancel || "Cancel", style: "cancel" },
-                          { text: t.delete || "Delete", style: "destructive", onPress: () => onDeleteSubCategory(sub._id) }
-                        ]
-                      );
+            <View style={styles.categoryHeroActions}>
+              <TouchableOpacity
+                style={styles.headerActionBtn}
+                onPress={() => onOpenAction({
+                  title: categoryName,
+                  options: [
+                    {
+                      label: isArabic ? 'تعديل الفئة' : 'Edit Space',
+                      icon: 'create-outline',
+                      onPress: () => onEditCategory(category || { _id: categoryId, name: categoryName })
+                    },
+                    {
+                      label: isArabic ? 'مشاركة الفئة' : 'Share Space',
+                      icon: 'share-social-outline',
+                      onPress: () => Share.share({ message: `Space: ${categoryName}` })
+                    },
+                    {
+                      label: t.delete || 'Delete Space',
+                      icon: 'trash-outline',
+                      variant: 'destructive',
+                      onPress: () => {
+                        Alert.alert(
+                          t.confirmDeleteTitle || "Confirm Delete",
+                          isArabic ? "هل أنت متأكد من حذف هذه المساحة وجميع المشاريع بداخلها؟" : "Are you sure you want to delete this space and all its projects?",
+                          [
+                            { text: t.cancel || "Cancel", style: "cancel" },
+                            { text: t.delete || "Delete", style: "destructive", onPress: () => onDeleteCategory(categoryId) }
+                          ]
+                        );
+                      }
                     }
-                  }
-                ]
-              })}
-            >
-              <View style={[styles.subCategoryIconWrap, { backgroundColor: sub.color + '20' }]}><Ionicons name={sub.icon as any} size={18} color={sub.color} /></View>
-              <Text style={styles.subCategoryName}>{sub.name}</Text>
-            </TouchableOpacity>
-          ))}
-          <TouchableOpacity
-            style={[styles.subCategoryCard, { borderStyle: 'dashed', backgroundColor: 'transparent', shadowOpacity: 0, elevation: 0, justifyContent: 'center', alignItems: 'center', flexDirection: 'column', paddingVertical: 24 }]}
-            onPress={onAddSubCategory}
-          >
-            <Ionicons name="add-circle-outline" size={32} color={colors.textMuted} />
-            <Text style={{ marginTop: 8, fontSize: 13, fontWeight: '600', color: colors.textMuted }}>Add Sub-Category</Text>
-          </TouchableOpacity>
+                  ]
+                })}
+              >
+                <Ionicons name="ellipsis-vertical" size={18} color={colors.textMuted} />
+              </TouchableOpacity>
+            </View>
+          </View>
         </View>
 
-        {/* Direct Projects Section */}
-        <View style={{ paddingHorizontal: 20, marginTop: 20 }}>
-          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-            <Text style={[styles.sectionLabel, { paddingHorizontal: 0, marginBottom: 0 }]}>Direct Projects</Text>
+        {/* ─── Projects Section (3D Folder Grid) ────────────────────── */}
+        <View style={{ paddingHorizontal: 20, marginTop: 4 }}>
+          <View style={{ flexDirection: isArabic ? 'row-reverse' : 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+            <View style={{ flexDirection: isArabic ? 'row-reverse' : 'row', alignItems: 'center', gap: 8 }}>
+              <Text style={[styles.sectionLabel, { paddingHorizontal: 0, marginBottom: 0 }]}>
+                {isArabic ? 'المشاريع' : 'Projects'}
+              </Text>
+              <View style={{ backgroundColor: colors.surface, paddingHorizontal: 8, paddingVertical: 2, borderRadius: 10, borderWidth: 1, borderColor: colors.border }}>
+                <Text style={{ fontSize: 11, fontWeight: '700', color: colors.textMuted }}>{directProjects.length}</Text>
+              </View>
+            </View>
+
+            <TouchableOpacity
+              onPress={onAddProject}
+              style={{ flexDirection: isArabic ? 'row-reverse' : 'row', alignItems: 'center', gap: 4 }}
+            >
+              <Ionicons name="add-circle" size={18} color={colors.primary} />
+              <Text style={{ fontSize: 13, fontWeight: '700', color: colors.primary }}>
+                {isArabic ? 'مشروع جديد' : 'New Project'}
+              </Text>
+            </TouchableOpacity>
           </View>
 
           <View style={[styles.projectsGrid, { paddingHorizontal: 0 }]}>
-            {directProjects.length === 0 && (
-              <View style={[styles.emptyContainer, { width: '100%', paddingVertical: 24 }]}>
-                 <Text style={{ color: colors.text, fontSize: 14, fontWeight: '600', textAlign: 'center' }}>No direct projects yet</Text>
-                 <Text style={{ color: colors.textMuted, fontSize: 13, marginTop: 4, textAlign: 'center' }}>Projects added here live directly under this category.</Text>
-              </View>
-            )}
+            {directProjects.map((project, i) => {
+              const linked = allTodos?.filter((t: any) => t.projectId === project._id) || [];
+              const doneCount = linked.filter((t: any) => t.status === 'done').length;
+              const totalCount = linked.length;
+              const pct = totalCount > 0 ? Math.round((doneCount / totalCount) * 100) : 0;
+              const previewItems = linked.slice(0, 3).map((t: any) => ({
+                text: t.text,
+                isCompleted: t.status === 'done',
+              }));
 
-            {directProjects.map(project => {
-              const { pct } = getProgress(project._id);
               return (
-                <TouchableOpacity
-                  key={project._id} style={[styles.projectGridCard, { shadowColor: project.color }]}
-                  onPress={() => onSelectProject(project._id)}
-                  onLongPress={() => onOpenAction({
-                    title: project.name,
-                    options: [
-                      { label: t.edit || 'Edit', icon: 'create-outline', onPress: () => onEditProject(project) },
-                      { label: t.share || 'Share', icon: 'share-social-outline', onPress: () => Share.share({ message: `Project: ${project.name}` }) },
-                      {
-                        label: t.delete || 'Delete',
-                        icon: 'trash-outline',
-                        variant: 'destructive',
-                        onPress: () => {
-                          Alert.alert(
-                            t.confirmDeleteTitle || "Confirm Delete",
-                            t.confirmDeleteProject || "Are you sure you want to delete this project and unlink all its tasks?",
-                            [
-                              { text: t.cancel || "Cancel", style: "cancel" },
-                              { text: t.delete || "Delete", style: "destructive", onPress: () => onDeleteProject(project._id) }
-                            ]
-                          );
-                        }
-                      }
-                    ]
-                  })}
+                <Reanimated.View
+                  key={project._id}
+                  entering={FadeInDown.duration(450).delay(i * 50)}
+                  style={{ width: '48%' }}
                 >
-                  <View style={[styles.projectGridIcon, { backgroundColor: project.color + '20' }]}><Ionicons name={project.icon as any} size={28} color={project.color} /></View>
-                  <Text style={styles.projectGridName} numberOfLines={1}>{project.name}</Text>
-                  <View style={styles.projectGridFooter}>
-                     <View style={styles.gridProgressBarTrack}><View style={[styles.gridProgressBarFill, { width: `${pct}%`, backgroundColor: project.color }]} /></View>
-                     <Text style={styles.gridProgressText}>{pct}%</Text>
-                  </View>
-                </TouchableOpacity>
+                  <ProjectFolderCard
+                    id={project._id}
+                    name={project.name}
+                    color={project.color}
+                    icon={project.icon || 'folder-outline'}
+                    itemCount={totalCount}
+                    progressPct={pct}
+                    previewItems={previewItems}
+                    index={i}
+                    isArabic={isArabic}
+                    onPress={() => onSelectProject(project._id)}
+                    onMenuPress={() => onOpenAction({
+                      title: project.name,
+                      options: [
+                        { label: isArabic ? 'تعديل المشروع' : 'Edit Project', icon: 'create-outline', onPress: () => onEditProject(project) },
+                        { label: isArabic ? 'مشاركة المشروع' : 'Share Project', icon: 'share-social-outline', onPress: () => Share.share({ message: `Project: ${project.name}` }) },
+                        {
+                          label: t.delete || 'Delete Project',
+                          icon: 'trash-outline',
+                          variant: 'destructive',
+                          onPress: () => {
+                            Alert.alert(
+                              t.confirmDeleteTitle || "Confirm Delete",
+                              isArabic ? "هل أنت متأكد من حذف هذا المشروع؟" : "Are you sure you want to delete this project and unlink its tasks?",
+                              [
+                                { text: t.cancel || "Cancel", style: "cancel" },
+                                { text: t.delete || "Delete", style: "destructive", onPress: () => onDeleteProject(project._id) }
+                              ]
+                            );
+                          }
+                        }
+                      ]
+                    })}
+                  />
+                </Reanimated.View>
               );
             })}
 
-            <TouchableOpacity
-              style={[styles.projectGridCard, { borderStyle: 'dashed', backgroundColor: 'transparent', shadowOpacity: 0, elevation: 0, justifyContent: 'center', alignItems: 'center' }]}
-              onPress={onAddProject}
+            {/* Ghost "+ Add Project" Folder Card */}
+            <Reanimated.View
+              entering={FadeInDown.duration(450).delay(directProjects.length * 50)}
+              style={{ width: '48%' }}
             >
-              <Ionicons name="add" size={28} color={colors.textMuted} />
-              <Text style={{ marginTop: 4, fontSize: 12, fontWeight: '600', color: colors.textMuted }}>Add Project</Text>
-            </TouchableOpacity>
+              <AddProjectFolderCard
+                onPress={onAddProject}
+                isArabic={isArabic}
+              />
+            </Reanimated.View>
           </View>
         </View>
 
-        {/* Category Lists Section */}
+        {/* ─── Category Lists Section ────────────────────────────────── */}
         <View style={styles.categoryListsSection}>
-          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-            <Text style={[styles.sectionLabel, { paddingHorizontal: 0, marginBottom: 0 }]}>Lists</Text>
+          <View style={{ flexDirection: isArabic ? 'row-reverse' : 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+            <Text style={[styles.sectionLabel, { paddingHorizontal: 0, marginBottom: 0 }]}>
+              {isArabic ? 'القوائم السريعة' : 'Quick Lists'}
+            </Text>
           </View>
           <View style={styles.categoryListsGrid}>
             {LIST_TYPE_CARDS.map((card, i) => {
@@ -643,7 +686,7 @@ const CategoryDetailView = ({
                       <Ionicons name={card.icon as any} size={24} color={card.color} />
                     </View>
                     <Text style={styles.categoryListCardTitle}>{card.label}</Text>
-                    <Text style={styles.categoryListCardCount}>{count} item{count !== 1 ? 's' : ''}</Text>
+                    <Text style={styles.categoryListCardCount}>{count} {count === 1 ? 'item' : 'items'}</Text>
                   </TouchableOpacity>
                 </Reanimated.View>
               );
@@ -693,14 +736,6 @@ const SubCategoryProjectsView = ({
   const [listModalVisible, setListModalVisible] = useState(false);
   const [activeListType, setActiveListType] = useState<string>('checklist');
 
-  const getProgress = (projectId: string) => {
-    if (!allTodos) return { pct: 0 };
-    const linked = allTodos.filter(t => t.projectId === projectId);
-    const done = linked.filter(t => t.status === 'done').length;
-    const total = linked.length;
-    return { pct: total > 0 ? Math.round((done / total) * 100) : 0 };
-  };
-
   const getListCount = (key: string) => {
     if (key === 'todo') {
       return allTodos?.filter((t: any) => t.subCategoryId === subCategoryId && !t.projectId).length || 0;
@@ -720,8 +755,8 @@ const SubCategoryProjectsView = ({
 
   return (
     <>
-      <ScrollView contentContainerStyle={[styles.projectsGrid, { paddingBottom: 120 }]} showsVerticalScrollIndicator={false}>
-        <View style={{ width: '100%', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 6, marginBottom: 8 }}>
+      <ScrollView contentContainerStyle={{ paddingBottom: 120 }} showsVerticalScrollIndicator={false}>
+        <View style={{ width: '100%', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, marginBottom: 12, marginTop: 4 }}>
           <Text style={[styles.sectionLabel, { paddingHorizontal: 0, marginBottom: 0 }]}>Projects in {subCategoryName}</Text>
           <TouchableOpacity
              onPress={() => onOpenAction({
@@ -758,59 +793,60 @@ const SubCategoryProjectsView = ({
             <Ionicons name="ellipsis-vertical" size={18} color={colors.textMuted} />
           </TouchableOpacity>
         </View>
-        {projects.map((project, i) => {
-          const { pct } = getProgress(project._id);
-          return (
-            <Reanimated.View key={project._id} entering={FadeInDown.duration(450).delay(i * 60)} style={[styles.projectGridCard, { shadowColor: project.color }]}>
-              <TouchableOpacity
-                style={{ flex: 1 }}
-                onPress={() => onSelectProject(project._id)}
-                onLongPress={() => onOpenAction({
-                title: project.name,
-                options: [
-                  {
-                    label: t.edit || 'Edit',
-                    icon: 'create-outline',
-                    onPress: () => onEditProject(project)
-                  },
-                  {
-                    label: t.share || 'Share',
-                    icon: 'share-social-outline',
-                    onPress: () => Share.share({ message: `Project: ${project.name}` })
-                  },
-                  {
-                     label: t.delete || 'Delete',
-                     icon: 'trash-outline',
-                     variant: 'destructive',
-                     onPress: () => {
-                       Alert.alert(
-                         t.confirmDeleteTitle || "Confirm Delete",
-                         t.confirmDeleteProject || "Are you sure you want to delete this project and unlink all its tasks?",
-                         [
-                           { text: t.cancel || "Cancel", style: "cancel" },
-                           { text: t.delete || "Delete", style: "destructive", onPress: () => onDeleteProject(project._id) }
-                         ]
-                       );
-                     }
-                  }
-                ]
-              })}
-            >
-              <View style={[styles.projectGridIcon, { backgroundColor: project.color + '20' }]}><Ionicons name={project.icon as any} size={28} color={project.color} /></View>
-              <Text style={styles.projectGridName} numberOfLines={2}>{project.name}</Text>
-              <View style={styles.projectGridFooter}>
-                 <View style={styles.gridProgressBarTrack}><View style={[styles.gridProgressBarFill, { width: `${pct}%`, backgroundColor: project.color }]} /></View>
-                 <Text style={styles.gridProgressText}>{pct}% Complete</Text>
-                 </View>
-              </TouchableOpacity>
-            </Reanimated.View>
-          );
-        })}
-        <Reanimated.View entering={FadeInDown.duration(450).delay(projects.length * 60)} style={[styles.projectGridCard, { borderStyle: 'dashed', backgroundColor: 'transparent', shadowOpacity: 0, elevation: 0, justifyContent: 'center', alignItems: 'center' }]}>
-          <TouchableOpacity style={{ alignItems: 'center', justifyContent: 'center', flex: 1 }} onPress={onAddProject}>
-            <Ionicons name="add-circle-outline" size={32} color={colors.textMuted} /><Text style={{ marginTop: 8, fontSize: 13, fontWeight: '600', color: colors.textMuted }}>Add Project</Text>
-          </TouchableOpacity>
-        </Reanimated.View>
+        <View style={[styles.projectsGrid, { paddingHorizontal: 20 }]}>
+          {projects.map((project, i) => {
+            const linked = allTodos?.filter((t: any) => t.projectId === project._id) || [];
+            const doneCount = linked.filter((t: any) => t.status === 'done').length;
+            const totalCount = linked.length;
+            const pct = totalCount > 0 ? Math.round((doneCount / totalCount) * 100) : 0;
+            const previewItems = linked.slice(0, 3).map((t: any) => ({
+              text: t.text,
+              isCompleted: t.status === 'done',
+            }));
+
+            return (
+              <Reanimated.View key={project._id} entering={FadeInDown.duration(450).delay(i * 50)} style={{ width: '48%' }}>
+                <ProjectFolderCard
+                  id={project._id}
+                  name={project.name}
+                  color={project.color}
+                  icon={project.icon || 'folder-outline'}
+                  itemCount={totalCount}
+                  progressPct={pct}
+                  previewItems={previewItems}
+                  index={i}
+                  onPress={() => onSelectProject(project._id)}
+                  onMenuPress={() => onOpenAction({
+                    title: project.name,
+                    options: [
+                      { label: t.edit || 'Edit', icon: 'create-outline', onPress: () => onEditProject(project) },
+                      { label: t.share || 'Share', icon: 'share-social-outline', onPress: () => Share.share({ message: `Project: ${project.name}` }) },
+                      {
+                        label: t.delete || 'Delete',
+                        icon: 'trash-outline',
+                        variant: 'destructive',
+                        onPress: () => {
+                          Alert.alert(
+                            t.confirmDeleteTitle || "Confirm Delete",
+                            t.confirmDeleteProject || "Are you sure you want to delete this project and unlink all its tasks?",
+                            [
+                              { text: t.cancel || "Cancel", style: "cancel" },
+                              { text: t.delete || "Delete", style: "destructive", onPress: () => onDeleteProject(project._id) }
+                            ]
+                          );
+                        }
+                      }
+                    ]
+                  })}
+                />
+              </Reanimated.View>
+            );
+          })}
+
+          <Reanimated.View entering={FadeInDown.duration(450).delay(projects.length * 50)} style={{ width: '48%' }}>
+            <AddProjectFolderCard onPress={onAddProject} />
+          </Reanimated.View>
+        </View>
 
         {/* Category Lists Section */}
         <View style={{ width: '100%', marginTop: 20 }}>
@@ -1289,20 +1325,19 @@ type Layer = 'categories' | 'categoryDetail' | 'subCategoryProjects' | 'detail';
 
 const Projects: React.FC = () => {
   const { colors } = useTheme();
-  const { userId } = useAuth();
-  const { language } = useAuth();
+  const { userId, language } = useAuth();
   const { isArabic } = useTranslation(language);
-  const styles = createProjectsStyles(colors);
+  const styles = React.useMemo(() => createProjectsStyles(colors, isArabic), [colors, isArabic]);
   const { showGuide, dismissGuide } = useScreenGuide('projects');
 
   const projectsTips: GuideTip[] = isArabic ? [
-    { icon: 'folder-outline', title: 'أنشئ فئة', description: 'اضغط "+ إضافة فئة" لتنظيم مشاريعك في مجموعات.', accentColor: '#A89CFF' },
-    { icon: 'rocket-outline', title: 'أضف مشروع', description: 'ادخل أي فئة واضغط "+ مشروع" لإضافة مشروع جديد.', accentColor: '#4EE6C1' },
-    { icon: 'layers-outline', title: 'فئات فرعية', description: 'أضف فئات فرعية لتنظيم أعمق داخل كل فئة.', accentColor: '#F2B544' },
+    { icon: 'folder-outline', title: 'أنشئ فئة', description: 'اضغط "+ إضافة فئة" لتنظيم مشاريعك في مجموعات.', accentColor: '#dbd4fd' },
+    { icon: 'rocket-outline', title: 'أضف مشروع', description: 'ادخل أي فئة واضغط "+ مشروع" لإضافة مشروع جديد.', accentColor: '#defef9' },
+    { icon: 'layers-outline', title: 'فئات فرعية', description: 'أضف فئات فرعية لتنظيم أعمق داخل كل فئة.', accentColor: '#f6e5c9' },
   ] : [
-    { icon: 'folder-outline', title: 'Create a Category', description: 'Tap "+ Add Category" to organize your projects into groups.', accentColor: '#A89CFF' },
-    { icon: 'rocket-outline', title: 'Add a Project', description: 'Enter any category and tap "+ Add" to create a new project.', accentColor: '#4EE6C1' },
-    { icon: 'layers-outline', title: 'Sub-Categories', description: 'Add sub-categories for deeper organization inside each category.', accentColor: '#F2B544' },
+    { icon: 'folder-outline', title: 'Create a Category', description: 'Tap "+ Add Category" to organize your projects into groups.', accentColor: '#dbd4fd' },
+    { icon: 'rocket-outline', title: 'Add a Project', description: 'Enter any category and tap "+ Add" to create a new project.', accentColor: '#defef9' },
+    { icon: 'layers-outline', title: 'Sub-Categories', description: 'Add sub-categories for deeper organization inside each category.', accentColor: '#f6e5c9' },
   ];
 
   const [layer, setLayer] = useState<Layer>('categories');
@@ -1358,7 +1393,7 @@ const Projects: React.FC = () => {
   }, [layer, selectedSubId]);
 
   const getTitle = () => {
-    if (layer === 'categories') return 'Projects';
+    if (layer === 'categories') return 'Spaces';
     if (layer === 'categoryDetail') return selectedCatName;
     if (layer === 'subCategoryProjects') return selectedSubName;
     return 'Project Details';
@@ -1417,7 +1452,7 @@ const Projects: React.FC = () => {
 
         {layer === 'categories' && (
           <CategoriesView 
-            styles={styles} colors={colors} userId={userId} 
+            styles={styles} colors={colors} userId={userId} isArabic={isArabic}
             onAddCategory={() => setIsAddingCategory(true)} 
             onEditCategory={(cat) => { setEditingCategory({ id: cat._id, name: cat.name, icon: cat.icon, color: cat.color }); setIsAddingCategory(true); }}
             onSelectCategory={(id, name) => { setSelectedCatId(id); setSelectedCatName(name); setLayer('categoryDetail'); }} 
@@ -1427,21 +1462,15 @@ const Projects: React.FC = () => {
         
         {layer === 'categoryDetail' && selectedCatId && (
           <CategoryDetailView 
-            styles={styles} colors={colors} categoryId={selectedCatId} categoryName={selectedCatName} userId={userId}
-            onSelectSubCategory={(id, name) => { setSelectedSubId(id); setSelectedSubName(name); setLayer('subCategoryProjects'); }}
-            onSelectProject={(id) => { setSelectedProjId(id); setSelectedSubId(null); setLayer('detail'); }}
-            onAddSubCategory={() => setIsAddingSubCategory(true)}
+            styles={styles} colors={colors} categoryId={selectedCatId} categoryName={selectedCatName} userId={userId} isArabic={isArabic}
+            onSelectProject={(id) => { setSelectedProjId(id); setLayer('detail'); }}
             onAddProject={() => setIsAddingProject(true)}
             onEditCategory={(cat) => { setEditingCategory({ id: cat._id, name: cat.name, icon: cat.icon, color: cat.color }); setIsAddingCategory(true); }}
-            onEditSubCategory={(sub) => { setEditingSubCategory({ id: sub._id, name: sub.name, icon: sub.icon, color: sub.color }); setIsAddingSubCategory(true); }}
             onEditProject={(proj) => { setEditingProject({ id: proj._id, name: proj.name, description: proj.description, icon: proj.icon, color: proj.color }); setIsAddingProject(true); }}
             onDeleteCategory={(id) => {
               deleteCategory({ id });
               setLayer('categories');
               setSelectedCatId(null);
-            }}
-            onDeleteSubCategory={(id) => {
-               deleteSubCategory({ id });
             }}
             onDeleteProject={(id) => {
                deleteProject({ id });

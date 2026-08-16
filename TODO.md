@@ -1,2 +1,6 @@
-- [x] Update `components/FloatingActionButton.tsx` to fix Add a Task gradient clipping
-- [x] Mark TODO complete after edit
+# Todo
+
+- ✅ Analyze ToDoIt app features and capabilities
+- ✅ Research competitor task management apps and their unique features
+- ✅ Identify gaps and opportunities for ToDoIt improvement
+- ✅ Create competitor analysis report with recommendations
