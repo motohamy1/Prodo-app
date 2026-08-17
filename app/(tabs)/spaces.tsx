@@ -33,7 +33,6 @@ import TodoCard from '@/components/TodoCard';
 import ActionModal from '@/components/ActionModal';
 import TimerModal from '@/components/TimerModal';
 import ProjectPickerModal from '@/components/ProjectPickerModal';
-import CategoryListModal from '@/components/CategoryListModal';
 import { createHomeStyles } from '@/assets/styles/home.styles';
 import { useScreenGuide } from '@/hooks/useScreenGuide';
 import ScreenGuide from '@/components/ScreenGuide';
@@ -42,6 +41,10 @@ import { LIST_TYPE_COLORS, PROJECT_COLORS } from '@/utils/magicColors';
 import Reanimated, { FadeInDown } from 'react-native-reanimated';
 import CategoryCard from '@/components/CategoryCard';
 import ProjectFolderCard, { AddProjectFolderCard } from '@/components/ProjectFolderCard';
+import AnimatedWavyHeader from '@/components/AnimatedWavyHeader';
+import * as DocumentPicker from 'expo-document-picker';
+import * as ImagePicker from 'expo-image-picker';
+import * as WebBrowser from 'expo-web-browser';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -65,10 +68,10 @@ const PROJECT_ICONS = [
 const ACCENT_COLORS = PROJECT_COLORS;
 
 const RESOURCE_TYPES: { key: string; label: string; icon: string; color: string }[] = [
-  { key: 'link',  label: 'Link',  icon: 'link-outline',          color: LIST_TYPE_COLORS.todo },
-  { key: 'video', label: 'Video', icon: 'videocam-outline',       color: LIST_TYPE_COLORS.bullet },
-  { key: 'image', label: 'Image', icon: 'image-outline',          color: LIST_TYPE_COLORS.checklist },
-  { key: 'note',  label: 'Note',  icon: 'document-text-outline',  color: LIST_TYPE_COLORS.toggle },
+  { key: 'file',  label: 'File / Doc',  icon: 'document-text-outline', color: '#3B82F6' },
+  { key: 'image', label: 'Photo',       icon: 'image-outline',         color: '#10B981' },
+  { key: 'link',  label: 'Web Link',    icon: 'globe-outline',         color: '#A78BFA' },
+  { key: 'note',  label: 'Note',        icon: 'reader-outline',        color: '#F59E0B' },
 ];
 
 function getStatusColor(status: string | undefined, colors: any) {
@@ -165,26 +168,29 @@ const AddSubCategoryModal = ({ visible, onClose, colors, styles, onAdd, initialD
 
 const AddCategoryModal = ({ visible, onClose, colors, styles, onAdd, initialData }: {
   visible: boolean; onClose: () => void; colors: any; styles: any;
-  onAdd: (name: string, icon: string, color: string) => void;
-  initialData?: { name: string; icon: string; color: string; id: Id<'projectCategories'> };
+  onAdd: (name: string, icon: string, color: string, tag: string) => void;
+  initialData?: { name: string; icon: string; color: string; tag?: string; id: Id<'projectCategories'> };
 }) => {
   const [name, setName] = useState('');
   const [icon, setIcon] = useState(CATEGORY_ICONS[0]);
   const [color, setColor] = useState(ACCENT_COLORS[0]);
+  const [tag, setTag] = useState('');
 
   useEffect(() => {
     if (initialData) {
       setName(initialData.name);
       setIcon(initialData.icon);
       setColor(initialData.color);
+      setTag(initialData.tag || '');
     } else {
       setName('');
       setIcon(CATEGORY_ICONS[0]);
       setColor(ACCENT_COLORS[0]);
+      setTag('');
     }
   }, [initialData, visible]);
 
-  const handleAdd = () => { if (!name.trim()) return; onAdd(name.trim(), icon, color); setName(''); onClose(); };
+  const handleAdd = () => { if (!name.trim()) return; onAdd(name.trim(), icon, color, tag.trim()); setName(''); setTag(''); onClose(); };
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <View style={{ flex: 1 }}>
@@ -199,6 +205,8 @@ const AddCategoryModal = ({ visible, onClose, colors, styles, onAdd, initialData
             <Text style={styles.modalTitle}>{initialData ? 'Edit Category' : 'New Category'}</Text>
             <Text style={styles.modalLabel}>Name</Text>
             <TextInput style={[styles.modalInput, { minHeight: 40, paddingVertical: Platform.OS === 'ios' ? 8 : 4 }]} placeholder="e.g. Programming, Medicine…" placeholderTextColor={colors.textMuted} value={name} onChangeText={setName} autoFocus multiline={true} blurOnSubmit={true} scrollEnabled={false} />
+            <Text style={styles.modalLabel}>Tag / Type (optional)</Text>
+            <TextInput style={[styles.modalInput, { minHeight: 40, paddingVertical: Platform.OS === 'ios' ? 8 : 4 }]} placeholder="e.g. #programming, Medicine, Design…" placeholderTextColor={colors.textMuted} value={tag} onChangeText={setTag} multiline={true} blurOnSubmit={true} scrollEnabled={false} />
             <Text style={styles.modalLabel}>Icon</Text>
             <View style={styles.iconPicker}>
               {CATEGORY_ICONS.map(ic => (
@@ -286,11 +294,85 @@ const AddResourceModal = ({ visible, onClose, colors, styles, onAdd }: {
   visible: boolean; onClose: () => void; colors: any; styles: any;
   onAdd: (type: string, title: string, url?: string, note?: string) => void;
 }) => {
-  const [resType, setResType] = useState('link');
+  const [resType, setResType] = useState('file');
   const [title, setTitle] = useState('');
   const [url, setUrl] = useState('');
   const [note, setNote] = useState('');
-  const handleAdd = () => { if (!title.trim()) return; onAdd(resType, title.trim(), url.trim() || undefined, note.trim() || undefined); setTitle(''); onClose(); };
+  const [selectedFile, setSelectedFile] = useState<{ name: string; size?: string; uri: string } | null>(null);
+  const [isPicking, setIsPicking] = useState(false);
+
+  const resetForm = () => {
+    setTitle('');
+    setUrl('');
+    setNote('');
+    setSelectedFile(null);
+    setResType('file');
+  };
+
+  const handlePickDocument = async () => {
+    try {
+      setIsPicking(true);
+      const result = await DocumentPicker.getDocumentAsync({
+        copyToCacheDirectory: true,
+        type: '*/*',
+      });
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        const asset = result.assets[0];
+        const formattedSize = asset.size ? `${(asset.size / (1024 * 1024)).toFixed(2)} MB` : undefined;
+        setSelectedFile({
+          name: asset.name,
+          size: formattedSize,
+          uri: asset.uri,
+        });
+        setUrl(asset.uri);
+        if (!title.trim()) {
+          setTitle(asset.name);
+        }
+      }
+    } catch (err) {
+      console.warn('Error picking document', err);
+    } finally {
+      setIsPicking(false);
+    }
+  };
+
+  const handlePickImage = async () => {
+    try {
+      setIsPicking(true);
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images'],
+        allowsEditing: false,
+        quality: 0.85,
+      });
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        const asset = result.assets[0];
+        const fileName = asset.fileName || `Photo_${Date.now()}.jpg`;
+        const formattedSize = asset.fileSize ? `${(asset.fileSize / (1024 * 1024)).toFixed(2)} MB` : undefined;
+        setSelectedFile({
+          name: fileName,
+          size: formattedSize,
+          uri: asset.uri,
+        });
+        setUrl(asset.uri);
+        if (!title.trim()) {
+          setTitle(fileName);
+        }
+      }
+    } catch (err) {
+      console.warn('Error picking image', err);
+    } finally {
+      setIsPicking(false);
+    }
+  };
+
+  const handleAdd = () => {
+    const finalTitle = title.trim() || selectedFile?.name || (resType === 'link' ? url.trim() : 'Resource');
+    if (!finalTitle) return;
+    onAdd(resType, finalTitle, url.trim() || undefined, note.trim() || undefined);
+    resetForm();
+    onClose();
+  };
+
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <View style={{ flex: 1 }}>
@@ -298,24 +380,151 @@ const AddResourceModal = ({ visible, onClose, colors, styles, onAdd }: {
           <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(0,0,0,0.6)' }]} />
         </TouchableWithoutFeedback>
         <View pointerEvents="box-none" style={StyleSheet.absoluteFill}>
-          <KeyboardAvoidingView style={{ flex: 1, justifyContent: 'flex-end' }} behavior="padding">
+          <KeyboardAvoidingView style={{ flex: 1, justifyContent: 'flex-end' }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
             <ScrollView style={{ maxHeight: '90%' }} contentContainerStyle={{ justifyContent: 'flex-end', flexGrow: 1 }} keyboardShouldPersistTaps="handled">
               <View style={styles.modalSheet}>
-            <View style={styles.modalHandle} />
-            <Text style={styles.modalTitle}>Add Resource</Text>
-            <Text style={styles.modalLabel}>Type</Text>
-            <View style={styles.addResourceTypeRow}>
-              {RESOURCE_TYPES.map(rt => (
-                <TouchableOpacity key={rt.key} style={[styles.resourceTypeBtn, resType === rt.key && styles.resourceTypeBtnSelected]} onPress={() => setResType(rt.key)}>
-                  <Ionicons name={rt.icon as any} size={20} color={resType === rt.key ? colors.primary : colors.textMuted} />
-                  <Text style={[styles.resourceTypeBtnText, resType === rt.key && styles.resourceTypeBtnTextSelected]}>{rt.label}</Text>
+                <View style={styles.modalHandle} />
+                <Text style={styles.modalTitle}>Add Resource</Text>
+                
+                {/* Resource Type Selector */}
+                <Text style={styles.modalLabel}>Resource Type</Text>
+                <View style={styles.addResourceTypeRow}>
+                  {RESOURCE_TYPES.map(rt => {
+                    const isSelected = resType === rt.key;
+                    return (
+                      <TouchableOpacity
+                        key={rt.key}
+                        style={[
+                          styles.resourceTypeBtn,
+                          isSelected && [styles.resourceTypeBtnSelected, { borderColor: rt.color, backgroundColor: rt.color + '18' }]
+                        ]}
+                        onPress={() => {
+                          setResType(rt.key);
+                          setSelectedFile(null);
+                          setUrl('');
+                        }}
+                      >
+                        <Ionicons name={rt.icon as any} size={18} color={isSelected ? rt.color : colors.textMuted} />
+                        <Text style={[styles.resourceTypeBtnText, isSelected && { color: rt.color, fontWeight: '800' }]}>
+                          {rt.label}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+
+                {/* File Upload from Device */}
+                {resType === 'file' && (
+                  <View>
+                    <Text style={styles.modalLabel}>Document / File from Device</Text>
+                    {selectedFile ? (
+                      <View style={styles.filePreviewBox}>
+                        <Ionicons name="document-attach" size={24} color="#3B82F6" />
+                        <View style={{ flex: 1 }}>
+                          <Text style={styles.filePreviewName} numberOfLines={1}>{selectedFile.name}</Text>
+                          {selectedFile.size && <Text style={styles.filePreviewSize}>{selectedFile.size}</Text>}
+                        </View>
+                        <TouchableOpacity onPress={handlePickDocument}>
+                          <Ionicons name="swap-horizontal" size={18} color={colors.primary} />
+                        </TouchableOpacity>
+                      </View>
+                    ) : (
+                      <TouchableOpacity
+                        style={styles.uploadPickerBox}
+                        onPress={handlePickDocument}
+                        activeOpacity={0.8}
+                      >
+                        <Ionicons name="cloud-upload-outline" size={28} color="#3B82F6" />
+                        <Text style={[styles.uploadPickerText, { color: '#3B82F6' }]}>
+                          {isPicking ? 'Opening Files...' : 'Choose File from Device'}
+                        </Text>
+                        <Text style={styles.uploadPickerSubtext}>PDF, DOC, ZIP, Audio, or any file</Text>
+                      </TouchableOpacity>
+                    )}
+                  </View>
+                )}
+
+                {/* Photo / Image from Gallery */}
+                {resType === 'image' && (
+                  <View>
+                    <Text style={styles.modalLabel}>Photo from Gallery</Text>
+                    {selectedFile ? (
+                      <View style={styles.filePreviewBox}>
+                        <Ionicons name="image" size={24} color="#10B981" />
+                        <View style={{ flex: 1 }}>
+                          <Text style={styles.filePreviewName} numberOfLines={1}>{selectedFile.name}</Text>
+                          {selectedFile.size && <Text style={styles.filePreviewSize}>{selectedFile.size}</Text>}
+                        </View>
+                        <TouchableOpacity onPress={handlePickImage}>
+                          <Ionicons name="swap-horizontal" size={18} color={colors.primary} />
+                        </TouchableOpacity>
+                      </View>
+                    ) : (
+                      <TouchableOpacity
+                        style={styles.uploadPickerBox}
+                        onPress={handlePickImage}
+                        activeOpacity={0.8}
+                      >
+                        <Ionicons name="images-outline" size={28} color="#10B981" />
+                        <Text style={[styles.uploadPickerText, { color: '#10B981' }]}>
+                          {isPicking ? 'Opening Gallery...' : 'Select Photo / Image'}
+                        </Text>
+                        <Text style={styles.uploadPickerSubtext}>Upload screenshots, mockups, or photos</Text>
+                      </TouchableOpacity>
+                    )}
+                  </View>
+                )}
+
+                {/* Remote Web Link */}
+                {resType === 'link' && (
+                  <View>
+                    <Text style={styles.modalLabel}>Remote URL / Web Link</Text>
+                    <TextInput
+                      style={[styles.modalInput, { minHeight: 44 }]}
+                      placeholder="https://github.com, figma.com, docs…"
+                      placeholderTextColor={colors.textMuted}
+                      value={url}
+                      onChangeText={setUrl}
+                      autoCapitalize="none"
+                      keyboardType="url"
+                    />
+                  </View>
+                )}
+
+                {/* Title */}
+                <Text style={styles.modalLabel}>Title</Text>
+                <TextInput
+                  style={[styles.modalInput, { minHeight: 42, paddingVertical: Platform.OS === 'ios' ? 8 : 4 }]}
+                  placeholder={resType === 'link' ? "e.g. Design Specs, GitHub Repo…" : "Resource display title…"}
+                  placeholderTextColor={colors.textMuted}
+                  value={title}
+                  onChangeText={setTitle}
+                />
+
+                {/* Notes & Description */}
+                <Text style={styles.modalLabel}>{resType === 'note' ? 'Note Content' : 'Note (optional)'}</Text>
+                <TextInput
+                  style={[styles.modalInput, { minHeight: resType === 'note' ? 80 : 50, textAlignVertical: 'top' }]}
+                  placeholder={resType === 'note' ? "Write your note, code snippet, or instructions here…" : "Add short description or context…"}
+                  placeholderTextColor={colors.textMuted}
+                  value={note}
+                  onChangeText={setNote}
+                  multiline
+                />
+
+                <TouchableOpacity
+                  style={[
+                    styles.modalPrimaryBtn,
+                    { backgroundColor: RESOURCE_TYPES.find(r => r.key === resType)?.color || colors.primary }
+                  ]}
+                  onPress={handleAdd}
+                >
+                  <Text style={[styles.modalPrimaryBtnText, { color: '#16270E', fontWeight: '800' }]}>Add Resource</Text>
                 </TouchableOpacity>
-              ))}
-            </View>
-            <Text style={styles.modalLabel}>Title</Text>
-            <TextInput style={[styles.modalInput, { minHeight: 40, paddingVertical: Platform.OS === 'ios' ? 8 : 4 }]} placeholder="Resource title…" placeholderTextColor={colors.textMuted} value={title} onChangeText={setTitle} multiline={true} blurOnSubmit={true} scrollEnabled={false} />
-            <TouchableOpacity style={styles.modalPrimaryBtn} onPress={handleAdd}><Text style={styles.modalPrimaryBtnText}>Add Resource</Text></TouchableOpacity>
-            <TouchableOpacity style={styles.modalSecondaryBtn} onPress={onClose}><Text style={styles.modalSecondaryBtnText}>Cancel</Text></TouchableOpacity>
+
+                <TouchableOpacity style={styles.modalSecondaryBtn} onPress={onClose}>
+                  <Text style={styles.modalSecondaryBtnText}>Cancel</Text>
+                </TouchableOpacity>
               </View>
             </ScrollView>
           </KeyboardAvoidingView>
@@ -390,7 +599,7 @@ const CategoriesView = ({ styles, colors, onSelectCategory, onAddCategory, onEdi
               icon={cat.icon || 'briefcase-outline'}
               index={i}
               subtitle={subtitle}
-              status={status}
+              status={cat.tag ? cat.tag : status}
               progressPct={progressPct}
               isArabic={isArabic}
               onPress={() => onSelectCategory(cat._id, cat.name, cat.color)}
@@ -465,7 +674,7 @@ const CategoryDetailView = ({
   colors: any;
   categoryId: Id<'projectCategories'>;
   categoryName: string;
-  onSelectProject: (id: Id<'projects'>) => void;
+  onSelectProject: (id: Id<'projects'>, name?: string) => void;
   onAddProject: () => void;
   onEditCategory: (cat: any) => void;
   onEditProject: (proj: any) => void;
@@ -479,26 +688,72 @@ const CategoryDetailView = ({
   const category = useOfflineQuery<any>('projects.getCategory', api.projects.getCategory, { id: categoryId });
   const directProjects = useOfflineQuery<any[]>('projects.getProjectsByCategory', api.projects.getProjectsByCategory, { categoryId });
   const allTodos = useOfflineQuery<any[]>('todos', api.todos.get, userId ? { userId } : 'skip');
-  const checklistItems = useOfflineQuery<any[]>('categoryItems_checklist', api.projects.getCategoryItems, { categoryId, listType: 'checklist' });
-  const bulletItems = useOfflineQuery<any[]>('categoryItems_bullet', api.projects.getCategoryItems, { categoryId, listType: 'bullet' });
-  const toggleItems = useOfflineQuery<any[]>('categoryItems_toggle', api.projects.getCategoryItems, { categoryId, listType: 'toggle' });
+  
+  // Real-time reactive items for this category from Convex
+  const toggleItems = useOfflineQuery<any[]>('categoryItems_toggle', api.projects.getCategoryItems, { categoryId, listType: 'toggle' }) || [];
+  const checklistItems = useOfflineQuery<any[]>('categoryItems_checklist', api.projects.getCategoryItems, { categoryId, listType: 'checklist' }) || [];
 
-  const [listModalVisible, setListModalVisible] = useState(false);
-  const [activeListType, setActiveListType] = useState<string>('checklist');
+  const updateCategoryMutation = useMutation(api.projects.updateCategory);
+  const addCategoryItemMutation = useMutation(api.projects.addCategoryItem);
+  const updateCategoryItemMutation = useMutation(api.projects.updateCategoryItem);
+  const deleteCategoryItemMutation = useMutation(api.projects.deleteCategoryItem);
 
-  const getListCount = (key: string) => {
-    if (key === 'todo') {
-      return allTodos?.filter((t: any) => t.categoryId === categoryId && !t.projectId && !t.subCategoryId).length || 0;
+  // Description / Workspace Overview state
+  const [editingDesc, setEditingDesc] = useState(false);
+  const [descText, setDescText] = useState('');
+
+  useEffect(() => {
+    if (category?.description !== undefined) {
+      setDescText(category.description || '');
     }
-    if (key === 'checklist') return checklistItems?.length || 0;
-    if (key === 'bullet') return bulletItems?.length || 0;
-    if (key === 'toggle') return toggleItems?.length || 0;
-    return 0;
+  }, [category?.description]);
+
+  const handleSaveDescription = async () => {
+    await updateCategoryMutation({ id: categoryId, description: descText.trim() });
+    setEditingDesc(false);
   };
 
-  const openListModal = (listType: string) => {
-    setActiveListType(listType);
-    setListModalVisible(true);
+  // Toggle Notes state
+  const [showAddToggle, setShowAddToggle] = useState(false);
+  const [newToggleTitle, setNewToggleTitle] = useState('');
+  const [newToggleContent, setNewToggleContent] = useState('');
+  const [expandedToggleIds, setExpandedToggleIds] = useState<Record<string, boolean>>({});
+
+  const toggleExpandItem = (itemId: string) => {
+    setExpandedToggleIds(prev => ({
+      ...prev,
+      [itemId]: !prev[itemId],
+    }));
+  };
+
+  const handleAddToggleItem = async () => {
+    if (!newToggleTitle.trim() || !userId) return;
+    await addCategoryItemMutation({
+      userId,
+      categoryId,
+      listType: 'toggle',
+      text: newToggleTitle.trim(),
+      content: newToggleContent.trim() || undefined,
+    });
+    setNewToggleTitle('');
+    setNewToggleContent('');
+    setShowAddToggle(false);
+  };
+
+  // Space Checklist state
+  const [showAddCheck, setShowAddCheck] = useState(false);
+  const [newCheckText, setNewCheckText] = useState('');
+
+  const handleAddChecklist = async () => {
+    if (!newCheckText.trim() || !userId) return;
+    await addCategoryItemMutation({
+      userId,
+      categoryId,
+      listType: 'checklist',
+      text: newCheckText.trim(),
+    });
+    setNewCheckText('');
+    setShowAddCheck(false);
   };
 
   if (!directProjects) {
@@ -509,292 +764,36 @@ const CategoryDetailView = ({
     );
   }
 
-  // Calculate total tasks across all projects in this category
-  const totalCategoryTasks = allTodos?.filter((t: any) => t.categoryId === categoryId || directProjects.some(p => p._id === t.projectId)).length || 0;
+  const doneChecklist = checklistItems.filter((item: any) => item.isCompleted).length;
+  const totalChecklist = checklistItems.length;
 
   return (
-    <>
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 120 }}>
-        {/* ─── Space Hero Summary Bar ───────────────────────────────── */}
-        <View style={styles.categoryHero}>
-          <View style={styles.categoryHeroTop}>
-            <View style={styles.categoryHeroLeft}>
-              <View style={[styles.categoryHeroIconWrap, { backgroundColor: (category?.color || colors.primary) + '22' }]}>
-                <Ionicons name={(category?.icon || 'briefcase-outline') as any} size={24} color={category?.color || colors.primary} />
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.categoryHeroTitle} numberOfLines={1}>
-                  {category?.name || categoryName}
-                </Text>
-                <Text style={styles.categoryHeroSubtitle}>
-                  {isArabic
-                    ? `${directProjects.length} ${directProjects.length === 1 ? 'مشروع' : 'مشاريع'} • ${totalCategoryTasks} ${totalCategoryTasks === 1 ? 'مهمة' : 'مهام'}`
-                    : `${directProjects.length} project${directProjects.length !== 1 ? 's' : ''} • ${totalCategoryTasks} task${totalCategoryTasks !== 1 ? 's' : ''}`}
-                </Text>
-              </View>
-            </View>
-
-            <View style={styles.categoryHeroActions}>
-              <TouchableOpacity
-                style={styles.headerActionBtn}
-                onPress={() => onOpenAction({
-                  title: categoryName,
-                  options: [
-                    {
-                      label: isArabic ? 'تعديل الفئة' : 'Edit Space',
-                      icon: 'create-outline',
-                      onPress: () => onEditCategory(category || { _id: categoryId, name: categoryName })
-                    },
-                    {
-                      label: isArabic ? 'مشاركة الفئة' : 'Share Space',
-                      icon: 'share-social-outline',
-                      onPress: () => Share.share({ message: `Space: ${categoryName}` })
-                    },
-                    {
-                      label: t.delete || 'Delete Space',
-                      icon: 'trash-outline',
-                      variant: 'destructive',
-                      onPress: () => {
-                        Alert.alert(
-                          t.confirmDeleteTitle || "Confirm Delete",
-                          isArabic ? "هل أنت متأكد من حذف هذه المساحة وجميع المشاريع بداخلها؟" : "Are you sure you want to delete this space and all its projects?",
-                          [
-                            { text: t.cancel || "Cancel", style: "cancel" },
-                            { text: t.delete || "Delete", style: "destructive", onPress: () => onDeleteCategory(categoryId) }
-                          ]
-                        );
-                      }
-                    }
-                  ]
-                })}
-              >
-                <Ionicons name="ellipsis-vertical" size={18} color={colors.textMuted} />
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-
-        {/* ─── Projects Section (3D Folder Grid) ────────────────────── */}
-        <View style={{ paddingHorizontal: 20, marginTop: 4 }}>
-          <View style={{ flexDirection: isArabic ? 'row-reverse' : 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
-            <View style={{ flexDirection: isArabic ? 'row-reverse' : 'row', alignItems: 'center', gap: 8 }}>
-              <Text style={[styles.sectionLabel, { paddingHorizontal: 0, marginBottom: 0 }]}>
-                {isArabic ? 'المشاريع' : 'Projects'}
-              </Text>
-              <View style={{ backgroundColor: colors.surface, paddingHorizontal: 8, paddingVertical: 2, borderRadius: 10, borderWidth: 1, borderColor: colors.border }}>
-                <Text style={{ fontSize: 11, fontWeight: '700', color: colors.textMuted }}>{directProjects.length}</Text>
-              </View>
-            </View>
-
-            <TouchableOpacity
-              onPress={onAddProject}
-              style={{ flexDirection: isArabic ? 'row-reverse' : 'row', alignItems: 'center', gap: 4 }}
-            >
-              <Ionicons name="add-circle" size={18} color={colors.primary} />
-              <Text style={{ fontSize: 13, fontWeight: '700', color: colors.primary }}>
-                {isArabic ? 'مشروع جديد' : 'New Project'}
-              </Text>
-            </TouchableOpacity>
-          </View>
-
-          <View style={[styles.projectsGrid, { paddingHorizontal: 0 }]}>
-            {directProjects.map((project, i) => {
-              const linked = allTodos?.filter((t: any) => t.projectId === project._id) || [];
-              const doneCount = linked.filter((t: any) => t.status === 'done').length;
-              const totalCount = linked.length;
-              const pct = totalCount > 0 ? Math.round((doneCount / totalCount) * 100) : 0;
-              const previewItems = linked.slice(0, 3).map((t: any) => ({
-                text: t.text,
-                isCompleted: t.status === 'done',
-              }));
-
-              return (
-                <Reanimated.View
-                  key={project._id}
-                  entering={FadeInDown.duration(450).delay(i * 50)}
-                  style={{ width: '48%' }}
-                >
-                  <ProjectFolderCard
-                    id={project._id}
-                    name={project.name}
-                    color={project.color}
-                    icon={project.icon || 'folder-outline'}
-                    itemCount={totalCount}
-                    progressPct={pct}
-                    previewItems={previewItems}
-                    index={i}
-                    isArabic={isArabic}
-                    onPress={() => onSelectProject(project._id)}
-                    onMenuPress={() => onOpenAction({
-                      title: project.name,
-                      options: [
-                        { label: isArabic ? 'تعديل المشروع' : 'Edit Project', icon: 'create-outline', onPress: () => onEditProject(project) },
-                        { label: isArabic ? 'مشاركة المشروع' : 'Share Project', icon: 'share-social-outline', onPress: () => Share.share({ message: `Project: ${project.name}` }) },
-                        {
-                          label: t.delete || 'Delete Project',
-                          icon: 'trash-outline',
-                          variant: 'destructive',
-                          onPress: () => {
-                            Alert.alert(
-                              t.confirmDeleteTitle || "Confirm Delete",
-                              isArabic ? "هل أنت متأكد من حذف هذا المشروع؟" : "Are you sure you want to delete this project and unlink its tasks?",
-                              [
-                                { text: t.cancel || "Cancel", style: "cancel" },
-                                { text: t.delete || "Delete", style: "destructive", onPress: () => onDeleteProject(project._id) }
-                              ]
-                            );
-                          }
-                        }
-                      ]
-                    })}
-                  />
-                </Reanimated.View>
-              );
-            })}
-
-            {/* Ghost "+ Add Project" Folder Card */}
-            <Reanimated.View
-              entering={FadeInDown.duration(450).delay(directProjects.length * 50)}
-              style={{ width: '48%' }}
-            >
-              <AddProjectFolderCard
-                onPress={onAddProject}
-                isArabic={isArabic}
-              />
-            </Reanimated.View>
-          </View>
-        </View>
-
-        {/* ─── Category Lists Section ────────────────────────────────── */}
-        <View style={styles.categoryListsSection}>
-          <View style={{ flexDirection: isArabic ? 'row-reverse' : 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+    <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 120, paddingTop: 6 }}>
+      {/* ─── 1. Projects Section (3D Folder Grid) ────────────────────── */}
+      <View style={{ paddingHorizontal: 20, marginTop: 4 }}>
+        <View style={{ flexDirection: isArabic ? 'row-reverse' : 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+          <View style={{ flexDirection: isArabic ? 'row-reverse' : 'row', alignItems: 'center', gap: 8 }}>
             <Text style={[styles.sectionLabel, { paddingHorizontal: 0, marginBottom: 0 }]}>
-              {isArabic ? 'القوائم السريعة' : 'Quick Lists'}
+              {isArabic ? 'المشاريع' : 'Projects'}
             </Text>
+            <View style={{ backgroundColor: colors.surface, paddingHorizontal: 8, paddingVertical: 2, borderRadius: 10, borderWidth: 1, borderColor: colors.border }}>
+              <Text style={{ fontSize: 11, fontWeight: '700', color: colors.textMuted }}>{directProjects.length}</Text>
+            </View>
           </View>
-          <View style={styles.categoryListsGrid}>
-            {LIST_TYPE_CARDS.map((card, i) => {
-              const count = getListCount(card.key);
-              return (
-                <Reanimated.View key={card.key} entering={FadeInDown.duration(450).delay(i * 60)} style={styles.categoryListCard}>
-                  <TouchableOpacity
-                    style={styles.categoryListCardInner}
-                    onPress={() => openListModal(card.key)}
-                    activeOpacity={0.82}
-                  >
-                    <View style={[styles.categoryListCardIconWrap, { backgroundColor: card.color + '20' }]}>
-                      <Ionicons name={card.icon as any} size={24} color={card.color} />
-                    </View>
-                    <Text style={styles.categoryListCardTitle}>{card.label}</Text>
-                    <Text style={styles.categoryListCardCount}>{count} {count === 1 ? 'item' : 'items'}</Text>
-                  </TouchableOpacity>
-                </Reanimated.View>
-              );
-            })}
-          </View>
-        </View>
-      </ScrollView>
 
-      <CategoryListModal
-        visible={listModalVisible}
-        onClose={() => setListModalVisible(false)}
-        categoryId={categoryId}
-        listType={activeListType}
-        colors={colors}
-        styles={styles}
-        userId={userId}
-      />
-    </>
-  );
-};
-
-// ─── Layer 3: Sub-Category Projects Grid ─────────────────────────────────────
-
-const SubCategoryProjectsView = ({
-  styles, colors, subCategoryId, subCategoryName,
-  onSelectProject, onAddProject, onEditSubCategory, onEditProject, onDeleteSubCategory, onDeleteProject, onOpenAction, userId
-}: {
-  styles: any; colors: any;
-  subCategoryId: Id<'projectSubCategories'>; subCategoryName: string;
-  onSelectProject: (id: Id<'projects'>) => void;
-  onAddProject: () => void;
-  onEditSubCategory: (sub: any) => void;
-  onEditProject: (proj: any) => void;
-  onDeleteSubCategory: (id: Id<'projectSubCategories'>) => void;
-  onDeleteProject: (id: Id<'projects'>) => void;
-  onOpenAction: (config: any) => void;
-  userId: Id<'users'> | null;
-}) => {
-  const { t } = useTranslation();
-  const projects = useOfflineQuery<any[]>('projects.getProjectsBySubCategory', api.projects.getProjectsBySubCategory, { subCategoryId });
-  const allTodos = useOfflineQuery<any[]>('todos', api.todos.get, userId ? { userId } : 'skip');
-  const sub = useOfflineQuery<any>('projects.getSubCategory', api.projects.getSubCategory, { id: subCategoryId });
-  const checklistItems = useOfflineQuery<any[]>('subCategoryItems_checklist', api.projects.getCategoryItems, { subCategoryId, listType: 'checklist' });
-  const bulletItems = useOfflineQuery<any[]>('subCategoryItems_bullet', api.projects.getCategoryItems, { subCategoryId, listType: 'bullet' });
-  const toggleItems = useOfflineQuery<any[]>('subCategoryItems_toggle', api.projects.getCategoryItems, { subCategoryId, listType: 'toggle' });
-
-  const [listModalVisible, setListModalVisible] = useState(false);
-  const [activeListType, setActiveListType] = useState<string>('checklist');
-
-  const getListCount = (key: string) => {
-    if (key === 'todo') {
-      return allTodos?.filter((t: any) => t.subCategoryId === subCategoryId && !t.projectId).length || 0;
-    }
-    if (key === 'checklist') return checklistItems?.length || 0;
-    if (key === 'bullet') return bulletItems?.length || 0;
-    if (key === 'toggle') return toggleItems?.length || 0;
-    return 0;
-  };
-
-  const openListModal = (listType: string) => {
-    setActiveListType(listType);
-    setListModalVisible(true);
-  };
-
-  if (!projects) return <View style={styles.emptyContainer}><Ionicons name="hourglass-outline" size={40} color={colors.border} /></View>;
-
-  return (
-    <>
-      <ScrollView contentContainerStyle={{ paddingBottom: 120 }} showsVerticalScrollIndicator={false}>
-        <View style={{ width: '100%', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, marginBottom: 12, marginTop: 4 }}>
-          <Text style={[styles.sectionLabel, { paddingHorizontal: 0, marginBottom: 0 }]}>Projects in {subCategoryName}</Text>
           <TouchableOpacity
-             onPress={() => onOpenAction({
-               title: subCategoryName,
-               options: [
-                 {
-                   label: t.edit || 'Edit',
-                   icon: 'create-outline',
-                   onPress: () => sub && onEditSubCategory(sub)
-                 },
-                 {
-                   label: t.share || 'Share',
-                   icon: 'share-social-outline',
-                   onPress: () => Share.share({ message: `Sub-Category: ${subCategoryName}` })
-                 },
-                 {
-                   label: t.delete || 'Delete',
-                   icon: 'trash-outline',
-                   variant: 'destructive',
-                   onPress: () => {
-                     Alert.alert(
-                       t.confirmDeleteTitle || "Confirm Delete",
-                       t.confirmDeleteSubCategory || "Are you sure you want to delete this sub-category and all its child projects?",
-                       [
-                         { text: t.cancel || "Cancel", style: "cancel" },
-                         { text: t.delete || "Delete", style: "destructive", onPress: () => onDeleteSubCategory(subCategoryId) }
-                       ]
-                     );
-                   }
-                 }
-               ]
-             })}
+            onPress={onAddProject}
+            style={{ flexDirection: isArabic ? 'row-reverse' : 'row', alignItems: 'center', gap: 4 }}
           >
-            <Ionicons name="ellipsis-vertical" size={18} color={colors.textMuted} />
+            <Ionicons name="add-circle" size={18} color={colors.primary} />
+            <Text style={{ fontSize: 13, fontWeight: '700', color: colors.primary }}>
+              {isArabic ? 'مشروع جديد' : 'New Project'}
+            </Text>
           </TouchableOpacity>
         </View>
-        <View style={[styles.projectsGrid, { paddingHorizontal: 20 }]}>
-          {projects.map((project, i) => {
+
+        <View style={[styles.projectsGrid, { paddingHorizontal: 0 }]}>
+          {directProjects.map((project, i) => {
             const linked = allTodos?.filter((t: any) => t.projectId === project._id) || [];
             const doneCount = linked.filter((t: any) => t.status === 'done').length;
             const totalCount = linked.length;
@@ -805,30 +804,37 @@ const SubCategoryProjectsView = ({
             }));
 
             return (
-              <Reanimated.View key={project._id} entering={FadeInDown.duration(450).delay(i * 50)} style={{ width: '48%' }}>
+              <Reanimated.View
+                key={project._id}
+                entering={FadeInDown.duration(450).delay(i * 50)}
+                style={{ width: '48%' }}
+              >
                 <ProjectFolderCard
                   id={project._id}
                   name={project.name}
                   color={project.color}
                   icon={project.icon || 'folder-outline'}
+                  tag={category?.tag || categoryName}
                   itemCount={totalCount}
+                  doneCount={doneCount}
                   progressPct={pct}
                   previewItems={previewItems}
                   index={i}
-                  onPress={() => onSelectProject(project._id)}
+                  isArabic={isArabic}
+                  onPress={() => onSelectProject(project._id, project.name)}
                   onMenuPress={() => onOpenAction({
                     title: project.name,
                     options: [
-                      { label: t.edit || 'Edit', icon: 'create-outline', onPress: () => onEditProject(project) },
-                      { label: t.share || 'Share', icon: 'share-social-outline', onPress: () => Share.share({ message: `Project: ${project.name}` }) },
+                      { label: isArabic ? 'تعديل المشروع' : 'Edit Project', icon: 'create-outline', onPress: () => onEditProject(project) },
+                      { label: isArabic ? 'مشاركة المشروع' : 'Share Project', icon: 'share-social-outline', onPress: () => Share.share({ message: `Project: ${project.name}` }) },
                       {
-                        label: t.delete || 'Delete',
+                        label: t.delete || 'Delete Project',
                         icon: 'trash-outline',
                         variant: 'destructive',
                         onPress: () => {
                           Alert.alert(
                             t.confirmDeleteTitle || "Confirm Delete",
-                            t.confirmDeleteProject || "Are you sure you want to delete this project and unlink all its tasks?",
+                            isArabic ? "هل أنت متأكد من حذف هذا المشروع؟" : "Are you sure you want to delete this project and unlink its tasks?",
                             [
                               { text: t.cancel || "Cancel", style: "cancel" },
                               { text: t.delete || "Delete", style: "destructive", onPress: () => onDeleteProject(project._id) }
@@ -843,49 +849,423 @@ const SubCategoryProjectsView = ({
             );
           })}
 
-          <Reanimated.View entering={FadeInDown.duration(450).delay(projects.length * 50)} style={{ width: '48%' }}>
-            <AddProjectFolderCard onPress={onAddProject} />
+          {/* Ghost "+ Add Project" Folder Card */}
+          <Reanimated.View
+            entering={FadeInDown.duration(450).delay(directProjects.length * 50)}
+            style={{ width: '48%' }}
+          >
+            <AddProjectFolderCard
+              onPress={onAddProject}
+              isArabic={isArabic}
+            />
           </Reanimated.View>
         </View>
+      </View>
 
-        {/* Category Lists Section */}
-        <View style={{ width: '100%', marginTop: 20 }}>
-          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, paddingHorizontal: 6 }}>
-            <Text style={[styles.sectionLabel, { paddingHorizontal: 0, marginBottom: 0 }]}>Lists</Text>
+      {/* ─── 2. Workspace Overview / Description ───────────────────────── */}
+      <View style={styles.workspaceSection}>
+        <View style={[styles.sectionHeaderRow, isArabic && { flexDirection: 'row-reverse' }]}>
+          <View style={{ flexDirection: isArabic ? 'row-reverse' : 'row', alignItems: 'center', gap: 6 }}>
+            <Ionicons name="document-text-outline" size={17} color={colors.primary} />
+            <Text style={styles.workspaceSectionTitle}>
+              {isArabic ? 'نظرة عامة على المساحة' : 'Workspace Overview'}
+            </Text>
           </View>
-          <View style={styles.categoryListsGrid}>
-            {LIST_TYPE_CARDS.map((card, i) => {
-              const count = getListCount(card.key);
+          {!editingDesc ? (
+            <TouchableOpacity onPress={() => setEditingDesc(true)} style={styles.sectionPillBtn}>
+              <Ionicons name="pencil" size={13} color={colors.primary} />
+              <Text style={[styles.sectionPillBtnText, { color: colors.primary }]}>
+                {isArabic ? 'تعديل' : 'Edit'}
+              </Text>
+            </TouchableOpacity>
+          ) : (
+            <View style={{ flexDirection: isArabic ? 'row-reverse' : 'row', gap: 8 }}>
+              <TouchableOpacity onPress={() => { setEditingDesc(false); setDescText(category?.description || ''); }} style={styles.sectionPillBtn}>
+                <Text style={[styles.sectionPillBtnText, { color: colors.textMuted }]}>
+                  {isArabic ? 'إلغاء' : 'Cancel'}
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={handleSaveDescription} style={[styles.sectionPillBtn, { backgroundColor: colors.primary }]}>
+                <Text style={[styles.sectionPillBtnText, { color: '#000' }]}>
+                  {isArabic ? 'حفظ' : 'Save'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          )}
+        </View>
+
+        <View style={[styles.workspaceCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          {editingDesc ? (
+            <TextInput
+              style={[styles.workspaceDescInput, { color: colors.text, textAlign: isArabic ? 'right' : 'left' }]}
+              value={descText}
+              onChangeText={setDescText}
+              multiline
+              placeholder={isArabic ? 'أضف وصفاً، أهدافاً، أو إرشادات لمساحة العمل هذه...' : 'Add workspace description, goals, or core guidelines...'}
+              placeholderTextColor={colors.textMuted}
+              autoFocus
+            />
+          ) : (
+            <TouchableOpacity activeOpacity={0.8} onPress={() => setEditingDesc(true)}>
+              {category?.description ? (
+                <Text style={[styles.workspaceDescText, { color: colors.text, textAlign: isArabic ? 'right' : 'left' }]}>
+                  {category.description}
+                </Text>
+              ) : (
+                <Text style={[styles.workspaceDescPlaceholder, { color: colors.textMuted, textAlign: isArabic ? 'right' : 'left' }]}>
+                  {isArabic ? '+ اضغط لإضافة وصف أو أهداف لمساحة العمل هذه...' : '+ Tap to add workspace description, goals, or key rules...'}
+                </Text>
+              )}
+            </TouchableOpacity>
+          )}
+        </View>
+      </View>
+
+      {/* ─── 3. Toggle Notes & Guidelines ─────────────────────────────── */}
+      <View style={styles.workspaceSection}>
+        <View style={[styles.sectionHeaderRow, isArabic && { flexDirection: 'row-reverse' }]}>
+          <View style={{ flexDirection: isArabic ? 'row-reverse' : 'row', alignItems: 'center', gap: 8 }}>
+            <Ionicons name="albums-outline" size={17} color="#A78BFA" />
+            <Text style={styles.workspaceSectionTitle}>
+              {isArabic ? 'الملاحظات والقوائم المنسدلة' : 'Toggle Notes & Guidelines'}
+            </Text>
+            <View style={[styles.countBadge, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+              <Text style={[styles.countBadgeText, { color: colors.textMuted }]}>{toggleItems.length}</Text>
+            </View>
+          </View>
+          <TouchableOpacity
+            onPress={() => setShowAddToggle(!showAddToggle)}
+            style={[styles.sectionPillBtn, { backgroundColor: showAddToggle ? colors.surface : colors.primary + '18' }]}
+          >
+            <Ionicons name={showAddToggle ? "close" : "add"} size={14} color={colors.primary} />
+            <Text style={[styles.sectionPillBtnText, { color: colors.primary }]}>
+              {showAddToggle ? (isArabic ? 'إغلاق' : 'Close') : (isArabic ? 'إضافة ملاحظة' : 'Add Note')}
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Add Toggle Item Card */}
+        {showAddToggle && (
+          <View style={[styles.addFormCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+            <Text style={[styles.formLabel, { color: colors.textMuted, textAlign: isArabic ? 'right' : 'left' }]}>
+              {isArabic ? 'عنوان الملاحظة' : 'Note / Section Title'}
+            </Text>
+            <TextInput
+              style={[styles.formInput, { color: colors.text, backgroundColor: colors.bg, borderColor: colors.border, textAlign: isArabic ? 'right' : 'left' }]}
+              placeholder={isArabic ? 'مثال: إرشادات التسليم، روابط هامة...' : 'e.g. Project guidelines, useful links, SOPs...'}
+              placeholderTextColor={colors.textMuted}
+              value={newToggleTitle}
+              onChangeText={setNewToggleTitle}
+              autoFocus
+            />
+
+            <Text style={[styles.formLabel, { color: colors.textMuted, marginTop: 10, textAlign: isArabic ? 'right' : 'left' }]}>
+              {isArabic ? 'المحتوى المنسدل (اختياري)' : 'Expanded Content / Notes (optional)'}
+            </Text>
+            <TextInput
+              style={[styles.formMultilineInput, { color: colors.text, backgroundColor: colors.bg, borderColor: colors.border, textAlign: isArabic ? 'right' : 'left' }]}
+              placeholder={isArabic ? 'اكتب التفاصيل والملاحظات هنا...' : 'Write detailed notes, checklists, or links here...'}
+              placeholderTextColor={colors.textMuted}
+              value={newToggleContent}
+              onChangeText={setNewToggleContent}
+              multiline
+            />
+
+            <View style={{ flexDirection: isArabic ? 'row-reverse' : 'row', justifyContent: 'flex-end', gap: 8, marginTop: 12 }}>
+              <TouchableOpacity onPress={() => setShowAddToggle(false)} style={styles.formCancelBtn}>
+                <Text style={{ color: colors.textMuted, fontSize: 13, fontWeight: '600' }}>
+                  {isArabic ? 'إلغاء' : 'Cancel'}
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={handleAddToggleItem} style={[styles.formSubmitBtn, { backgroundColor: colors.primary }]}>
+                <Text style={{ color: '#000', fontSize: 13, fontWeight: '700' }}>
+                  {isArabic ? 'حفظ الملاحظة' : 'Save Note'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
+
+        {/* List of Toggle Items */}
+        {toggleItems.length === 0 && !showAddToggle ? (
+          <TouchableOpacity
+            onPress={() => setShowAddToggle(true)}
+            style={[styles.emptyPromptCard, { backgroundColor: colors.surface + '40', borderColor: colors.border }]}
+          >
+            <Ionicons name="folder-open-outline" size={22} color={colors.textMuted} />
+            <Text style={[styles.emptyPromptText, { color: colors.textMuted }]}>
+              {isArabic ? '+ أضف أول ملاحظة أو قائمة منسدلة لهذه المساحة' : '+ Create your first toggle note or guideline'}
+            </Text>
+          </TouchableOpacity>
+        ) : (
+          <View style={{ gap: 8 }}>
+            {toggleItems.map((item: any) => {
+              const isExpanded = expandedToggleIds[item._id] ?? false;
               return (
-                <Reanimated.View key={card.key} entering={FadeInDown.duration(450).delay(i * 60)} style={styles.categoryListCard}>
+                <View
+                  key={item._id}
+                  style={[styles.toggleCard, { backgroundColor: colors.surface, borderColor: colors.border }]}
+                >
                   <TouchableOpacity
-                    style={styles.categoryListCardInner}
-                    onPress={() => openListModal(card.key)}
-                    activeOpacity={0.82}
+                    onPress={() => toggleExpandItem(item._id)}
+                    style={[styles.toggleCardHeader, isArabic && { flexDirection: 'row-reverse' }]}
+                    activeOpacity={0.75}
                   >
-                    <View style={[styles.categoryListCardIconWrap, { backgroundColor: card.color + '20' }]}>
-                      <Ionicons name={card.icon as any} size={24} color={card.color} />
+                    <View style={[styles.toggleIconCircle, { backgroundColor: isExpanded ? colors.primary + '22' : colors.bg }]}>
+                      <Ionicons
+                        name={isExpanded ? "chevron-down" : (isArabic ? "chevron-back" : "chevron-forward")}
+                        size={15}
+                        color={isExpanded ? colors.primary : colors.textMuted}
+                      />
                     </View>
-                    <Text style={styles.categoryListCardTitle}>{card.label}</Text>
-                    <Text style={styles.categoryListCardCount}>{count} item{count !== 1 ? 's' : ''}</Text>
+                    <Text style={[styles.toggleCardTitle, { color: colors.text, textAlign: isArabic ? 'right' : 'left' }]} numberOfLines={1}>
+                      {item.text}
+                    </Text>
+                    <TouchableOpacity
+                      onPress={() => {
+                        Alert.alert(
+                          isArabic ? "حذف الملاحظة" : "Delete Note",
+                          isArabic ? "هل أنت متأكد من حذف هذه الملاحظة المنسدلة؟" : "Are you sure you want to delete this toggle item?",
+                          [
+                            { text: isArabic ? "إلغاء" : "Cancel", style: "cancel" },
+                            { text: isArabic ? "حذف" : "Delete", style: "destructive", onPress: () => deleteCategoryItemMutation({ id: item._id }) }
+                          ]
+                        );
+                      }}
+                      hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                    >
+                      <Ionicons name="trash-outline" size={15} color={colors.textMuted} />
+                    </TouchableOpacity>
                   </TouchableOpacity>
-                </Reanimated.View>
+
+                  {isExpanded && (
+                    <View style={[styles.toggleCardBody, { borderTopColor: colors.border }]}>
+                      <Text style={[styles.toggleCardContent, { color: colors.text, textAlign: isArabic ? 'right' : 'left' }]}>
+                        {item.content || (isArabic ? 'لا يوجد محتوى إضافي بعد.' : 'No additional content details added.')}
+                      </Text>
+                    </View>
+                  )}
+                </View>
               );
             })}
           </View>
-        </View>
-      </ScrollView>
+        )}
+      </View>
 
-      <CategoryListModal
-        visible={listModalVisible}
-        onClose={() => setListModalVisible(false)}
-        subCategoryId={subCategoryId}
-        listType={activeListType}
-        colors={colors}
-        styles={styles}
-        userId={userId}
-      />
-    </>
+      {/* ─── 4. Space Quick Checklist ─────────────────────────────────── */}
+      <View style={styles.workspaceSection}>
+        <View style={[styles.sectionHeaderRow, isArabic && { flexDirection: 'row-reverse' }]}>
+          <View style={{ flexDirection: isArabic ? 'row-reverse' : 'row', alignItems: 'center', gap: 8 }}>
+            <Ionicons name="checkbox-outline" size={17} color="#34D399" />
+            <Text style={styles.workspaceSectionTitle}>
+              {isArabic ? 'قائمة مهام المساحة' : 'Space Checklist & Tasks'}
+            </Text>
+            <View style={[styles.countBadge, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+              <Text style={[styles.countBadgeText, { color: colors.textMuted }]}>{doneChecklist}/{totalChecklist}</Text>
+            </View>
+          </View>
+          <TouchableOpacity
+            onPress={() => setShowAddCheck(!showAddCheck)}
+            style={[styles.sectionPillBtn, { backgroundColor: showAddCheck ? colors.surface : colors.primary + '18' }]}
+          >
+            <Ionicons name={showAddCheck ? "close" : "add"} size={14} color={colors.primary} />
+            <Text style={[styles.sectionPillBtnText, { color: colors.primary }]}>
+              {showAddCheck ? (isArabic ? 'إغلاق' : 'Close') : (isArabic ? 'إضافة مهمة' : 'Add Task')}
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Add Checklist Input */}
+        {showAddCheck && (
+          <View style={[styles.addInlineRow, { backgroundColor: colors.surface, borderColor: colors.border }, isArabic && { flexDirection: 'row-reverse' }]}>
+            <TextInput
+              style={[styles.inlineInput, { color: colors.text, textAlign: isArabic ? 'right' : 'left' }]}
+              placeholder={isArabic ? 'اكتب مهمة جديدة للمساحة...' : 'Type a space task or checklist item...'}
+              placeholderTextColor={colors.textMuted}
+              value={newCheckText}
+              onChangeText={setNewCheckText}
+              autoFocus
+              onSubmitEditing={handleAddChecklist}
+            />
+            <TouchableOpacity onPress={handleAddChecklist} style={[styles.inlineAddBtn, { backgroundColor: colors.primary }]}>
+              <Ionicons name="arrow-up" size={16} color="#000" />
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {/* Checklist Items */}
+        {checklistItems.length === 0 && !showAddCheck ? (
+          <TouchableOpacity
+            onPress={() => setShowAddCheck(true)}
+            style={[styles.emptyPromptCard, { backgroundColor: colors.surface + '40', borderColor: colors.border }]}
+          >
+            <Ionicons name="checkbox-outline" size={22} color={colors.textMuted} />
+            <Text style={[styles.emptyPromptText, { color: colors.textMuted }]}>
+              {isArabic ? '+ أضف مهمة سريعة إلى قائمة المساحة' : '+ Add a quick action task to this space'}
+            </Text>
+          </TouchableOpacity>
+        ) : (
+          <View style={{ gap: 6 }}>
+            {checklistItems.map((item: any) => (
+              <View
+                key={item._id}
+                style={[styles.checklistItemRow, { backgroundColor: colors.surface, borderColor: colors.border }, isArabic && { flexDirection: 'row-reverse' }]}
+              >
+                <TouchableOpacity
+                  onPress={() => updateCategoryItemMutation({ id: item._id, isCompleted: !item.isCompleted })}
+                  style={styles.checkboxTouchable}
+                >
+                  <Ionicons
+                    name={item.isCompleted ? "checkmark-circle" : "ellipse-outline"}
+                    size={20}
+                    color={item.isCompleted ? "#34D399" : colors.border}
+                  />
+                </TouchableOpacity>
+                <Text
+                  style={[
+                    styles.checkItemText,
+                    { color: item.isCompleted ? colors.textMuted : colors.text, textAlign: isArabic ? 'right' : 'left' },
+                    item.isCompleted && { textDecorationLine: 'line-through' }
+                  ]}
+                  numberOfLines={2}
+                >
+                  {item.text}
+                </Text>
+                <TouchableOpacity
+                  onPress={() => deleteCategoryItemMutation({ id: item._id })}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                >
+                  <Ionicons name="close" size={17} color={colors.textMuted} />
+                </TouchableOpacity>
+              </View>
+            ))}
+          </View>
+        )}
+      </View>
+    </ScrollView>
+  );
+};
+
+// ─── Layer 3: Sub-Category Projects Grid ─────────────────────────────────────
+
+const SubCategoryProjectsView = ({
+  styles, colors, subCategoryId, subCategoryName,
+  onSelectProject, onAddProject, onEditSubCategory, onEditProject, onDeleteSubCategory, onDeleteProject, onOpenAction, userId
+}: {
+  styles: any; colors: any;
+  subCategoryId: Id<'projectSubCategories'>; subCategoryName: string;
+  onSelectProject: (id: Id<'projects'>, name?: string) => void;
+  onAddProject: () => void;
+  onEditSubCategory: (sub: any) => void;
+  onEditProject: (proj: any) => void;
+  onDeleteSubCategory: (id: Id<'projectSubCategories'>) => void;
+  onDeleteProject: (id: Id<'projects'>) => void;
+  onOpenAction: (config: any) => void;
+  userId: Id<'users'> | null;
+}) => {
+  const { t } = useTranslation();
+  const projects = useOfflineQuery<any[]>('projects.getProjectsBySubCategory', api.projects.getProjectsBySubCategory, { subCategoryId });
+  const allTodos = useOfflineQuery<any[]>('todos', api.todos.get, userId ? { userId } : 'skip');
+  const sub = useOfflineQuery<any>('projects.getSubCategory', api.projects.getSubCategory, { id: subCategoryId });
+
+  if (!projects) return <View style={styles.emptyContainer}><Ionicons name="hourglass-outline" size={40} color={colors.border} /></View>;
+
+  return (
+    <ScrollView contentContainerStyle={{ paddingBottom: 120 }} showsVerticalScrollIndicator={false}>
+      <View style={{ width: '100%', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, marginBottom: 12, marginTop: 4 }}>
+        <Text style={[styles.sectionLabel, { paddingHorizontal: 0, marginBottom: 0 }]}>Projects in {subCategoryName}</Text>
+        <TouchableOpacity
+           onPress={() => onOpenAction({
+             title: subCategoryName,
+             options: [
+               {
+                 label: t.edit || 'Edit',
+                 icon: 'create-outline',
+                 onPress: () => sub && onEditSubCategory(sub)
+               },
+               {
+                 label: t.share || 'Share',
+                 icon: 'share-social-outline',
+                 onPress: () => Share.share({ message: `Sub-Category: ${subCategoryName}` })
+               },
+               {
+                 label: t.delete || 'Delete',
+                 icon: 'trash-outline',
+                 variant: 'destructive',
+                 onPress: () => {
+                   Alert.alert(
+                     t.confirmDeleteTitle || "Confirm Delete",
+                     t.confirmDeleteSubCategory || "Are you sure you want to delete this sub-category and all its child projects?",
+                     [
+                       { text: t.cancel || "Cancel", style: "cancel" },
+                       { text: t.delete || "Delete", style: "destructive", onPress: () => onDeleteSubCategory(subCategoryId) }
+                     ]
+                   );
+                 }
+               }
+             ]
+           })}
+        >
+          <Ionicons name="ellipsis-vertical" size={18} color={colors.textMuted} />
+        </TouchableOpacity>
+      </View>
+      <View style={[styles.projectsGrid, { paddingHorizontal: 20 }]}>
+        {projects.map((project, i) => {
+          const linked = allTodos?.filter((t: any) => t.projectId === project._id) || [];
+          const doneCount = linked.filter((t: any) => t.status === 'done').length;
+          const totalCount = linked.length;
+          const pct = totalCount > 0 ? Math.round((doneCount / totalCount) * 100) : 0;
+          const previewItems = linked.slice(0, 3).map((t: any) => ({
+            text: t.text,
+            isCompleted: t.status === 'done',
+          }));
+
+          return (
+            <Reanimated.View key={project._id} entering={FadeInDown.duration(450).delay(i * 50)} style={{ width: '48%' }}>
+              <ProjectFolderCard
+                id={project._id}
+                name={project.name}
+                color={project.color}
+                icon={project.icon || 'folder-outline'}
+                tag={subCategoryName}
+                itemCount={totalCount}
+                doneCount={doneCount}
+                progressPct={pct}
+                previewItems={previewItems}
+                index={i}
+                onPress={() => onSelectProject(project._id, project.name)}
+                onMenuPress={() => onOpenAction({
+                  title: project.name,
+                  options: [
+                    { label: t.edit || 'Edit', icon: 'create-outline', onPress: () => onEditProject(project) },
+                    { label: t.share || 'Share', icon: 'share-social-outline', onPress: () => Share.share({ message: `Project: ${project.name}` }) },
+                    {
+                      label: t.delete || 'Delete',
+                      icon: 'trash-outline',
+                      variant: 'destructive',
+                      onPress: () => {
+                        Alert.alert(
+                          t.confirmDeleteTitle || "Confirm Delete",
+                          t.confirmDeleteProject || "Are you sure you want to delete this project and unlink all its tasks?",
+                          [
+                            { text: t.cancel || "Cancel", style: "cancel" },
+                            { text: t.delete || "Delete", style: "destructive", onPress: () => onDeleteProject(project._id) }
+                          ]
+                        );
+                      }
+                    }
+                  ]
+                })}
+              />
+            </Reanimated.View>
+          );
+        })}
+
+        <Reanimated.View entering={FadeInDown.duration(450).delay(projects.length * 50)} style={{ width: '48%' }}>
+          <AddProjectFolderCard onPress={onAddProject} />
+        </Reanimated.View>
+      </View>
+    </ScrollView>
   );
 };
 
@@ -1259,27 +1639,130 @@ const ProjectDetailView = ({ styles, colors, projectId, onDeleteProject, userId,
         </View>
 
         <View style={styles.detailSection}>
-           <View style={styles.detailSectionHeader}>
-             <Text style={styles.detailSectionTitle}>Resources</Text>
-             <TouchableOpacity onPress={() => setShowAddResource(true)}><Text style={styles.detailSectionAction}>+ Add</Text></TouchableOpacity>
-           </View>
-           {resources?.map(res => (
-             <View key={res._id} style={styles.resourceCard}>
-               <Ionicons name="link" size={20} color={colors.primary} />
-               <View style={styles.resourceInfo}><Text style={styles.resourceTitle}>{res.title}</Text><Text style={styles.resourceUrl} numberOfLines={1}>{res.url || res.note}</Text></View>
-               <TouchableOpacity onPress={() => {
-                  setActionConfig({
-                    title: res.title,
-                    type: 'resource',
-                    options: [
-                      { label: isArabic ? 'فتح الرابط' : 'Open Link', icon: 'open-outline', onPress: () => res.url && Linking.openURL(res.url) },
-                      { label: isArabic ? 'حذف' : 'Delete', icon: 'trash-outline', variant: 'destructive', onPress: () => deleteResource({ id: res._id }) }
-                    ]
-                  });
-                  setActionModalVisible(true);
-                }}><Ionicons name="ellipsis-vertical" size={16} color={colors.textMuted} /></TouchableOpacity>
-             </View>
-           ))}
+          <View style={styles.detailSectionHeader}>
+            <View style={{ flexDirection: isArabic ? 'row-reverse' : 'row', alignItems: 'center', gap: 6 }}>
+              <Ionicons name="folder-open-outline" size={17} color={colors.primary} />
+              <Text style={styles.detailSectionTitle}>
+                {isArabic ? 'الموارد والملفات' : 'Resources & Files'}
+              </Text>
+            </View>
+            <TouchableOpacity onPress={() => setShowAddResource(true)}>
+              <Text style={styles.detailSectionAction}>
+                {isArabic ? '+ إضافة' : '+ Add'}
+              </Text>
+            </TouchableOpacity>
+          </View>
+
+          {(!resources || resources.length === 0) ? (
+            <TouchableOpacity
+              style={styles.resourceEmptyBox}
+              onPress={() => setShowAddResource(true)}
+              activeOpacity={0.8}
+            >
+              <Ionicons name="cloud-upload-outline" size={24} color={colors.textMuted} />
+              <Text style={styles.resourceEmptyText}>
+                {isArabic ? '+ أضف ملفات، صور، روابط، أو ملاحظات للمشروع' : '+ Add files, photos, web links, or notes'}
+              </Text>
+            </TouchableOpacity>
+          ) : (
+            resources.map(res => {
+              const type = res.type || 'link';
+              let iconName: any = 'globe-outline';
+              let typeColor = '#A78BFA';
+              let typeBg = 'rgba(167, 139, 250, 0.15)';
+              let typeLabel = isArabic ? 'رابط' : 'LINK';
+
+              if (type === 'file') {
+                iconName = 'document-text-outline';
+                typeColor = '#3B82F6';
+                typeBg = 'rgba(59, 130, 246, 0.15)';
+                typeLabel = isArabic ? 'ملف' : 'FILE';
+              } else if (type === 'image') {
+                iconName = 'image-outline';
+                typeColor = '#10B981';
+                typeBg = 'rgba(16, 185, 129, 0.15)';
+                typeLabel = isArabic ? 'صورة' : 'PHOTO';
+              } else if (type === 'note') {
+                iconName = 'reader-outline';
+                typeColor = '#F59E0B';
+                typeBg = 'rgba(245, 158, 11, 0.15)';
+                typeLabel = isArabic ? 'ملاحظة' : 'NOTE';
+              }
+
+              const handleOpenResource = () => {
+                if (res.url) {
+                  if (res.url.startsWith('http://') || res.url.startsWith('https://')) {
+                    WebBrowser.openBrowserAsync(res.url).catch(() => {
+                      if (res.url) Linking.openURL(res.url);
+                    });
+                  } else {
+                    Linking.openURL(res.url).catch(() => {
+                      Share.share({ url: res.url, message: res.title });
+                    });
+                  }
+                } else if (res.note) {
+                  Alert.alert(res.title, res.note);
+                }
+              };
+
+              return (
+                <TouchableOpacity
+                  key={res._id}
+                  style={styles.resourceCard}
+                  onPress={handleOpenResource}
+                  activeOpacity={0.78}
+                >
+                  <View style={[styles.resourceIconBadge, { backgroundColor: typeBg }]}>
+                    <Ionicons name={iconName} size={22} color={typeColor} />
+                  </View>
+                  <View style={styles.resourceInfo}>
+                    <View style={{ flexDirection: isArabic ? 'row-reverse' : 'row', alignItems: 'center', gap: 6 }}>
+                      <View style={[styles.resourceTypeBadge, { backgroundColor: typeBg }]}>
+                        <Text style={[styles.resourceTypeBadgeText, { color: typeColor }]}>{typeLabel}</Text>
+                      </View>
+                    </View>
+                    <Text style={styles.resourceTitle} numberOfLines={1}>{res.title}</Text>
+                    <Text style={styles.resourceUrl} numberOfLines={1}>
+                      {res.url || res.note || (isArabic ? 'لا توجد تفاصيل' : 'No details')}
+                    </Text>
+                  </View>
+                  <TouchableOpacity
+                    onPress={() => {
+                      setActionConfig({
+                        title: res.title,
+                        type: 'resource',
+                        options: [
+                          {
+                            label: isArabic ? 'فتح المورد' : 'Open / View',
+                            icon: 'open-outline',
+                            onPress: handleOpenResource,
+                          },
+                          {
+                            label: isArabic ? 'مشاركة' : 'Share',
+                            icon: 'share-social-outline',
+                            onPress: () => Share.share({
+                              message: res.url ? `${res.title}\n${res.url}` : `${res.title}\n${res.note || ''}`,
+                              url: res.url,
+                            }),
+                          },
+                          {
+                            label: isArabic ? 'حذف المورد' : 'Delete',
+                            icon: 'trash-outline',
+                            variant: 'destructive',
+                            onPress: () => deleteResource({ id: res._id }),
+                          }
+                        ]
+                      });
+                      setActionModalVisible(true);
+                    }}
+                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                  >
+                    <Ionicons name="ellipsis-vertical" size={16} color={colors.textMuted} />
+                  </TouchableOpacity>
+                </TouchableOpacity>
+              );
+            })
+          )}
         </View>
       </ScrollView>
       <AddResourceModal visible={showAddResource} onClose={() => setShowAddResource(false)} colors={colors} styles={styles} onAdd={(type, title, url, note) => userId && addResource({ userId, projectId: project._id, type, title, url, note })} />
@@ -1346,6 +1829,7 @@ const Projects: React.FC = () => {
   const [selectedSubId, setSelectedSubId] = useState<Id<'projectSubCategories'> | null>(null);
   const [selectedSubName, setSelectedSubName] = useState('');
   const [selectedProjId, setSelectedProjId] = useState<Id<'projects'> | null>(null);
+  const [selectedProjName, setSelectedProjName] = useState('');
 
   const [isActionModalVisible, setActionModalVisible] = useState(false);
   const [actionConfig, setActionConfig] = useState<{ title: string, options: any[] } | null>(null);
@@ -1353,7 +1837,7 @@ const Projects: React.FC = () => {
   const [isAddingCategory, setIsAddingCategory] = useState(false);
   const [isAddingSubCategory, setIsAddingSubCategory] = useState(false);
   const [isAddingProject, setIsAddingProject] = useState(false);
-  const [editingCategory, setEditingCategory] = useState<{ id: Id<'projectCategories'>, name: string, icon: string, color: string } | null>(null);
+  const [editingCategory, setEditingCategory] = useState<{ id: Id<'projectCategories'>, name: string, icon: string, color: string, tag?: string } | null>(null);
   const [editingSubCategory, setEditingSubCategory] = useState<{ id: Id<'projectSubCategories'>, name: string, icon: string, color: string } | null>(null);
   const [editingProject, setEditingProject] = useState<{ id: Id<'projects'>, name: string, description?: string, icon: string, color: string } | null>(null);
 
@@ -1371,6 +1855,7 @@ const Projects: React.FC = () => {
     if (layer === 'detail') {
       setLayer(selectedSubId ? 'subCategoryProjects' : 'categoryDetail');
       setSelectedProjId(null);
+      setSelectedProjName('');
       return true;
     } else if (layer === 'subCategoryProjects') {
       setLayer('categoryDetail');
@@ -1396,13 +1881,13 @@ const Projects: React.FC = () => {
     if (layer === 'categories') return 'Spaces';
     if (layer === 'categoryDetail') return selectedCatName;
     if (layer === 'subCategoryProjects') return selectedSubName;
-    return 'Project Details';
+    return selectedProjName || (isArabic ? 'تفاصيل المشروع' : 'Project Details');
   };
 
-  const handleAddCategory = (name: string, icon: string, color: string) => {
+  const handleAddCategory = (name: string, icon: string, color: string, tag: string) => {
     if (!userId) return;
-    if (editingCategory) updateCategory({ id: editingCategory.id, name, icon, color });
-    else addCategory({ userId, name, icon, color });
+    if (editingCategory) updateCategory({ id: editingCategory.id, name, icon, color, tag: tag || undefined });
+    else addCategory({ userId, name, icon, color, tag: tag || undefined });
     setIsAddingCategory(false);
     setEditingCategory(null);
   };
@@ -1432,29 +1917,81 @@ const Projects: React.FC = () => {
     >
       <StatusBar barStyle={colors.statusBarStyle} backgroundColor={colors.bg} />
       <SafeAreaView style={styles.safeArea}>
-        <View style={styles.header}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
-            {layer !== 'categories' && (
-              <TouchableOpacity onPress={handleBack} style={{ marginRight: isArabic ? 0 : 10, marginLeft: isArabic ? 10 : 0 }}>
-                <Ionicons name={isArabic ? "arrow-forward" : "arrow-back"} size={24} color={colors.primary} />
-              </TouchableOpacity>
-            )}
-            <View style={styles.headerLeft}>
-              <Text style={styles.headerTitle} numberOfLines={1}>{getTitle()}</Text>
-              <Text style={styles.headerSubtitle}>{layer === 'categories' ? 'Manage your workspaces' : 'Exploring paths'}</Text>
+        <AnimatedWavyHeader backgroundColor={colors.bg} waveHeight={10} contentStyle={{ paddingBottom: 2 }}>
+          {layer === 'categories' ? (
+            <View style={[styles.header, { paddingBottom: 6 }]}>
+              <View style={styles.headerLeft}>
+                <Text style={styles.headerTitle} numberOfLines={1}>{getTitle()}</Text>
+                <Text style={styles.headerSubtitle}>{isArabic ? 'إدارة مساحات العمل' : 'Manage your workspaces'}</Text>
+              </View>
+              <View style={styles.headerActions}>
+                <TouchableOpacity style={styles.headerBtn} onPress={() => setIsAddingCategory(true)}>
+                  <Ionicons name="add" size={24} color={colors.primary} />
+                </TouchableOpacity>
+              </View>
             </View>
-          </View>
-          <View style={styles.headerActions}>
-            {layer === 'categories' && <TouchableOpacity style={styles.headerBtn} onPress={() => setIsAddingCategory(true)}><Ionicons name="add" size={24} color={colors.primary} /></TouchableOpacity>}
-          </View>
-        </View>
+          ) : (
+            <View style={[styles.header, { paddingBottom: 6, flexDirection: isArabic ? 'row-reverse' : 'row', alignItems: 'center', justifyContent: 'space-between' }]}>
+              <TouchableOpacity onPress={handleBack} style={styles.headerBtn} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+                <Ionicons name={isArabic ? "arrow-forward" : "arrow-back"} size={22} color={colors.primary} />
+              </TouchableOpacity>
+
+              <Text style={[styles.headerTitle, { textAlign: 'center', flex: 1, fontSize: 20, marginHorizontal: 8 }]} numberOfLines={1}>
+                {getTitle()}
+              </Text>
+
+              {layer === 'categoryDetail' && selectedCatId ? (
+                <TouchableOpacity
+                  style={styles.headerBtn}
+                  onPress={() => {
+                    setActionConfig({
+                      title: selectedCatName,
+                      options: [
+                        {
+                          label: isArabic ? 'تعديل الفئة' : 'Edit Space',
+                          icon: 'create-outline',
+                          onPress: () => setEditingCategory({ id: selectedCatId, name: selectedCatName, icon: 'briefcase-outline', color: '#dbd4fd' })
+                        },
+                        {
+                          label: isArabic ? 'مشاركة الفئة' : 'Share Space',
+                          icon: 'share-social-outline',
+                          onPress: () => Share.share({ message: `Space: ${selectedCatName}` })
+                        },
+                        {
+                          label: isArabic ? 'حذف الفئة' : 'Delete Space',
+                          icon: 'trash-outline',
+                          variant: 'destructive',
+                          onPress: () => {
+                            Alert.alert(
+                              isArabic ? "تأكيد الحذف" : "Confirm Delete",
+                              isArabic ? "هل أنت متأكد من حذف هذه المساحة وجميع المشاريع بداخلها؟" : "Are you sure you want to delete this space and all its projects?",
+                              [
+                                { text: isArabic ? "إلغاء" : "Cancel", style: "cancel" },
+                                { text: isArabic ? "حذف" : "Delete", style: "destructive", onPress: () => { deleteCategory({ id: selectedCatId }); setLayer('categories'); setSelectedCatId(null); } }
+                              ]
+                            );
+                          }
+                        }
+                      ]
+                    });
+                    setActionModalVisible(true);
+                  }}
+                >
+                  <Ionicons name="ellipsis-vertical" size={20} color={colors.textMuted} />
+                </TouchableOpacity>
+              ) : (
+                <View style={{ width: 42, height: 42 }} />
+              )}
+            </View>
+          )}
+        </AnimatedWavyHeader>
 
 
         {layer === 'categories' && (
           <CategoriesView 
             styles={styles} colors={colors} userId={userId} isArabic={isArabic}
             onAddCategory={() => setIsAddingCategory(true)} 
-            onEditCategory={(cat) => { setEditingCategory({ id: cat._id, name: cat.name, icon: cat.icon, color: cat.color }); setIsAddingCategory(true); }}
+            onEditCategory={(cat) => { setEditingCategory({ id: cat._id, name: cat.name, icon: cat.icon, color: cat.color, tag: cat.tag }); setIsAddingCategory(true); }}
             onSelectCategory={(id, name) => { setSelectedCatId(id); setSelectedCatName(name); setLayer('categoryDetail'); }} 
             onOpenAction={(config) => { setActionConfig(config); setActionModalVisible(true); }} 
           />
@@ -1463,9 +2000,9 @@ const Projects: React.FC = () => {
         {layer === 'categoryDetail' && selectedCatId && (
           <CategoryDetailView 
             styles={styles} colors={colors} categoryId={selectedCatId} categoryName={selectedCatName} userId={userId} isArabic={isArabic}
-            onSelectProject={(id) => { setSelectedProjId(id); setLayer('detail'); }}
+            onSelectProject={(id, name) => { setSelectedProjId(id); setSelectedProjName(name || ''); setLayer('detail'); }}
             onAddProject={() => setIsAddingProject(true)}
-            onEditCategory={(cat) => { setEditingCategory({ id: cat._id, name: cat.name, icon: cat.icon, color: cat.color }); setIsAddingCategory(true); }}
+            onEditCategory={(cat) => { setEditingCategory({ id: cat._id, name: cat.name, icon: cat.icon, color: cat.color, tag: cat.tag }); setIsAddingCategory(true); }}
             onEditProject={(proj) => { setEditingProject({ id: proj._id, name: proj.name, description: proj.description, icon: proj.icon, color: proj.color }); setIsAddingProject(true); }}
             onDeleteCategory={(id) => {
               deleteCategory({ id });
@@ -1482,7 +2019,7 @@ const Projects: React.FC = () => {
         {layer === 'subCategoryProjects' && selectedSubId && (
           <SubCategoryProjectsView 
             styles={styles} colors={colors} subCategoryId={selectedSubId} subCategoryName={selectedSubName} userId={userId}
-            onSelectProject={(id) => { setSelectedProjId(id); setLayer('detail'); }}
+            onSelectProject={(id, name) => { setSelectedProjId(id); setSelectedProjName(name || ''); setLayer('detail'); }}
             onAddProject={() => setIsAddingProject(true)}
             onEditSubCategory={(sub) => { setEditingSubCategory({ id: sub._id, name: sub.name, icon: sub.icon, color: sub.color }); setIsAddingSubCategory(true); }}
             onEditProject={(proj) => { setEditingProject({ id: proj._id, name: proj.name, description: proj.description, icon: proj.icon, color: proj.color }); setIsAddingProject(true); }}

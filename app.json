@@ -1,10 +1,10 @@
 {
   "expo": {
     "name": "Prodo",
-    "slug": "prodo",
+    "slug": "do-it",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/app_logo.png",
+    "icon": "./assets/images/prodo.png",
     "scheme": "prodoapp",
     "userInterfaceStyle": "automatic",
     "ios": {
@@ -15,9 +15,9 @@
       "softwareKeyboardLayoutMode": "resize",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
-        "foregroundImage": "./assets/images/app_logo.png",
-        "backgroundImage": "./assets/images/app_logo.png",
-        "monochromeImage": "./assets/images/app_logo.png"
+        "foregroundImage": "./assets/images/prodo.png",
+        "backgroundImage": "./assets/images/prodo.png",
+        "monochromeImage": "./assets/images/prodo.png"
       },
       "predictiveBackGestureEnabled": false,
       "package": "com.motohamy.prodoapp",
@@ -26,19 +26,20 @@
         "android.permission.USE_EXACT_ALARM",
         "android.permission.POST_NOTIFICATIONS",
         "android.permission.VIBRATE",
-        "android.permission.RECEIVE_BOOT_COMPLETED"
+        "android.permission.RECEIVE_BOOT_COMPLETED",
+        "android.permission.RECORD_AUDIO"
       ]
     },
     "web": {
       "output": "static",
-      "favicon": "./assets/images/app_logo.png"
+      "favicon": "./assets/images/prodo.png"
     },
     "plugins": [
       "expo-router",
       [
         "expo-splash-screen",
         {
-          "image": "./assets/images/app_logo.png",
+          "image": "./assets/images/prodo.png",
           "imageWidth": 200,
           "resizeMode": "contain",
           "backgroundColor": "#ffffff",
@@ -62,7 +63,11 @@
       ],
       "expo-task-manager",
       "expo-localization",
-      "expo-status-bar"
+      "expo-status-bar",
+      "expo-audio",
+      "expo-image-picker",
+      "expo-document-picker",
+      "expo-asset"
     ],
     "experiments": {
       "typedRoutes": true

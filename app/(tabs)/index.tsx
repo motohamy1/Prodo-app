@@ -41,6 +41,7 @@ import {
   UpcomingEventsCard,
   MonthlyOverviewCard,
   ProductivityCard,
+  InsightsCard,
   EventManagementModal,
   EventData,
   UpcomingEventDisplay,
@@ -76,14 +77,18 @@ const Index = () => {
   const setTimerMutation = useOfflineMutation(api.todos.setTimer, "todos:setTimer");
 
   // Yearly goals for monthly card
-  const currentYear = new Date().getFullYear();
-  const currentMonthIdx = new Date().getMonth();
-  const currentMonthName = isArabic ? months_ar[currentMonthIdx] : months_en[currentMonthIdx];
-  const yearlyGoals = useOfflineQuery<any[]>(
-    'yearlyGoals.getGoals', 
-    api.yearlyGoals.getGoals, 
-    userId ? { userId, year: currentYear } : 'skip'
-  ) || [];
+    const currentYear = new Date().getFullYear();
+    const currentMonthIdx = new Date().getMonth();
+    const currentMonthName = isArabic ? months_ar[currentMonthIdx] : months_en[currentMonthIdx];
+    const yearlyGoals = useOfflineQuery<any[]>(
+      'yearlyGoals.getGoals',
+      api.yearlyGoals.getGoals,
+      userId ? { userId, year: currentYear } : 'skip'
+    ) || [];
+
+    // Daily insights for focus topics and wellbeing
+    const dailyInsights = useOfflineQuery('insights.daily', api.insights.getLatestInsights,
+      userId ? { userId, period: "day" } : 'skip');
 
   // Local State
   const [isGlobalActionModalVisible, setGlobalActionModalVisible] = useState(false);
@@ -116,18 +121,30 @@ const Index = () => {
     { icon: 'hand-left-outline', title: 'Long Press', description: 'Long press any task to delete, share, or link it to a project.', accentColor: '#f6e5c9' },
   ];
 
-  // Normalized Todos (Tasks only)
-  const normalizedTodos = todos?.filter(t => t.type !== 'note' && t.type !== 'reminder').map(t => ({
-    ...t,
-    status: t.status || ((t as any).isCompleted ? 'done' : 'not_started')
-  })) || [];
+  // Normalized Todos (Tasks ONLY for Kanban board)
+  const normalizedTodos = useMemo(() => {
+    if (!todos) return [];
+    return todos
+      .filter(t => !t.type || t.type === 'task')
+      .map(t => ({
+        ...t,
+        status: t.status || ((t as any).isCompleted ? 'done' : 'not_started')
+      }));
+  }, [todos]);
 
-  // Upcoming Events from Todos (type === 'reminder' or timed items)
+  // Upcoming Events from Todos (meetings, appointments, reminders, and timed events)
   const upcomingEvents: UpcomingEventDisplay[] = useMemo(() => {
     if (!todos) return [];
     const nowTs = Date.now();
     return todos
-      .filter(t => t.type === 'reminder' || (t.dueDate && t.dueDate >= todayStart))
+      .filter(t => 
+        t.type === 'reminder' || 
+        t.type === 'meeting' || 
+        t.type === 'appointment' || 
+        Boolean(t.meetingLink) || 
+        Boolean(t.location) ||
+        (t.dueDate && t.dueDate >= todayStart && t.type !== 'task')
+      )
       .sort((a, b) => (a.date || a.dueDate || 0) - (b.date || b.dueDate || 0))
       .map(t => ({
         _id: t._id,
@@ -138,6 +155,7 @@ const Index = () => {
         location: t.location,
         meetingLink: t.meetingLink,
         priority: t.priority,
+        type: t.type,
       }));
   }, [todos, todayStart]);
 
@@ -278,11 +296,16 @@ const Index = () => {
 
     const empty = todoCol.length + inProgressCol.length + doneCol.length + notDoneCol.length === 0;
 
-    // Daily checklist tasks for Card 1 (prioritize active, then done)
-    const checklistTasks = [...inProgressCol, ...todoCol, ...doneCol].map(task => ({
+    // Daily checklist tasks for Card 1 (prioritize active, then done, including tasks & day checklist items)
+    const dayChecklistRaw = (todos || []).filter(t => {
+      const a = anchorOf(t);
+      return a === selectedDate && (t.type === 'task' || t.type === 'checklist' || !t.type);
+    });
+
+    const checklistTasks = (dayChecklistRaw.length > 0 ? dayChecklistRaw : [...inProgressCol, ...todoCol, ...doneCol]).map(task => ({
       _id: task._id,
       text: task.text,
-      status: task.status,
+      status: task.status || ((task as any).isCompleted ? 'done' : 'not_started'),
       priority: task.priority,
       dueDate: task.dueDate,
     }));
@@ -463,6 +486,12 @@ const Index = () => {
                 streakDays={streakCount}
                 weeklyRate={weeklyRatePercent}
                 onStartFocus={handleStartFocusTimer}
+              />
+
+              {/* Card 5: AI Insights & Wellbeing Card */}
+              <InsightsCard
+                insights={dailyInsights}
+                onPress={() => router.push('/(tabs)/insights')}
               />
             </ScrollStack>
 

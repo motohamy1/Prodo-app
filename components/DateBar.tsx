@@ -60,6 +60,34 @@ const DateBar: React.FC<DateBarProps> = ({
     return Math.max(0, Math.min(daysList.length - 1, dayNum - 1));
   }, [daysList.length, selectedDate]);
 
+  const autoReturnTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const clearAutoReturnTimer = () => {
+    if (autoReturnTimer.current) {
+      clearTimeout(autoReturnTimer.current);
+      autoReturnTimer.current = null;
+    }
+  };
+
+  const scheduleAutoReturn = () => {
+    clearAutoReturnTimer();
+    autoReturnTimer.current = setTimeout(() => {
+      if (selectedIndex >= 0 && flatListRef.current) {
+        flatListRef.current.scrollToIndex({
+          index: selectedIndex,
+          animated: true,
+          viewPosition: 0.5,
+        });
+      }
+    }, 5000);
+  };
+
+  useEffect(() => {
+    return () => {
+      clearAutoReturnTimer();
+    };
+  }, []);
+
   // Center on the selected day when day, month, or year changes
   useEffect(() => {
     if (selectedIndex >= 0 && flatListRef.current) {
@@ -95,6 +123,7 @@ const DateBar: React.FC<DateBarProps> = ({
       <LivePress
         key={dayStart}
         onPress={() => {
+          clearAutoReturnTimer();
           onSelectDate(dayStart);
           flatListRef.current?.scrollToIndex({
             index,
@@ -119,7 +148,7 @@ const DateBar: React.FC<DateBarProps> = ({
           <View
             style={[
               homeStyles.dateBarDot,
-              isActive && { backgroundColor: colors.secondaryText },
+              isActive && { backgroundColor: '#16270E' },
             ]}
           />
         )}
@@ -151,6 +180,7 @@ const DateBar: React.FC<DateBarProps> = ({
           <LivePress
             style={homeStyles.dateBarReset}
             onPress={() => {
+              clearAutoReturnTimer();
               onSelectDate(todayStart);
             }}
           >
@@ -173,6 +203,18 @@ const DateBar: React.FC<DateBarProps> = ({
           offset: ITEM_TOTAL_SIZE * index,
           index,
         })}
+        onScrollBeginDrag={() => {
+          clearAutoReturnTimer();
+        }}
+        onScrollEndDrag={() => {
+          scheduleAutoReturn();
+        }}
+        onMomentumScrollBegin={() => {
+          clearAutoReturnTimer();
+        }}
+        onMomentumScrollEnd={() => {
+          scheduleAutoReturn();
+        }}
         onScrollToIndexFailed={info => {
           setTimeout(() => {
             flatListRef.current?.scrollToIndex({

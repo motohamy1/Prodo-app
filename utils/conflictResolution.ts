@@ -131,7 +131,7 @@ class ConflictResolver {
 
         case 'merge':
           resolution = 'merge';
-          resolvedData = this.mergeData(conflict);
+          resolvedData = this.mergeData(conflict as any) as unknown as T;
           break;
 
         default:
@@ -225,7 +225,7 @@ class ConflictResolver {
         resolvedData = conflict.remoteVersion;
         break;
       case 'merge':
-        resolvedData = customMergeData || this.mergeData(conflict);
+        resolvedData = customMergeData || (this.mergeData(conflict as any) as unknown as T);
         break;
       default:
         resolvedData = conflict.localVersion;

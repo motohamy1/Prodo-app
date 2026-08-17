@@ -58,6 +58,40 @@ export const createAddScreenStyles = (colors: ColorScheme, isArabic: boolean = f
       borderColor: 'rgba(255, 255, 255, 0.08)',
     },
 
+    // ─── Centered Category Switcher ──────────────────────────────
+    centeredTabsWrapper: {
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingHorizontal: 20,
+      marginBottom: 12,
+    },
+    categoryTabsSegmented: {
+      flexDirection: isArabic ? 'row-reverse' : 'row',
+      backgroundColor: 'rgba(255, 255, 255, 0.06)',
+      borderRadius: 22,
+      padding: 4,
+      gap: 4,
+      borderWidth: 1,
+      borderColor: 'rgba(255, 255, 255, 0.08)',
+    },
+    categoryTabPill: {
+      paddingHorizontal: 16,
+      paddingVertical: 6,
+      borderRadius: 18,
+    },
+    categoryTabPillActive: {
+      backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    },
+    categoryTabText: {
+      fontSize: 13,
+      fontWeight: '600',
+      color: '#9CA3AF',
+    },
+    categoryTabTextActive: {
+      color: '#FFFFFF',
+      fontWeight: '700',
+    },
+
     // ─── Input Mode Selector (Voice vs Type) ─────────────────────
     modeSelectorRow: {
       flexDirection: isArabic ? 'row-reverse' : 'row',
@@ -99,12 +133,38 @@ export const createAddScreenStyles = (colors: ColorScheme, isArabic: boolean = f
       paddingBottom: 20,
       alignItems: 'center',
     },
+    voiceHeroCard: {
+      width: '100%',
+      backgroundColor: 'transparent',
+      borderRadius: 0,
+      borderWidth: 0,
+      borderColor: 'transparent',
+      paddingVertical: 8,
+      paddingHorizontal: 0,
+      alignItems: 'center',
+    },
     heroStatusRow: {
       width: '100%',
       flexDirection: isArabic ? 'row-reverse' : 'row',
       justifyContent: 'space-between',
       alignItems: 'center',
       marginBottom: 12,
+    },
+    heroTagChip: {
+      flexDirection: isArabic ? 'row-reverse' : 'row',
+      alignItems: 'center',
+      gap: 5,
+      backgroundColor: 'rgba(212, 255, 0, 0.1)',
+      paddingHorizontal: 10,
+      paddingVertical: 5,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: 'rgba(212, 255, 0, 0.25)',
+    },
+    heroTagChipText: {
+      fontSize: 12,
+      fontWeight: '700',
+      color: '#D4FF00',
     },
     waveformIconBtn: {
       padding: 8,
@@ -249,8 +309,32 @@ export const createAddScreenStyles = (colors: ColorScheme, isArabic: boolean = f
     typingTypeToggles: {
       flexDirection: isArabic ? 'row-reverse' : 'row',
       alignItems: 'center',
-      gap: 10,
+      justifyContent: 'space-between',
       marginBottom: 12,
+    },
+    typingLeftToggles: {
+      flexDirection: isArabic ? 'row-reverse' : 'row',
+      alignItems: 'center',
+      gap: 10,
+    },
+    typingTagInputContainer: {
+      flexDirection: isArabic ? 'row-reverse' : 'row',
+      alignItems: 'center',
+      gap: 8,
+      backgroundColor: 'rgba(255, 255, 255, 0.04)',
+      borderRadius: 12,
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+      marginBottom: 10,
+      borderWidth: 1,
+      borderColor: 'rgba(255, 255, 255, 0.06)',
+    },
+    typingTagInput: {
+      flex: 1,
+      fontSize: 13,
+      color: '#FFFFFF',
+      fontWeight: '600',
+      paddingVertical: 2,
     },
     typeToggleBtn: {
       paddingHorizontal: 12,
@@ -319,6 +403,104 @@ export const createAddScreenStyles = (colors: ColorScheme, isArabic: boolean = f
       fontSize: 13,
       fontWeight: '700',
       color: '#23173D',
+    },
+
+    // ─── Grouped Dynamic Hashtags Deck ──────────────────────────
+    hashtagSection: {
+      marginBottom: 24,
+    },
+    hashtagHeaderBlock: {
+      flexDirection: isArabic ? 'row-reverse' : 'row',
+      alignItems: 'center',
+      paddingHorizontal: 20,
+      marginBottom: 12,
+      gap: 12,
+    },
+    hashtagSectionTitle: {
+      fontSize: 16,
+      fontWeight: '800',
+      color: '#FFFFFF',
+      letterSpacing: -0.3,
+    },
+    hashtagSectionLine: {
+      flex: 1,
+      height: 1,
+      backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    },
+    cardsCarouselContent: {
+      paddingHorizontal: 16,
+      paddingVertical: 12,
+      gap: 14,
+    },
+    whiteCardOuter: {
+      width: 150,
+      minHeight: 180,
+      backgroundColor: '#FFFFFF',
+      borderRadius: 18,
+      padding: 14,
+      justifyContent: 'space-between',
+      ...Platform.select({
+        ios: {
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: 4 },
+          shadowOpacity: 0.15,
+          shadowRadius: 8,
+        },
+        android: {
+          elevation: 4,
+        },
+      }),
+    },
+    cardTopBlock: {
+      flex: 1,
+    },
+    cardTitleText: {
+      fontSize: 14,
+      fontWeight: '800',
+      color: '#0F172A',
+      letterSpacing: -0.2,
+      lineHeight: 18,
+      marginBottom: 4,
+    },
+    cardDateText: {
+      fontSize: 11,
+      fontWeight: '600',
+      color: '#94A3B8',
+      marginBottom: 8,
+    },
+    cardSnippetText: {
+      fontSize: 12,
+      fontWeight: '400',
+      color: '#475569',
+      lineHeight: 16,
+    },
+    cardBottomRow: {
+      flexDirection: isArabic ? 'row-reverse' : 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      marginTop: 10,
+    },
+    cardIconCircle: {
+      width: 28,
+      height: 28,
+      borderRadius: 14,
+      backgroundColor: '#F1F5F9',
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    cardReminderTimeBadge: {
+      flexDirection: isArabic ? 'row-reverse' : 'row',
+      alignItems: 'center',
+      gap: 4,
+      backgroundColor: '#FEF3C7',
+      paddingHorizontal: 6,
+      paddingVertical: 3,
+      borderRadius: 8,
+    },
+    cardReminderTimeText: {
+      fontSize: 10,
+      fontWeight: '700',
+      color: '#92400E',
     },
 
     // ─── Search & Controls Row ──────────────────────────────────
@@ -501,6 +683,35 @@ export const createAddScreenStyles = (colors: ColorScheme, isArabic: boolean = f
     },
     modalCloseBtn: {
       padding: 4,
+    },
+    tagModalInput: {
+      backgroundColor: colors.surface,
+      borderRadius: 14,
+      padding: 14,
+      fontSize: 15,
+      color: '#FFFFFF',
+      borderWidth: 1,
+      borderColor: 'rgba(255, 255, 255, 0.1)',
+      marginVertical: 10,
+    },
+    suggestedTagsRow: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: 8,
+      marginVertical: 12,
+    },
+    suggestedTagChip: {
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+      borderRadius: 12,
+      backgroundColor: 'rgba(255, 255, 255, 0.06)',
+      borderWidth: 1,
+      borderColor: 'rgba(255, 255, 255, 0.08)',
+    },
+    suggestedTagText: {
+      fontSize: 12,
+      fontWeight: '600',
+      color: '#9CA3AF',
     },
     filterOption: {
       flexDirection: isArabic ? 'row-reverse' : 'row',

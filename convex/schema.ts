@@ -49,6 +49,36 @@ export default defineSchema({
     type: v.optional(v.string()), // 'task' | 'note' | 'reminder'
     hashtags: v.optional(v.array(v.string())),
     completedAt: v.optional(v.number()),
+    // Voice & Audio fields
+    audioStorageId: v.optional(v.id("_storage")),
+    audioDuration: v.optional(v.number()), // in seconds
+    audioMimeType: v.optional(v.string()),
+    audioFileSize: v.optional(v.number()),
+    // Speech-to-Text fields
+    transcript: v.optional(v.string()),
+    transcriptLanguage: v.optional(v.string()),
+    transcriptStatus: v.optional(
+      v.union(
+        v.literal("none"),
+        v.literal("recording"),
+        v.literal("transcribing"),
+        v.literal("completed"),
+        v.literal("failed")
+      )
+    ),
+    transcriptError: v.optional(v.string()),
+    // AI Note Intelligence fields
+    aiSummary: v.optional(v.string()),
+    aiActionItems: v.optional(v.array(v.string())),
+    aiChatHistory: v.optional(
+      v.array(
+        v.object({
+          role: v.union(v.literal("user"), v.literal("model"), v.literal("system")),
+          content: v.string(),
+          timestamp: v.number(),
+        })
+      )
+    ),
   }).index("by_user", ["userId"])
     .index("by_parent", ["parentId"]),
 
@@ -57,6 +87,8 @@ export default defineSchema({
     name: v.string(),       
     icon: v.string(),       
     color: v.string(),      
+    description: v.optional(v.string()),
+    tag: v.optional(v.string()),
   }).index("by_user", ["userId"]),
 
   projectSubCategories: defineTable({
@@ -147,4 +179,95 @@ export default defineSchema({
   }).index("by_category_type", ["categoryId", "listType"])
     .index("by_subCategory_type", ["subCategoryId", "listType"])
     .index("by_date_type", ["date", "listType"]),
-});
+
+      // ─── Topic Intelligence ─────────────────────────────────────────────────────
+  
+      topicNodes: defineTable({
+        userId: v.id("users"),
+        name: v.string(),
+        displayName: v.string(),
+        type: v.union(
+          v.literal("hashtag"),
+          v.literal("project"),
+          v.literal("inferred"),
+          v.literal("goal")
+        ),
+        sourceRef: v.optional(v.union(
+          v.id("projectCategories"),
+          v.id("projectSubCategories"),
+          v.id("projects"),
+          v.id("yearlyGoals")
+        )),
+        totalOccurrences: v.number(),
+        activeTodos: v.number(),
+        completedTodos: v.number(),
+        totalTimeSpent: v.optional(v.number()),
+        lastActivityAt: v.number(),
+        firstSeenAt: v.number(),
+        sentimentScore: v.optional(v.number()),
+        momentum: v.optional(v.number()),
+        consistency: v.optional(v.number()),
+        relatedTopics: v.optional(v.array(v.id("topicNodes"))),
+      }).index("by_user", ["userId"])
+        .index("by_user_type", ["userId", "type"])
+        .index("by_user_last_activity", ["userId", "lastActivityAt"]),
+
+      topicEdges: defineTable({
+        userId: v.id("users"),
+        fromTopicId: v.id("topicNodes"),
+        toTopicId: v.id("topicNodes"),
+        edgeType: v.union(
+          v.literal("contains"),
+          v.literal("co_occurs"),
+          v.literal("sequence"),
+          v.literal("subtopic"),
+          v.literal("conflict")
+        ),
+        weight: v.number(),
+        evidenceCount: v.number(),
+      }).index("by_user", ["userId"])
+        .index("by_from", ["fromTopicId"])
+        .index("by_to", ["toTopicId"]),
+
+      userInsights: defineTable({
+        userId: v.id("users"),
+        period: v.union(v.literal("day"), v.literal("week"), v.literal("month")),
+        periodStart: v.number(),
+        periodEnd: v.number(),
+        topTopics: v.array(v.object({
+          topicId: v.id("topicNodes"),
+          name: v.string(),
+          activityCount: v.number(),
+          completionRate: v.number(),
+          timeShare: v.number(),
+          trend: v.union(v.literal("up"), v.literal("down"), v.literal("stable")),
+        })),
+        productivityScore: v.number(),
+        peakHours: v.array(v.number()),
+        consistencyStreak: v.number(),
+        completionVelocity: v.number(),
+        stressLevel: v.optional(v.number()),
+        satisfactionScore: v.optional(v.number()),
+        balanceScore: v.optional(v.number()),
+        neglectedTopics: v.array(v.object({
+          topicId: v.id("topicNodes"),
+          name: v.string(),
+          daysSinceActivity: v.number(),
+          expectedFrequency: v.string(),
+        })),
+        overdueCount: v.number(),
+        suggestedFocus: v.array(v.object({
+          topicId: v.id("topicNodes"),
+          name: v.string(),
+          reason: v.string(),
+          priority: v.union(v.literal("high"), v.literal("medium"), v.literal("low")),
+          suggestedAction: v.string(),
+        })),
+        goalAlignment: v.array(v.object({
+          goalId: v.id("yearlyGoals"),
+          goalText: v.string(),
+          alignedTopicIds: v.array(v.id("topicNodes")),
+          progressPercent: v.number(),
+        })),
+      }).index("by_user_period", ["userId", "period", "periodStart"]),
+    });

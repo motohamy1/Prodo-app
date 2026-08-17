@@ -33,6 +33,8 @@ export const addCategory = mutation({
     name: v.string(),
     icon: v.string(),
     color: v.string(),
+    description: v.optional(v.string()),
+    tag: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     return await ctx.db.insert("projectCategories", {
@@ -40,6 +42,8 @@ export const addCategory = mutation({
       name: args.name,
       icon: args.icon,
       color: args.color,
+      description: args.description,
+      tag: args.tag,
     });
   },
 });
@@ -50,6 +54,8 @@ export const updateCategory = mutation({
     name: v.optional(v.string()),
     icon: v.optional(v.string()),
     color: v.optional(v.string()),
+    description: v.optional(v.string()),
+    tag: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const { id, ...fields } = args;

@@ -26,10 +26,6 @@ import { Platform, UIManager } from "react-native";
 
 // Register the background task (already defined in backgroundTask.ts via defineTask)
 
-if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
-  UIManager.setLayoutAnimationEnabledExperimental(true);
-}
-
 function RootLayoutContent() {
   useSyncManager();
   const { isInitialized, migrationInProgress, error: offlineError } = useOfflineFirstInit();
@@ -94,13 +90,6 @@ function RootLayoutContent() {
     <Stack screenOptions={{ headerShown: false }}>
       <Stack.Screen name="(tabs)" />
       <Stack.Screen name="auth" options={{ presentation: 'modal' }} />
-      <Stack.Screen 
-        name="add-reminder" 
-        options={{ 
-          presentation: 'modal',
-          headerShown: false,
-        }} 
-      />
     </Stack>
   );
 }

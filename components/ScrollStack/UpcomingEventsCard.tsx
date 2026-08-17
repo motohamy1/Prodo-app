@@ -16,6 +16,7 @@ export interface UpcomingEventDisplay {
   location?: string;
   meetingLink?: string;
   priority?: string;
+  type?: string;
 }
 
 interface UpcomingEventsCardProps {
@@ -96,48 +97,82 @@ export const UpcomingEventsCard: React.FC<UpcomingEventsCardProps> = ({
           decelerationRate="fast"
           scrollEventThrottle={16}
         >
-          {events.map((evt) => (
-            <TouchableOpacity
-              key={evt._id}
-              style={styles.eventRow}
-              onPress={() => onOpenEventModal(evt)}
-              activeOpacity={0.7}
-            >
-              {/* Time Badge */}
-              <View style={[styles.eventTimeChip, { backgroundColor: isDarkMode ? 'rgba(222, 254, 249, 0.15)' : 'rgba(222, 254, 249, 0.3)' }]}>
-                <Ionicons name="time-outline" size={13} color="#defef9" />
-                <Text style={[styles.eventTimeText, { color: isDarkMode ? '#defef9' : '#0A2B3A' }]}>
-                  {formatTime(evt.startTime || evt.date)}
-                </Text>
-              </View>
+          {events.map((evt) => {
+            const isMeeting = evt.type === 'meeting' || Boolean(evt.meetingLink);
+            const isAppointment = evt.type === 'appointment';
+            const isReminder = evt.type === 'reminder';
 
-              {/* Event Info */}
-              <View style={styles.eventInfo}>
-                <Text style={styles.eventTitle} numberOfLines={1}>
-                  {evt.title}
-                </Text>
-                
-                {(evt.location || evt.meetingLink) && (
-                  <View style={styles.eventMeta}>
-                    {evt.location ? (
-                      <>
-                        <Ionicons name="location-outline" size={12} color={colors.textMuted} />
-                        <Text style={styles.eventMetaText} numberOfLines={1}>{evt.location}</Text>
-                      </>
-                    ) : (
-                      <>
-                        <Ionicons name="videocam-outline" size={12} color="#defef9" />
-                        <Text style={[styles.eventMetaText, { color: '#defef9' }]}>Online Meeting</Text>
-                      </>
-                    )}
+            let chipIcon = "time-outline";
+            let chipColor = "#defef9";
+            let typeBadgeText = "";
+
+            if (isMeeting) {
+              chipIcon = "videocam-outline";
+              chipColor = "#38BDF8";
+              typeBadgeText = isArabic ? "اجتماع" : "Meeting";
+            } else if (isAppointment) {
+              chipIcon = "calendar-outline";
+              chipColor = "#F59E0B";
+              typeBadgeText = isArabic ? "موعد" : "Appointment";
+            } else if (isReminder) {
+              chipIcon = "alarm-outline";
+              chipColor = "#EC4899";
+              typeBadgeText = isArabic ? "تذكير" : "Reminder";
+            }
+
+            return (
+              <TouchableOpacity
+                key={evt._id}
+                style={styles.eventRow}
+                onPress={() => onOpenEventModal(evt)}
+                activeOpacity={0.7}
+              >
+                {/* Time Badge with dynamic type-aware icon */}
+                <View style={[styles.eventTimeChip, { backgroundColor: isDarkMode ? `${chipColor}20` : `${chipColor}35` }]}>
+                  <Ionicons name={chipIcon as any} size={13} color={chipColor} />
+                  <Text style={[styles.eventTimeText, { color: isDarkMode ? chipColor : '#0A2B3A' }]}>
+                    {formatTime(evt.startTime || evt.date)}
+                  </Text>
+                </View>
+
+                {/* Event Info */}
+                <View style={styles.eventInfo}>
+                  <View style={{ flexDirection: isArabic ? 'row-reverse' : 'row', alignItems: 'center', gap: 6 }}>
+                    <Text style={styles.eventTitle} numberOfLines={1}>
+                      {evt.title}
+                    </Text>
+                    {typeBadgeText ? (
+                      <View style={{ backgroundColor: isDarkMode ? `${chipColor}20` : `${chipColor}25`, paddingHorizontal: 5, paddingVertical: 1, borderRadius: 4 }}>
+                        <Text style={{ fontSize: 9, fontWeight: '700', color: chipColor }}>{typeBadgeText}</Text>
+                      </View>
+                    ) : null}
                   </View>
-                )}
-              </View>
+                  
+                  {(evt.location || evt.meetingLink) && (
+                    <View style={styles.eventMeta}>
+                      {evt.location ? (
+                        <>
+                          <Ionicons name="location-outline" size={12} color={colors.textMuted} />
+                          <Text style={styles.eventMetaText} numberOfLines={1}>{evt.location}</Text>
+                        </>
+                      ) : null}
+                      {evt.meetingLink ? (
+                        <>
+                          <Ionicons name="videocam-outline" size={12} color="#38BDF8" />
+                          <Text style={[styles.eventMetaText, { color: '#38BDF8' }]}>
+                            {isArabic ? 'رابط الاجتماع' : 'Meeting Link'}
+                          </Text>
+                        </>
+                      ) : null}
+                    </View>
+                  )}
+                </View>
 
-              {/* Edit Icon */}
-              <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
-            </TouchableOpacity>
-          ))}
+                {/* Edit Icon */}
+                <Ionicons name={isArabic ? "chevron-back" : "chevron-forward"} size={16} color={colors.textMuted} />
+              </TouchableOpacity>
+            );
+          })}
         </ScrollView>
       )}
 

@@ -18,6 +18,7 @@ import ScreenGuide from '@/components/ScreenGuide';
 import type { GuideTip } from '@/components/ScreenGuide';
 import { getNotificationSound, setNotificationSound, NotificationSound } from '@/utils/soundPreferences';
 import { updateNotificationSoundPreference } from '@/utils/notifications';
+import AnimatedWavyHeader from '@/components/AnimatedWavyHeader';
 
 const Settings = () => {
   const { colors, isDarkMode, toggleDarkMode } = useTheme();
@@ -180,13 +181,15 @@ const Settings = () => {
     <View style={[styles.container]}>
       <StatusBar barStyle={colors.statusBarStyle} backgroundColor={colors.bg} />
       <SafeAreaView style={styles.safeArea}>
-        <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-          
-          <Animated.View entering={FadeInDown.duration(500)} style={styles.header}>
+        <AnimatedWavyHeader backgroundColor={colors.bg} waveHeight={10} contentStyle={{ paddingBottom: 2 }}>
+          <Animated.View entering={FadeInDown.duration(500)} style={[styles.header, { paddingTop: 4, paddingBottom: 4 }]}>
             <Text style={[styles.headerTitle, isArabic && { textAlign: 'right' }]}>
               {t.settings}
             </Text>
           </Animated.View>
+        </AnimatedWavyHeader>
+
+        <ScrollView contentContainerStyle={[styles.scrollContent, { paddingTop: 12 }]} showsVerticalScrollIndicator={false}>
 
           {/* Profile Section */}
           <Animated.View entering={FadeInUp.duration(600).delay(100)} style={styles.profileOuter}>

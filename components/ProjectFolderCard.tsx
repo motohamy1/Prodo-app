@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Platform } from 'react-native';
+import { View, Text, StyleSheet, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import LivePress from '@/components/LivePress';
 import useTheme from '@/hooks/useTheme';
@@ -14,7 +14,9 @@ export interface ProjectFolderCardProps {
   name: string;
   color?: string;
   icon?: string;
+  tag?: string;
   itemCount: number;
+  doneCount?: number;
   progressPct?: number;
   previewItems?: ProjectPreviewItem[];
   index: number;
@@ -23,18 +25,18 @@ export interface ProjectFolderCardProps {
   onMenuPress: () => void;
 }
 
-// Preset vibrant folder colors inspired by the reference design and Prodo palette
+// Preset vibrant folder colors inspired by the reference design (Yellow, Blue, Orange, Purple, Red, Green, etc.)
 export const FOLDER_PALETTES = [
-  { bg: '#F59E0B', darkBg: '#D97706', tabBg: '#FBBF24', ink: '#1F1400', subInk: '#452A02', badgeBg: '#FEF3C7', iconColor: '#B45309' }, // Warm Amber Gold
-  { bg: '#3B82F6', darkBg: '#2563EB', tabBg: '#60A5FA', ink: '#FFFFFF', subInk: '#DBEAFE', badgeBg: '#EFF6FF', iconColor: '#1D4ED8' }, // Cobalt Blue
-  { bg: '#F97316', darkBg: '#EA580C', tabBg: '#FB923C', ink: '#1A0B00', subInk: '#431407', badgeBg: '#FFEDD5', iconColor: '#C2410C' }, // Tangy Orange
-  { bg: '#A855F7', darkBg: '#9333EA', tabBg: '#C084FC', ink: '#FFFFFF', subInk: '#F3E8FF', badgeBg: '#FAF5FF', iconColor: '#7E22CE' }, // Royal Lilac
-  { bg: '#F43F5E', darkBg: '#E11D48', tabBg: '#FB7185', ink: '#FFFFFF', subInk: '#FFE4E6', badgeBg: '#FFF1F2', iconColor: '#BE123C' }, // Coral Rose
-  { bg: '#10B981', darkBg: '#059669', tabBg: '#34D399', ink: '#022C22', subInk: '#064E3B', badgeBg: '#ECFDF5', iconColor: '#047857' }, // Emerald Jade
-  { bg: '#06B6D4', darkBg: '#0891B2', tabBg: '#22D3EE', ink: '#083344', subInk: '#164E63', badgeBg: '#ECFEFF', iconColor: '#0E7490' }, // Glacial Cyan
-  { bg: '#dbd4fd', darkBg: '#c4b6f7', tabBg: '#e4deff', ink: '#1E143C', subInk: '#3E2F6B', badgeBg: '#FFFFFF', iconColor: '#5B41A8' }, // Soft Lavender
-  { bg: '#e5f19d', darkBg: '#cbe068', tabBg: '#eff7b8', ink: '#1A290E', subInk: '#364B1D', badgeBg: '#FFFFFF', iconColor: '#476318' }, // Pastel Lime
-  { bg: '#f6e5c9', darkBg: '#edd5af', tabBg: '#faeedb', ink: '#2B1C0B', subInk: '#4D361E', badgeBg: '#FFFFFF', iconColor: '#6B4A23' }, // Warm Cream
+  { bg: '#FBBF24', darkBg: '#D97706', tabBg: '#F59E0B', ink: '#1F1400', subInk: '#5C3804', badgeBg: '#FEF3C7', iconColor: '#B45309' }, // Golden Yellow (like "Friends" in reference)
+  { bg: '#3B82F6', darkBg: '#1D4ED8', tabBg: '#2563EB', ink: '#FFFFFF', subInk: '#DBEAFE', badgeBg: '#EFF6FF', iconColor: '#1D4ED8' }, // Royal Blue (like "Astronomy")
+  { bg: '#F97316', darkBg: '#C2410C', tabBg: '#EA580C', ink: '#1A0B00', subInk: '#5C1D06', badgeBg: '#FFEDD5', iconColor: '#C2410C' }, // Tangerine Orange (like "Jokes lol")
+  { bg: '#A78BFA', darkBg: '#7C3AED', tabBg: '#8B5CF6', ink: '#1E143C', subInk: '#3E2F6B', badgeBg: '#EDE9FE', iconColor: '#6D28D9' }, // Lavender Purple (like "Cartoons")
+  { bg: '#FB7185', darkBg: '#E11D48', tabBg: '#F43F5E', ink: '#2A040D', subInk: '#5E0D1F', badgeBg: '#FFE4E6', iconColor: '#BE123C' }, // Coral Pink/Red (like "Tasty food")
+  { bg: '#34D399', darkBg: '#059669', tabBg: '#10B981', ink: '#022C22', subInk: '#064E3B', badgeBg: '#D1FAE5', iconColor: '#047857' }, // Fresh Green (like "Sport")
+  { bg: '#38BDF8', darkBg: '#0284C7', tabBg: '#0EA5E9', ink: '#082F49', subInk: '#0C4A6E', badgeBg: '#E0F2FE', iconColor: '#0369A1' }, // Sky Cyan
+  { bg: '#e5f19d', darkBg: '#a8be36', tabBg: '#cbe068', ink: '#1A290E', subInk: '#364B1D', badgeBg: '#FFFFFF', iconColor: '#476318' }, // Pastel Lime (Prodo theme)
+  { bg: '#dbd4fd', darkBg: '#9e8ef8', tabBg: '#c4b6f7', ink: '#1E143C', subInk: '#3E2F6B', badgeBg: '#FFFFFF', iconColor: '#5B41A8' }, // Soft Lavender (Prodo theme)
+  { bg: '#f6e5c9', darkBg: '#d8b982', tabBg: '#edd5af', ink: '#2B1C0B', subInk: '#4D361E', badgeBg: '#FFFFFF', iconColor: '#6B4A23' }, // Warm Cream (Prodo theme)
 ];
 
 export const getFolderPalette = (index: number, customColor?: string) => {
@@ -49,8 +51,9 @@ export const ProjectFolderCard: React.FC<ProjectFolderCardProps> = ({
   name,
   color,
   icon = 'folder-outline',
+  tag,
   itemCount = 0,
-  progressPct = 0,
+  doneCount = 0,
   previewItems = [],
   index,
   isArabic = false,
@@ -62,9 +65,9 @@ export const ProjectFolderCard: React.FC<ProjectFolderCardProps> = ({
     ? `${itemCount} ${itemCount === 1 ? 'عنصر' : 'عناصر'}`
     : `${itemCount} ${itemCount === 1 ? 'item' : 'items'}`;
 
-  // Dynamic preview snippets
-  const taskSnippet1 = previewItems[0]?.text || name;
-  const taskSnippet2 = previewItems[1]?.text || 'Active task';
+  // Clean hashtag format: e.g. #Work, #Design, etc.
+  const rawTag = tag || name;
+  const displayTag = rawTag.startsWith('#') ? rawTag : `#${rawTag.replace(/\s+/g, '')}`;
 
   return (
     <View style={styles.cardWrapper}>
@@ -84,13 +87,13 @@ export const ProjectFolderCard: React.FC<ProjectFolderCardProps> = ({
               isArabic ? styles.folderTabRTL : styles.folderTabLTR,
             ]}
           />
-          {/* Folder Back Body */}
+          {/* Folder Back Body Wall */}
           <View style={[styles.folderBackWall, { backgroundColor: palette.darkBg }]} />
         </View>
 
-        {/* ─── Layer 2: Stacked Preview Cards (Peeking Out) ───────────── */}
+        {/* ─── Layer 2: Stacked Preview Cards (Peeking Out of Pocket) ── */}
         <View style={[styles.peekingCardsLayer, isArabic && { flexDirection: 'row-reverse' }]} pointerEvents="none">
-          {/* Card 1: Left Tilted Document Card */}
+          {/* Card 1: Left Tilted Card (Project Hashtag preview) */}
           <View
             style={[
               styles.previewCard,
@@ -99,18 +102,18 @@ export const ProjectFolderCard: React.FC<ProjectFolderCardProps> = ({
             ]}
           >
             <View style={styles.previewCardHeader}>
-              <View style={[styles.miniDot, { backgroundColor: palette.bg }]} />
-              <View style={[styles.miniLine, { width: 26, backgroundColor: '#CBD5E1' }]} />
+              <Ionicons name="pricetag" size={8} color={palette.iconColor} />
+              <View style={[styles.miniLine, { width: 16, backgroundColor: palette.bg }]} />
             </View>
-            <Text style={styles.miniText} numberOfLines={2}>
-              {taskSnippet1}
+            <Text style={[styles.miniHashtagText, { color: palette.darkBg }]} numberOfLines={2}>
+              {displayTag}
             </Text>
             <View style={styles.previewCardFooter}>
-              <View style={[styles.miniBar, { width: '70%', backgroundColor: '#E2E8F0' }]} />
+              <View style={[styles.miniBar, { width: '80%', backgroundColor: '#E2E8F0' }]} />
             </View>
           </View>
 
-          {/* Card 2: Center/Back Card */}
+          {/* Card 2: Center/Back Card (Item Numbers / Count inside project) */}
           <View
             style={[
               styles.previewCard,
@@ -118,15 +121,17 @@ export const ProjectFolderCard: React.FC<ProjectFolderCardProps> = ({
               { backgroundColor: '#F8FAFC' },
             ]}
           >
-            <View style={styles.previewCenterArtwork}>
-              <Ionicons name={icon as any} size={18} color={palette.iconColor} />
+            <View style={[styles.centerCountContainer, { backgroundColor: palette.badgeBg }]}>
+              <Text style={[styles.miniCountNumber, { color: palette.iconColor }]}>
+                {itemCount}
+              </Text>
             </View>
-            <Text style={[styles.miniText, { fontSize: 8, color: '#64748B', marginTop: 2 }]} numberOfLines={1}>
-              {taskSnippet2}
+            <Text style={[styles.miniCountLabel, { color: '#64748B' }]} numberOfLines={1}>
+              {isArabic ? 'عناصر' : 'items'}
             </Text>
           </View>
 
-          {/* Card 3: Right Tilted Graphic/Sticker Card */}
+          {/* Card 3: Right Tilted Card (Icon/Sticker preview) */}
           <View
             style={[
               styles.previewCard,
@@ -137,20 +142,20 @@ export const ProjectFolderCard: React.FC<ProjectFolderCardProps> = ({
             <View style={[styles.cornerFold, { borderTopColor: palette.tabBg, borderRightColor: palette.darkBg }]} />
             <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
               <View style={[styles.iconChip, { backgroundColor: palette.badgeBg }]}>
-                <Ionicons name={icon as any} size={16} color={palette.iconColor} />
+                <Ionicons name={icon as any} size={15} color={palette.iconColor} />
               </View>
             </View>
           </View>
         </View>
 
-        {/* ─── Layer 3: Front Folder Flap (The Front Pouch) ───────────── */}
+        {/* ─── Layer 3: Front Folder Pouch (The Front Flap) ───────────── */}
         <View style={styles.frontPouchContainer}>
-          {/* Asymmetrical Curved Top Flap Lip (Lower scoop on right to reveal cards) */}
+          {/* Scooped Top Lip (higher on left, scooped down on right to reveal cards) */}
           <View
             style={[
               styles.frontFlapLip,
               { backgroundColor: palette.bg },
-              isArabic && styles.frontFlapLipRTL,
+              isArabic ? styles.frontFlapLipRTL : styles.frontFlapLipLTR,
             ]}
           />
 
@@ -162,7 +167,7 @@ export const ProjectFolderCard: React.FC<ProjectFolderCardProps> = ({
               isArabic && { flexDirection: 'row-reverse' },
             ]}
           >
-            {/* Folder Information */}
+            {/* Folder Information (Title & Item Count) */}
             <View style={[styles.infoColumn, isArabic && { alignItems: 'flex-end' }]}>
               <Text
                 style={[
@@ -191,10 +196,10 @@ export const ProjectFolderCard: React.FC<ProjectFolderCardProps> = ({
               style={[
                 styles.projectBadge,
                 { backgroundColor: palette.badgeBg },
-                isArabic ? { marginLeft: 0, marginRight: 6 } : { marginRight: 0, marginLeft: 6 },
+                isArabic ? { marginLeft: 0, marginRight: 4 } : { marginRight: 0, marginLeft: 4 },
               ]}
             >
-              <Ionicons name={icon as any} size={16} color={palette.iconColor} />
+              <Ionicons name={icon as any} size={15} color={palette.iconColor} />
             </View>
           </View>
         </View>
@@ -218,14 +223,14 @@ export const AddProjectFolderCard: React.FC<{
         activeOpacity={0.88}
         onPress={onPress}
       >
-        <View style={[styles.addCardContainer, { borderColor: colors.border, backgroundColor: colors.surface + '60' }]}>
+        <View style={[styles.addCardContainer, { borderColor: colors.border, backgroundColor: colors.surface + '70' }]}>
           {/* Top Ghost Tab */}
           <View style={[styles.addCardTab, { borderColor: colors.border }, isArabic ? styles.folderTabRTL : styles.folderTabLTR]} />
 
           {/* Body Content */}
           <View style={styles.addCardBody}>
             <View style={[styles.addIconCircle, { backgroundColor: colors.surface }]}>
-              <Ionicons name="add" size={24} color={colors.primary} />
+              <Ionicons name="add" size={22} color={colors.primary} />
             </View>
             <Text style={[styles.addCardTitle, { color: colors.text }]}>
               {isArabic ? 'مشروع جديد' : 'New Project'}
@@ -242,13 +247,13 @@ export const AddProjectFolderCard: React.FC<{
 
 const styles = StyleSheet.create({
   cardWrapper: {
-    width: '48%',
+    width: '100%',
     marginBottom: 16,
   },
   pressableArea: {
     width: '100%',
-    height: 172,
-    borderRadius: 20,
+    height: 155,
+    borderRadius: 18,
   },
 
   // ─── Layer 1: Back Wall ───────────────────────────────────────────
@@ -258,14 +263,14 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    borderRadius: 20,
+    borderRadius: 18,
     overflow: 'hidden',
   },
   folderTab: {
     position: 'absolute',
     top: 0,
-    width: '58%',
-    height: 28,
+    width: '52%',
+    height: 24,
     borderTopLeftRadius: 14,
     borderTopRightRadius: 14,
   },
@@ -277,20 +282,20 @@ const styles = StyleSheet.create({
   },
   folderBackWall: {
     position: 'absolute',
-    top: 14,
+    top: 10,
     left: 0,
     right: 0,
     bottom: 0,
-    borderRadius: 18,
+    borderRadius: 16,
   },
 
   // ─── Layer 2: Peeking Cards ────────────────────────────────────────
   peekingCardsLayer: {
     position: 'absolute',
-    top: 8,
+    top: 6,
     left: 6,
     right: 6,
-    height: 96,
+    height: 75,
     flexDirection: 'row',
     alignItems: 'flex-start',
     justifyContent: 'center',
@@ -298,18 +303,18 @@ const styles = StyleSheet.create({
   },
   previewCard: {
     position: 'absolute',
-    width: 68,
-    height: 72,
-    borderRadius: 10,
-    padding: 6,
+    width: 54,
+    height: 60,
+    borderRadius: 8,
+    padding: 5,
     borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.08)',
+    borderColor: 'rgba(0,0,0,0.06)',
     ...Platform.select({
       ios: {
         shadowColor: '#000',
-        shadowOffset: { width: 0, height: 3 },
-        shadowOpacity: 0.16,
-        shadowRadius: 4,
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.15,
+        shadowRadius: 3,
       },
       android: {
         elevation: 3,
@@ -317,57 +322,81 @@ const styles = StyleSheet.create({
     }),
   },
   previewCardLeft: {
-    left: 2,
-    top: 6,
-    transform: [{ rotate: '-8deg' }],
+    left: 8,
+    top: 4,
+    transform: [{ rotate: '-7deg' }],
     zIndex: 1,
   },
   previewCardCenter: {
     alignSelf: 'center',
     top: 0,
-    width: 62,
-    height: 70,
+    width: 50,
+    height: 58,
     transform: [{ rotate: '1deg' }],
     zIndex: 2,
   },
   previewCardRight: {
-    right: 4,
-    top: 4,
-    width: 64,
-    height: 74,
-    transform: [{ rotate: '9deg' }],
+    right: 8,
+    top: 2,
+    width: 52,
+    height: 62,
+    transform: [{ rotate: '8deg' }],
     zIndex: 3,
   },
   previewCardHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
-    marginBottom: 4,
+    gap: 3,
+    marginBottom: 3,
   },
   miniDot: {
-    width: 5,
-    height: 5,
-    borderRadius: 2.5,
+    width: 4,
+    height: 4,
+    borderRadius: 2,
   },
   miniLine: {
-    height: 3,
+    height: 2.5,
     borderRadius: 1.5,
   },
+  miniHashtagText: {
+    fontSize: 7,
+    fontWeight: '800',
+    letterSpacing: -0.2,
+    lineHeight: 9,
+  },
   miniText: {
-    fontSize: 8,
+    fontSize: 7.5,
     fontWeight: '700',
     color: '#334155',
-    lineHeight: 11,
+    lineHeight: 10,
   },
   previewCardFooter: {
     marginTop: 'auto',
   },
   miniBar: {
-    height: 3,
+    height: 2.5,
     borderRadius: 1.5,
   },
-  previewCenterArtwork: {
+  centerCountContainer: {
     flex: 1,
+    borderRadius: 6,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  miniCountNumber: {
+    fontSize: 13,
+    fontWeight: '900',
+    letterSpacing: -0.5,
+  },
+  miniCountLabel: {
+    fontSize: 6.5,
+    fontWeight: '700',
+    textAlign: 'center',
+    marginTop: 1,
+  },
+  centerArtContainer: {
+    flex: 1,
+    borderRadius: 6,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -378,29 +407,29 @@ const styles = StyleSheet.create({
     width: 0,
     height: 0,
     borderStyle: 'solid',
-    borderTopWidth: 12,
-    borderRightWidth: 12,
+    borderTopWidth: 10,
+    borderRightWidth: 10,
     borderBottomWidth: 0,
     borderLeftWidth: 0,
     borderBottomColor: 'transparent',
     borderLeftColor: 'transparent',
-    borderTopLeftRadius: 3,
+    borderTopLeftRadius: 2,
   },
   iconChip: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
+    width: 26,
+    height: 26,
+    borderRadius: 13,
     justifyContent: 'center',
     alignItems: 'center',
   },
 
-  // ─── Layer 3: Front Folder Pouch ───────────────────────────────────
+  // ─── Layer 3: Front Folder Flap (The Front Pouch) ─────────────
   frontPouchContainer: {
     position: 'absolute',
     left: 0,
     right: 0,
     bottom: 0,
-    height: 104,
+    height: 94,
     zIndex: 5,
   },
   frontFlapLip: {
@@ -408,26 +437,28 @@ const styles = StyleSheet.create({
     top: 0,
     left: 0,
     right: 0,
-    height: 24,
-    borderTopLeftRadius: 18,
-    borderTopRightRadius: 28,
-    transform: [{ skewY: '-2deg' }],
+    height: 20,
+  },
+  frontFlapLipLTR: {
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 26,
+    transform: [{ skewY: '-3deg' }],
   },
   frontFlapLipRTL: {
-    borderTopLeftRadius: 28,
-    borderTopRightRadius: 18,
-    transform: [{ skewY: '2deg' }],
+    borderTopLeftRadius: 26,
+    borderTopRightRadius: 16,
+    transform: [{ skewY: '3deg' }],
   },
   frontPouchBody: {
     position: 'absolute',
-    top: 10,
+    top: 8,
     left: 0,
     right: 0,
     bottom: 0,
-    borderBottomLeftRadius: 18,
-    borderBottomRightRadius: 18,
+    borderBottomLeftRadius: 16,
+    borderBottomRightRadius: 16,
     paddingHorizontal: 12,
-    paddingVertical: 12,
+    paddingVertical: 10,
     flexDirection: 'row',
     alignItems: 'flex-end',
     justifyContent: 'space-between',
@@ -451,28 +482,28 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '800',
     letterSpacing: -0.3,
-    marginBottom: 3,
+    marginBottom: 2,
   },
   itemCountText: {
     fontSize: 12,
     fontWeight: '600',
     letterSpacing: -0.1,
-    opacity: 0.9,
+    opacity: 0.88,
   },
   projectBadge: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1.5,
-    borderColor: 'rgba(255,255,255,0.7)',
+    borderColor: 'rgba(255,255,255,0.75)',
     ...Platform.select({
       ios: {
         shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.15,
-        shadowRadius: 3,
+        shadowOffset: { width: 0, height: 1.5 },
+        shadowOpacity: 0.12,
+        shadowRadius: 2,
       },
       android: {
         elevation: 2,
@@ -483,7 +514,7 @@ const styles = StyleSheet.create({
   // ─── Add Ghost Card ────────────────────────────────────────────────
   addCardContainer: {
     flex: 1,
-    borderRadius: 18,
+    borderRadius: 16,
     borderWidth: 1.5,
     borderStyle: 'dashed',
     padding: 12,
@@ -493,8 +524,8 @@ const styles = StyleSheet.create({
   addCardTab: {
     position: 'absolute',
     top: -2,
-    width: '50%',
-    height: 18,
+    width: '48%',
+    height: 16,
     borderTopLeftRadius: 12,
     borderTopRightRadius: 12,
     borderWidth: 1.5,
@@ -504,15 +535,15 @@ const styles = StyleSheet.create({
   addCardBody: {
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 8,
+    marginTop: 6,
   },
   addIconCircle: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: 38,
+    height: 38,
+    borderRadius: 19,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: 6,
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.1)',
   },

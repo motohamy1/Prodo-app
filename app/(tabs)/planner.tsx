@@ -24,6 +24,12 @@ import ScreenGuide from '@/components/ScreenGuide';
 import type { GuideTip } from '@/components/ScreenGuide';
 import { LIST_TYPE_COLORS } from '@/utils/magicColors';
 import Reanimated, { FadeInDown } from 'react-native-reanimated';
+import MonthWalletDeck from '@/components/MonthWalletDeck';
+import { getMonthPalette } from '@/components/MonthCreditCard';
+import LivePress from '@/components/LivePress';
+import DayTimelineSchedule from '@/components/DayTimelineSchedule';
+import TaskDetailModal from '@/components/TaskDetailModal';
+import AnimatedWavyHeader from '@/components/AnimatedWavyHeader';
 
 const months_en = [
   'January', 'February', 'March', 'April',
@@ -36,6 +42,12 @@ const months_ar = [
   'مايو', 'يونيو', 'يوليو', 'أغسطس',
   'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'
 ];
+
+const weekdays_en = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+const weekdays_ar = ['أحد', 'إثنين', 'ثلاثاء', 'أربعاء', 'خميس', 'جمعة', 'سبت'];
+
+const fullWeekdays_en = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+const fullWeekdays_ar = ['الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
 
 const LIST_TYPE_CARDS = [
   { key: 'checklist', label: 'Checklists', icon: 'checkbox-outline', color: LIST_TYPE_COLORS.checklist },
@@ -68,6 +80,8 @@ const Planner = () => {
   const [selectedDay, setSelectedDay] = useState<number | null>(null);
   
   const [expandedTodoId, setExpandedTodoId] = useState<Id<"todos"> | null>(null);
+  const [selectedTaskForModal, setSelectedTaskForModal] = useState<Id<"todos"> | null>(null);
+  const [dayHubFilter, setDayHubFilter] = useState<'all' | 'tasks' | 'checklists' | 'notes' | 'completed'>('all');
   const [isTimerModalVisible, setTimerModalVisible] = useState(false);
   const [isProjectModalVisible, setProjectModalVisible] = useState(false);
   const [selectedTodoId, setSelectedTodoId] = useState<Id<"todos"> | null>(null);
@@ -93,13 +107,20 @@ const Planner = () => {
   };
 
   const updateTodoStatus = useOfflineMutation(api.todos.updateStatus, "todos:updateStatus");
+  const addTodoMutation = useOfflineMutation(api.todos.addTodo, "todos:addTodo");
   const deleteTodoMutation = useOfflineMutation(api.todos.deleteTodo, "todos:deleteTodo");
+  const addPlannerItemMutation = useOfflineMutation(api.projects.addPlannerItem, "projects:addPlannerItem");
+  const updatePlannerItemMutation = useOfflineMutation(api.projects.updatePlannerItem, "projects:updatePlannerItem");
+  const deletePlannerItemMutation = useOfflineMutation(api.projects.deletePlannerItem, "projects:deletePlannerItem");
   const setTimerMutation = useOfflineMutation(api.todos.setTimer, "todos:setTimer");
   const linkProjectMutation = useOfflineMutation(api.todos.linkProject, "todos:linkProject");
   const linkTaskMutation = useOfflineMutation(api.todos.linkTask, "todos:linkTask");
   const scrollViewRef = useRef<ScrollView>(null);
   const yearScrollRef = useRef<ScrollView>(null);
+  const monthStackRef = useRef<ScrollView>(null);
+  const autoReturnTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  const currentMonth = new Date().getMonth();
   // Scroll year carousel to current year on mount
   useEffect(() => {
     const years = [currentYear - 1, currentYear, currentYear + 1, currentYear + 2];
@@ -206,7 +227,7 @@ const Planner = () => {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ flexGrow: 1, paddingBottom: 100 }}
       >
-        {/* ─── Goals of the Year ─── */}
+        {/* ─── Deep Shadow Goals of the Year ─── */}
         <View style={styles.yearSectionHeader}>
           <Text style={styles.yearSectionTitle}>{t.goalsOfTheYear}</Text>
           <Text style={styles.yearSectionSubtitle}>{t.year} {activeYear}</Text>
@@ -224,7 +245,7 @@ const Planner = () => {
             }
           }}
           contentContainerStyle={styles.yearScrollContainer}
-          style={{ height: 220 }}
+          style={{ height: 129 }}
         >
           {years.map((year) => {
             const yearGoalDocs = allGoals.filter((g: any) => g.year === year);
@@ -248,383 +269,539 @@ const Planner = () => {
             const goalProgress = totalGoals > 0 ? completedGoals / totalGoals : 0;
             const achievementCount = yearAchievementDocs.length;
 
+            const currentMonthPalette = getMonthPalette(currentMonth);
+
+            // Dynamic color system for current year card (matches current month palette)
+            const cardBg = isCurrent ? currentMonthPalette.bg : colors.surface;
+            const cardBorder = isCurrent ? currentMonthPalette.ink + '20' : colors.border;
+            const textColor = isCurrent ? currentMonthPalette.ink : colors.text;
+            const textMutedColor = isCurrent ? currentMonthPalette.ink + 'A6' : colors.textMuted;
+            const badgeBg = isCurrent ? currentMonthPalette.ink + '18' : colors.primary + '18';
+            const badgeTextColor = isCurrent ? currentMonthPalette.ink : colors.primary;
+            const iconBtnBg = isCurrent ? currentMonthPalette.ink + '14' : (isDarkMode ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.05)');
+            const iconBtnColor = isCurrent ? currentMonthPalette.ink : colors.primary;
+            const capsuleBg = isCurrent ? currentMonthPalette.ink + '0E' : (isDarkMode ? 'rgba(255, 255, 255, 0.04)' : 'rgba(0, 0, 0, 0.03)');
+            const capsuleBorder = isCurrent ? currentMonthPalette.ink + '18' : colors.border;
+            const flagIconColor = isCurrent ? currentMonthPalette.ink : (isDarkMode ? '#D4FF00' : colors.primary);
+            const trophyIconColor = isCurrent ? currentMonthPalette.ink : '#FBBF24';
+            const progressTrackBg = isCurrent ? currentMonthPalette.ink + '1A' : (isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.08)');
+            const progressFillBg = isCurrent ? currentMonthPalette.accent : (isDarkMode ? '#D4FF00' : colors.primary);
+            const progressTextColor = isCurrent ? currentMonthPalette.ink : (isDarkMode ? '#D4FF00' : colors.primary);
+
             return (
-                <View key={year} style={{ width: screenWidth, paddingHorizontal: 16 }}>
+              <View key={year} style={{ width: screenWidth, paddingHorizontal: 16 }}>
                 <TouchableOpacity
-                  style={[styles.yearCard, isCurrent && styles.yearCardActive]}
+                  style={[
+                    styles.yearCard,
+                    {
+                      backgroundColor: cardBg,
+                      borderColor: cardBorder,
+                    },
+                    isCurrent && {
+                      shadowColor: currentMonthPalette.ink,
+                      shadowOpacity: 0.15,
+                      shadowRadius: 10,
+                      elevation: 4,
+                    }
+                  ]}
                   onPress={() => router.push({ pathname: '/year-detail', params: { year: year.toString() } })}
-                  activeOpacity={0.85}
+                  activeOpacity={0.88}
                 >
+                  {/* Top Row: Year, Badge, Edit Icon */}
                   <View style={styles.yearCardHeader}>
-                    <Text style={styles.yearCardTitle}>{year}</Text>
-                  <View style={{ flexDirection: isArabic ? 'row-reverse' : 'row', alignItems: 'center', gap: 8 }}>
-                    {isCurrent && (
-                      <Text style={styles.yearCardBadge}>{t.current}</Text>
-                    )}
-                    <Ionicons name="create-outline" size={18} color={colors.textMuted} />
-                  </View>
-                </View>
-
-                {/* Stats Row */}
-                <View style={{
-                  flexDirection: isArabic ? 'row-reverse' : 'row',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  marginTop: 12,
-                  gap: 12,
-                }}>
-                  {/* Goals stat */}
-                  <View style={{
-                    flex: 1,
-                    backgroundColor: colors.bg,
-                    borderRadius: 16,
-                    padding: 12,
-                    alignItems: 'center',
-                  }}>
-                    <Ionicons name="flag-outline" size={20} color={colors.primary} />
-                    <Text style={{ fontSize: 13, fontWeight: '700', color: colors.textMuted, marginTop: 4 }}>
-                      {totalGoals > 0 ? `${completedGoals}/${totalGoals}` : '—'}
-                    </Text>
-                    <Text style={{ fontSize: 11, fontWeight: '600', color: colors.textMuted }}>
-                      {t.goalsOfTheYear}
-                    </Text>
-                  </View>
-
-                  {/* Achievements stat */}
-                  <View style={{
-                    flex: 1,
-                    backgroundColor: colors.bg,
-                    borderRadius: 16,
-                    padding: 12,
-                    alignItems: 'center',
-                  }}>
-                    <Ionicons name="trophy-outline" size={20} color={colors.success} />
-                    <Text style={{ fontSize: 13, fontWeight: '700', color: colors.textMuted, marginTop: 4 }}>
-                      {achievementCount}
-                    </Text>
-                    <Text style={{ fontSize: 11, fontWeight: '600', color: colors.textMuted }}>
-                      {t.achievementsOfTheYear}
-                    </Text>
-                  </View>
-                </View>
-
-                {/* Progress bar */}
-                {totalGoals > 0 && (
-                  <View style={{ marginTop: 14 }}>
-                    <View style={{
-                      height: 6,
-                      backgroundColor: colors.border + '40',
-                      borderRadius: 3,
-                      overflow: 'hidden',
-                    }}>
-                      <View style={{
-                        height: '100%',
-                        width: `${goalProgress * 100}%`,
-                        backgroundColor: colors.primary,
-                        borderRadius: 3,
-                      }} />
+                    <View style={{ flexDirection: isArabic ? 'row-reverse' : 'row', alignItems: 'center', gap: 8 }}>
+                      <Text style={[styles.yearCardTitle, { color: textColor }]}>{year}</Text>
+                      {isCurrent && (
+                        <View style={[styles.yearCardBadge, { backgroundColor: badgeBg }]}>
+                          <Text style={{ fontSize: 10, fontWeight: '700', color: badgeTextColor }}>{t.current}</Text>
+                        </View>
+                      )}
                     </View>
-                    <Text style={{
-                      fontSize: 11,
-                      fontWeight: '700',
-                      color: colors.primary,
-                      marginTop: 6,
-                      textAlign: isArabic ? 'right' : 'left',
-                    }}>
-                      {Math.round(goalProgress * 100)}% {t.goalCompleted}
-                    </Text>
+                    <View style={{ width: 28, height: 28, borderRadius: 8, backgroundColor: iconBtnBg, justifyContent: 'center', alignItems: 'center' }}>
+                      <Ionicons name="create-outline" size={15} color={iconBtnColor} />
+                    </View>
                   </View>
-                )}
 
-                {totalGoals === 0 && (
-                  <Text style={{
-                    textAlign: 'center',
-                    color: colors.textMuted,
-                    fontSize: 13,
-                    fontWeight: '500',
-                    marginTop: 14,
+                  {/* Middle Row: Stats Capsules */}
+                  <View style={{
+                    flexDirection: isArabic ? 'row-reverse' : 'row',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    gap: 8,
+                    marginVertical: 4,
                   }}>
-                    {t.tapToPlan}
-                  </Text>
-                )}
-              </TouchableOpacity>
+                    {/* Goals stat */}
+                    <View style={[styles.yearStatCard, { backgroundColor: capsuleBg, borderColor: capsuleBorder }]}>
+                      <Ionicons name="flag-outline" size={16} color={flagIconColor} />
+                      <View style={{ flex: 1 }}>
+                        <Text style={[styles.yearStatValue, { color: textColor, textAlign: isArabic ? 'right' : 'left' }]}>
+                          {totalGoals > 0 ? `${completedGoals}/${totalGoals}` : '—'}
+                        </Text>
+                        <Text style={[styles.yearStatLabel, { color: textMutedColor, textAlign: isArabic ? 'right' : 'left' }]} numberOfLines={1}>
+                          {t.goalsOfTheYear}
+                        </Text>
+                      </View>
+                    </View>
+
+                    {/* Achievements stat */}
+                    <View style={[styles.yearStatCard, { backgroundColor: capsuleBg, borderColor: capsuleBorder }]}>
+                      <Ionicons name="trophy-outline" size={16} color={trophyIconColor} />
+                      <View style={{ flex: 1 }}>
+                        <Text style={[styles.yearStatValue, { color: textColor, textAlign: isArabic ? 'right' : 'left' }]}>
+                          {achievementCount}
+                        </Text>
+                        <Text style={[styles.yearStatLabel, { color: textMutedColor, textAlign: isArabic ? 'right' : 'left' }]} numberOfLines={1}>
+                          {t.achievementsOfTheYear}
+                        </Text>
+                      </View>
+                    </View>
+                  </View>
+
+                  {/* Bottom Row: Progress bar or Tap to plan */}
+                  {totalGoals > 0 ? (
+                    <View style={{ flexDirection: isArabic ? 'row-reverse' : 'row', alignItems: 'center', gap: 8, marginTop: 2 }}>
+                      <View style={{
+                        flex: 1,
+                        height: 5,
+                        backgroundColor: progressTrackBg,
+                        borderRadius: 3,
+                        overflow: 'hidden',
+                      }}>
+                        <View style={{
+                          height: '100%',
+                          width: `${goalProgress * 100}%`,
+                          backgroundColor: progressFillBg,
+                          borderRadius: 3,
+                        }} />
+                      </View>
+                      <Text style={{
+                        fontSize: 10,
+                        fontWeight: '700',
+                        color: progressTextColor,
+                      }}>
+                        {Math.round(goalProgress * 100)}% {t.goalCompleted}
+                      </Text>
+                    </View>
+                  ) : (
+                    <Text style={{
+                      textAlign: 'center',
+                      color: textMutedColor,
+                      fontSize: 11,
+                      fontWeight: '600',
+                      marginTop: 2,
+                    }}>
+                      {t.tapToPlan}
+                    </Text>
+                  )}
+                </TouchableOpacity>
               </View>
             );
           })}
         </ScrollView>
 
-        {/* ─── Month Grid ─── */}
-        <View style={[styles.monthGrid, isArabic && { flexDirection: 'row-reverse' }]}>
-          {months.map((month, index) => {
-            const tasks = getTasksForMonth(index);
-            const isSelected = selectedMonth === index;
-            return (
-              <Reanimated.View key={month} entering={FadeInDown.duration(420).delay(index * 50)} style={{ width: '31%' }}>
-                <TouchableOpacity
-                  style={[styles.monthCard, isSelected && styles.selectedMonthCard]}
-                  onPress={() => setSelectedMonth(index)}
-                  activeOpacity={0.7}
-                >
-                  {tasks.length > 0 && !isSelected && <View style={styles.monthIndicator} />}
-                  <Text style={[styles.monthName, isSelected && styles.selectedMonthName]}>
-                    {isArabic ? month : month.substring(0, 3)}
-                  </Text>
-                  <Text style={[styles.monthStats, isSelected && styles.selectedMonthStats]}>
-                    {tasks.length > 0 ? `${tasks.length} ${tasks.length === 1 ? t.task : t.tasks}` : t.empty}
-                  </Text>
-                </TouchableOpacity>
-              </Reanimated.View>
-            );
-          })}
-        </View>
+        {/* ─── 3D Vertical Stacked Wallet Deck for Months ─── */}
+        <MonthWalletDeck
+          months={months}
+          currentYear={currentYear}
+          currentMonthIndex={currentMonth}
+          getTasksForMonth={getTasksForMonth}
+          onSelectMonth={(monthIdx) => setSelectedMonth(monthIdx)}
+          isArabic={isArabic}
+          t={{
+            current: t.current,
+            task: t.task,
+            tasksThisMonth: t.tasksThisMonth,
+            empty: t.empty,
+          }}
+        />
       </ScrollView>
     );
   };
 
   const renderDayGrid = (monthIndex: number) => {
     const daysInMonth = getDaysInMonth(monthIndex, currentYear);
-    const dayElements = [];
+    const palette = getMonthPalette(monthIndex);
+    const monthTasks = getTasksForMonth(monthIndex);
+    const completedMonthTasks = monthTasks.filter(t => t.status === 'done');
+    const firstDayOfWeek = new Date(currentYear, monthIndex, 1).getDay();
 
-    for (let i = 1; i <= daysInMonth; i++) {
-        const tasks = getTasksForDay(i, monthIndex, currentYear);
-        const isToday = i === new Date().getDate() && 
-                        monthIndex === new Date().getMonth() && 
-                        currentYear === new Date().getFullYear();
+    const weekdays = isArabic ? weekdays_ar : weekdays_en;
 
-        dayElements.push(
-            <Reanimated.View 
-                key={i} 
-                entering={FadeInDown.duration(380).delay((i % 14) * 40)} 
-                style={{ width: '13%' }}
-            >
-                <TouchableOpacity 
-                style={[
-                    styles.dayCard, 
-                    tasks.length > 0 && styles.hasTaskCard,
-                    isToday && styles.todayCard
-                ]}
-                onPress={() => setSelectedDay(i)}
-                activeOpacity={0.7}
-            >
-                {tasks.length > 0 && !isToday && <View style={styles.monthIndicator} />}
-                <Text style={[
-                    styles.dayText, 
-                    isToday && styles.todayText
-                ]}>{i}</Text>
-                <Text style={[
-                    styles.dayStats, 
-                    isToday && styles.todayStats
-                ]}>
-                    {tasks.length > 0 ? `${tasks.length} ${tasks.length === 1 ? t.task : t.tasks}` : t.empty}
-                </Text>
-            </TouchableOpacity>
-            </Reanimated.View>
-        );
+    // Build exact 7-column rows so every day column aligns with weekday headers
+    const totalSlots = Math.ceil((firstDayOfWeek + daysInMonth) / 7) * 7;
+    const calendarRows: Array<Array<{ day: number | null; isToday: boolean; isSolidEdge: boolean; tasks: any[] }>> = [];
+
+    let currentRow: Array<{ day: number | null; isToday: boolean; isSolidEdge: boolean; tasks: any[] }> = [];
+
+    for (let slot = 0; slot < totalSlots; slot++) {
+      const dayNumber = slot >= firstDayOfWeek && slot < firstDayOfWeek + daysInMonth
+        ? slot - firstDayOfWeek + 1
+        : null;
+
+      const isToday = dayNumber !== null && 
+                      dayNumber === new Date().getDate() && 
+                      monthIndex === new Date().getMonth() && 
+                      currentYear === new Date().getFullYear();
+
+      const isLastRow = slot >= totalSlots - 7;
+      const isSolidEdgeDay = dayNumber !== null && (daysInMonth >= 30 ? (dayNumber >= 30 || isLastRow) : false);
+      const dayTasks = dayNumber ? getTasksForDay(dayNumber, monthIndex, currentYear) : [];
+
+      currentRow.push({
+        day: dayNumber,
+        isToday,
+        isSolidEdge: isSolidEdgeDay,
+        tasks: dayTasks,
+      });
+
+      if (currentRow.length === 7) {
+        calendarRows.push(currentRow);
+        currentRow = [];
+      }
     }
 
     return (
-        <ScrollView 
-            contentContainerStyle={{ flexGrow: 1, paddingBottom: 100 }} 
-            showsVerticalScrollIndicator={false}
-        >
+      <ScrollView 
+        contentContainerStyle={{ flexGrow: 1, paddingBottom: 100, paddingTop: 4 }} 
+        showsVerticalScrollIndicator={false}
+      >
+        {/* ─── Redesigned Month Goals & Tasks Capsule Card ─── */}
+        {(() => {
+          const monthGoalDocs = allGoals.filter((g: any) => g.year === currentYear && g.month === monthIndex && g.day === undefined);
+          const monthAchievementDocs = allAchievements.filter((a: any) => a.year === currentYear && a.month === monthIndex && a.day === undefined);
 
-            <View style={{ paddingHorizontal: 24, marginBottom: 32, alignItems: 'center' }}>
-                <Text style={[styles.headerTitle, { fontSize: isArabic ? 34 : 38, letterSpacing: -1 }]}>{months[monthIndex]}</Text>
-                <View style={{ height: 4, width: 40, backgroundColor: colors.primary, borderRadius: 2, marginTop: 8 }} />
-                <Text style={{ color: colors.textMuted, fontSize: 14, marginTop: 12, fontWeight: '700' }}>
-                    {getTasksForMonth(monthIndex).length} {t.tasksThisMonth}
-                </Text>
-            </View>
+          let totalGoals = 0;
+          let completedGoals = 0;
+          monthGoalDocs.forEach((doc: any) => {
+            const stats = getChecklistStats(doc.description);
+            totalGoals += stats.total;
+            completedGoals += stats.completed;
+          });
+          if (totalGoals === 0 && monthGoalDocs.length > 0) {
+            totalGoals = monthGoalDocs.length;
+            completedGoals = monthGoalDocs.filter((d: any) => d.isCompleted).length;
+          }
 
-            {/* ─── Monthly Goals Card ─── */}
-            {(() => {
-              const monthTasks = getTasksForMonth(monthIndex);
-              const monthGoalDocs = allGoals.filter((g: any) => g.year === currentYear && g.month === monthIndex && g.day === undefined);
-              const monthAchievementDocs = allAchievements.filter((a: any) => a.year === currentYear && a.month === monthIndex && a.day === undefined);
+          const goalProgress = totalGoals > 0 ? completedGoals / totalGoals : 0;
+          const achievementCount = monthAchievementDocs.length;
+          const totalTasksCount = monthTasks.length;
+          const completedTasksCount = completedMonthTasks.length;
+          const taskProgress = totalTasksCount > 0 ? completedTasksCount / totalTasksCount : 0;
 
-              let totalGoals = 0;
-              let completedGoals = 0;
-              monthGoalDocs.forEach((doc: any) => {
-                const stats = getChecklistStats(doc.description);
-                totalGoals += stats.total;
-                completedGoals += stats.completed;
-              });
-              if (totalGoals === 0 && monthGoalDocs.length > 0) {
-                totalGoals = monthGoalDocs.length;
-                completedGoals = monthGoalDocs.filter((d: any) => d.isCompleted).length;
-              }
-
-              const goalProgress = totalGoals > 0 ? completedGoals / totalGoals : 0;
-              const achievementCount = monthAchievementDocs.length;
-
-              return (
-                <TouchableOpacity
-                  style={{
-                    backgroundColor: cardBg,
-                    marginHorizontal: 20,
-                    marginBottom: 24,
-                    borderRadius: 28,
-                    padding: 20,
-                    shadowColor: colors.shadow,
-                    shadowOffset: { width: 0, height: 4 },
-                    shadowOpacity: 0.06,
-                    shadowRadius: 12,
-                    elevation: 3,
-                  }}
-                  onPress={() => router.push({
-                    pathname: '/goals-detail',
-                    params: {
-                      year: currentYear.toString(),
-                      month: monthIndex.toString(),
-                      title: isArabic ? `أهداف ${months[monthIndex]}` : `${months[monthIndex]} Goals`,
-                    }
-                  })}
-                  activeOpacity={0.85}
-                >
-                  <View style={{ flexDirection: isArabic ? 'row-reverse' : 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-                    <Text style={{ fontSize: 18, fontWeight: '800', color: colors.text }}>
-                      {isArabic ? `أهداف ${months[monthIndex]}` : `${months[monthIndex]} Goals`}
-                    </Text>
-                    <View style={{ flexDirection: isArabic ? 'row-reverse' : 'row', alignItems: 'center', gap: 8 }}>
-                      <Ionicons name="create-outline" size={18} color={colors.textMuted} />
-                    </View>
-                  </View>
-
-                  <View style={{ flexDirection: isArabic ? 'row-reverse' : 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
-                    <View style={{ flex: 1, backgroundColor: colors.bg, borderRadius: 16, padding: 12, alignItems: 'center' }}>
-                      <Ionicons name="flag-outline" size={20} color={colors.primary} />
-                      <Text style={{ fontSize: 13, fontWeight: '700', color: colors.textMuted, marginTop: 4 }}>
-                        {totalGoals > 0 ? `${completedGoals}/${totalGoals}` : '—'}
-                      </Text>
-                      <Text style={{ fontSize: 11, fontWeight: '600', color: colors.textMuted }}>
-                        {isArabic ? 'الأهداف' : 'Goals'}
-                      </Text>
-                    </View>
-                    <View style={{ flex: 1, backgroundColor: colors.bg, borderRadius: 16, padding: 12, alignItems: 'center' }}>
-                      <Ionicons name="trophy-outline" size={20} color={colors.success} />
-                      <Text style={{ fontSize: 13, fontWeight: '700', color: colors.textMuted, marginTop: 4 }}>
-                        {achievementCount}
-                      </Text>
-                      <Text style={{ fontSize: 11, fontWeight: '600', color: colors.textMuted }}>
-                        {isArabic ? 'إنجازات' : 'Achievements'}
-                      </Text>
-                    </View>
-                  </View>
-
-                  {totalGoals > 0 && (
-                    <View style={{ marginTop: 14 }}>
-                      <View style={{ height: 6, backgroundColor: colors.border + '40', borderRadius: 3, overflow: 'hidden' }}>
-                        <View style={{ height: '100%', width: `${goalProgress * 100}%`, backgroundColor: colors.primary, borderRadius: 3 }} />
-                      </View>
-                      <Text style={{ fontSize: 11, fontWeight: '700', color: colors.primary, marginTop: 6, textAlign: isArabic ? 'right' : 'left' }}>
-                        {Math.round(goalProgress * 100)}% {isArabic ? 'مكتمل' : 'complete'}
-                      </Text>
+          return (
+            <LivePress
+              style={[
+                styles.monthGoalsCardNew,
+                {
+                  backgroundColor: palette.bg,
+                  borderColor: palette.ink + '20',
+                  shadowColor: palette.ink,
+                  shadowOpacity: 0.15,
+                  shadowRadius: 12,
+                  elevation: 5,
+                }
+              ]}
+              onPress={() => router.push({
+                pathname: '/goals-detail',
+                params: {
+                  year: currentYear.toString(),
+                  month: monthIndex.toString(),
+                  title: isArabic ? `أهداف ${months[monthIndex]}` : `${months[monthIndex]} Goals`,
+                }
+              })}
+              pressScale={0.96}
+            >
+              {/* Header row: Month & Year Pill + Edit icon button */}
+              <View style={[styles.monthGoalsHeaderRow, isArabic && { flexDirection: 'row-reverse' }]}>
+                <View style={{ flexDirection: isArabic ? 'row-reverse' : 'row', alignItems: 'center', gap: 8 }}>
+                  <Text style={[styles.monthGoalsTitleText, { color: palette.ink }]}>
+                    {months[monthIndex]} {currentYear}
+                  </Text>
+                  {monthIndex === currentMonth && (
+                    <View style={[styles.monthGoalsPill, { backgroundColor: palette.ink + '18' }]}>
+                      <Text style={[styles.monthGoalsPillText, { color: palette.ink }]}>{t.current}</Text>
                     </View>
                   )}
+                </View>
+                <View style={{
+                  width: 32,
+                  height: 32,
+                  borderRadius: 10,
+                  backgroundColor: palette.ink + '14',
+                  justifyContent: 'center',
+                  alignItems: 'center'
+                }}>
+                  <Ionicons name="create-outline" size={16} color={palette.ink} />
+                </View>
+              </View>
 
-                  {totalGoals === 0 && (
-                    <Text style={{ textAlign: 'center', color: colors.textMuted, fontSize: 13, fontWeight: '500', marginTop: 14 }}>
-                      {isArabic ? 'اضغط للتخطيط' : 'Tap to plan'}
+              {/* 3 Stats Capsules: Tasks, Goals, Achievements */}
+              <View style={[styles.monthStatsRow, isArabic && { flexDirection: 'row-reverse' }]}>
+                {/* Tasks Capsule */}
+                <View style={[styles.monthStatCapsule, { backgroundColor: palette.ink + '0E', borderColor: palette.ink + '18' }]}>
+                  <Ionicons name="checkbox-outline" size={16} color={palette.ink} />
+                  <Text style={[styles.monthStatValueText, { color: palette.ink }]}>
+                    {totalTasksCount > 0 ? `${completedTasksCount}/${totalTasksCount}` : '0'}
+                  </Text>
+                  <Text style={[styles.monthStatLabelText, { color: palette.ink + 'B3' }]} numberOfLines={1}>
+                    {isArabic ? 'المهام' : 'Tasks'}
+                  </Text>
+                </View>
+
+                {/* Goals Capsule */}
+                <View style={[styles.monthStatCapsule, { backgroundColor: palette.ink + '0E', borderColor: palette.ink + '18' }]}>
+                  <Ionicons name="flag-outline" size={16} color={palette.ink} />
+                  <Text style={[styles.monthStatValueText, { color: palette.ink }]}>
+                    {totalGoals > 0 ? `${completedGoals}/${totalGoals}` : '—'}
+                  </Text>
+                  <Text style={[styles.monthStatLabelText, { color: palette.ink + 'B3' }]} numberOfLines={1}>
+                    {isArabic ? 'الأهداف' : 'Goals'}
+                  </Text>
+                </View>
+
+                {/* Achievements Capsule */}
+                <View style={[styles.monthStatCapsule, { backgroundColor: palette.ink + '0E', borderColor: palette.ink + '18' }]}>
+                  <Ionicons name="trophy-outline" size={16} color={palette.ink} />
+                  <Text style={[styles.monthStatValueText, { color: palette.ink }]}>
+                    {achievementCount}
+                  </Text>
+                  <Text style={[styles.monthStatLabelText, { color: palette.ink + 'B3' }]} numberOfLines={1}>
+                    {isArabic ? 'إنجازات' : 'Achievements'}
+                  </Text>
+                </View>
+              </View>
+
+              {/* Progress Bar & Completion Stat */}
+              {totalGoals > 0 || totalTasksCount > 0 ? (
+                <View style={[styles.monthProgressContainer, isArabic && { alignItems: 'flex-end' }]}>
+                  <View style={[styles.monthProgressBarTrack, { backgroundColor: palette.ink + '1A', width: '100%' }]}>
+                    <View style={[
+                      styles.monthProgressBarFill,
+                      {
+                        width: `${totalGoals > 0 ? goalProgress * 100 : taskProgress * 100}%`,
+                        backgroundColor: palette.accent,
+                      }
+                    ]} />
+                  </View>
+                  <View style={{ flexDirection: isArabic ? 'row-reverse' : 'row', justifyContent: 'space-between', alignItems: 'center', width: '100%', marginTop: 2 }}>
+                    <Text style={[styles.monthProgressText, { color: palette.ink }]}>
+                      {totalGoals > 0 
+                        ? `${Math.round(goalProgress * 100)}% ${t.goalCompleted || 'complete'}` 
+                        : `${Math.round(taskProgress * 100)}% ${isArabic ? 'مهام مكتملة' : 'tasks done'}`}
                     </Text>
-                  )}
-                </TouchableOpacity>
-              );
-            })()}
-
-            <View style={[styles.dayGrid, isArabic && { flexDirection: 'row-reverse' }]}>
-                {isArabic ? [...dayElements].reverse() : dayElements}
-            </View>
-
-            {/* ─── Month Bottom Summary ─── */}
-            {(() => {
-              const monthTasks = getTasksForMonth(monthIndex);
-              const monthGoalDocs = allGoals.filter((g: any) => g.year === currentYear && g.month === monthIndex && g.day === undefined);
-              const monthAchievementDocs = allAchievements.filter((a: any) => a.year === currentYear && a.month === monthIndex && a.day === undefined);
-              
-              const notDoneTasks = monthTasks.filter(t => t.status === 'not_done' || (t.status === 'not_started' && t.dueDate && new Date(t.dueDate).setHours(23,59,59,999) < Date.now()));
-              const completedTasks = monthTasks.filter(t => t.status === 'done');
-              const incompleteGoals = monthGoalDocs.filter((g: any) => !g.isCompleted);
-              const completedGoals = monthGoalDocs.filter((g: any) => g.isCompleted);
-              const completedAchievements = monthAchievementDocs.filter((a: any) => a.isCompleted);
-              const incompleteAchievements = monthAchievementDocs.filter((a: any) => !a.isCompleted);
-              
-              const hasContent = notDoneTasks.length > 0 || completedTasks.length > 0 || incompleteGoals.length > 0 || completedGoals.length > 0 || completedAchievements.length > 0 || incompleteAchievements.length > 0;
-              if (!hasContent) return null;
-              
-              return (
-                <View style={{ paddingHorizontal: 20, marginTop: 24 }}>
-                  <View style={{
-                    backgroundColor: cardBg,
-                    borderRadius: 24,
-                    padding: 20,
-                    shadowColor: colors.shadow,
-                    shadowOffset: { width: 0, height: 4 },
-                    shadowOpacity: 0.06,
-                    shadowRadius: 12,
-                    elevation: 3,
-                  }}>
-                    <Text style={{ fontSize: 16, fontWeight: '800', color: colors.text, marginBottom: 12 }}>
-                      {isArabic ? 'ملخص الشهر' : 'Month Summary'}
+                    <Text style={{ fontSize: 10, fontWeight: '700', color: palette.ink + '99' }}>
+                      {isArabic ? 'اضغط للتفاصيل' : 'Tap for details'}
                     </Text>
-                    
-                    {completedTasks.length > 0 && (
-                      <View style={{ flexDirection: isArabic ? 'row-reverse' : 'row', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-                        <Ionicons name="checkmark-circle" size={16} color={colors.success} />
-                        <Text style={{ fontSize: 13, fontWeight: '700', color: colors.success, flex: 1 }}>
-                          {completedTasks.length} {isArabic ? 'مهام مكتملة' : 'tasks completed'}
-                        </Text>
-                      </View>
-                    )}
-                    
-                    {completedGoals.length > 0 && (
-                      <View style={{ flexDirection: isArabic ? 'row-reverse' : 'row', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-                        <Ionicons name="flag" size={16} color={colors.success} />
-                        <Text style={{ fontSize: 13, fontWeight: '700', color: colors.success, flex: 1 }}>
-                          {completedGoals.length} {isArabic ? 'أهداف محققة' : 'goals achieved'}
-                        </Text>
-                      </View>
-                    )}
-
-                    {completedAchievements.length > 0 && (
-                      <View style={{ flexDirection: isArabic ? 'row-reverse' : 'row', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-                        <Ionicons name="trophy" size={16} color={colors.success} />
-                        <Text style={{ fontSize: 13, fontWeight: '700', color: colors.success, flex: 1 }}>
-                          {completedAchievements.length} {isArabic ? 'إنجازات محققة' : 'achievements reached'}
-                        </Text>
-                      </View>
-                    )}
-                    
-                    {notDoneTasks.length > 0 && (
-                      <View style={{ flexDirection: isArabic ? 'row-reverse' : 'row', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-                        <Ionicons name="alert-circle" size={16} color={colors.danger} />
-                        <Text style={{ fontSize: 13, fontWeight: '700', color: colors.danger, flex: 1 }}>
-                          {notDoneTasks.length} {isArabic ? 'مهام لم تنجز' : 'tasks not done'}
-                        </Text>
-                      </View>
-                    )}
-
-                    {incompleteGoals.length > 0 && (
-                      <View style={{ flexDirection: isArabic ? 'row-reverse' : 'row', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-                        <Ionicons name="flag-outline" size={16} color={colors.danger} />
-                        <Text style={{ fontSize: 13, fontWeight: '700', color: colors.danger, flex: 1 }}>
-                          {incompleteGoals.length} {isArabic ? 'أهداف لم تتحقق' : 'goals not met'}
-                        </Text>
-                      </View>
-                    )}
-
-                    {incompleteAchievements.length > 0 && (
-                      <View style={{ flexDirection: isArabic ? 'row-reverse' : 'row', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-                        <Ionicons name="trophy-outline" size={16} color={colors.danger} />
-                        <Text style={{ fontSize: 13, fontWeight: '700', color: colors.danger, flex: 1 }}>
-                          {incompleteAchievements.length} {isArabic ? 'إنجازات لم تتحقق' : 'achievements not reached'}
-                        </Text>
-                      </View>
-                    )}
                   </View>
                 </View>
-              );
-            })()}
-        </ScrollView>
+              ) : (
+                <Text style={{ textAlign: 'center', color: palette.ink + '99', fontSize: 12, fontWeight: '700', marginTop: 4 }}>
+                  {isArabic ? 'اضغط لتحديد أهداف الشهر' : 'Tap to set monthly goals'}
+                </Text>
+              )}
+            </LivePress>
+          );
+        })()}
+
+        {/* ─── Calendar Section (Weekdays + Days Grid) ─── */}
+        <View style={styles.calendarContainer}>
+          {/* Weekday Header Row */}
+          <View style={[styles.weekdayRow, isArabic && { flexDirection: 'row-reverse' }]}>
+            {weekdays.map((dayName, idx) => (
+              <View key={idx} style={styles.weekdayCell}>
+                <Text style={styles.weekdayText}>{dayName}</Text>
+              </View>
+            ))}
+          </View>
+
+          {/* 7-Column Calendar Rows */}
+          {calendarRows.map((row, rowIdx) => (
+            <View key={`row-${rowIdx}`} style={[styles.calendarRow, isArabic && { flexDirection: 'row-reverse' }]}>
+              {row.map((cell, colIdx) => {
+                if (cell.day === null) {
+                  return (
+                    <View key={`empty-${rowIdx}-${colIdx}`} style={styles.calendarDaySlotEmpty} />
+                  );
+                }
+
+                return (
+                  <Reanimated.View 
+                    key={`day-${cell.day}`} 
+                    entering={FadeInDown.duration(280).delay(((rowIdx * 7 + colIdx) % 7) * 20)} 
+                    style={styles.calendarDayCell}
+                  >
+                    <LivePress 
+                      style={[
+                        styles.dayCard, 
+                        cell.isSolidEdge && styles.dayCardEdgeSolid,
+                        cell.tasks.length > 0 && styles.hasTaskCard,
+                        cell.isToday && styles.todayCard,
+                        cell.isToday && { backgroundColor: palette.accent, borderColor: palette.accent }
+                      ]}
+                      onPress={() => setSelectedDay(cell.day!)}
+                      pressScale={0.96}
+                      hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+                    >
+                      <Text style={[
+                        styles.dayText, 
+                        cell.isToday && styles.todayText
+                      ]}>{cell.day}</Text>
+                      {cell.tasks.length > 0 ? (
+                        <View style={[
+                          styles.dayTaskBadge, 
+                          cell.isToday && { backgroundColor: 'rgba(255, 255, 255, 0.28)' }
+                        ]}>
+                          <Text style={[
+                            styles.dayTaskBadgeText, 
+                            cell.isToday && { color: '#FFFFFF' }
+                          ]}>
+                            {cell.tasks.length}
+                          </Text>
+                        </View>
+                      ) : (
+                        <Text style={[
+                          styles.dayStats, 
+                          cell.isToday && styles.todayStats
+                        ]}>·</Text>
+                      )}
+                    </LivePress>
+                  </Reanimated.View>
+                );
+              })}
+            </View>
+          ))}
+        </View>
+
+        {/* ─── Redesigned Month Bottom Summary ─── */}
+        {(() => {
+          const monthGoalDocs = allGoals.filter((g: any) => g.year === currentYear && g.month === monthIndex && g.day === undefined);
+          const monthAchievementDocs = allAchievements.filter((a: any) => a.year === currentYear && a.month === monthIndex && a.day === undefined);
+          
+          const notDoneTasks = monthTasks.filter(t => t.status === 'not_done' || (t.status === 'not_started' && t.dueDate && new Date(t.dueDate).setHours(23,59,59,999) < Date.now()));
+          const completedTasks = monthTasks.filter(t => t.status === 'done');
+          const incompleteGoals = monthGoalDocs.filter((g: any) => !g.isCompleted);
+          const completedGoals = monthGoalDocs.filter((g: any) => g.isCompleted);
+          const completedAchievements = monthAchievementDocs.filter((a: any) => a.isCompleted);
+          const incompleteAchievements = monthAchievementDocs.filter((a: any) => !a.isCompleted);
+          
+          return (
+            <View style={styles.monthSummaryCardNew}>
+              <View style={[styles.monthSummaryHeaderRow, isArabic && { flexDirection: 'row-reverse' }]}>
+                <View style={{ flexDirection: isArabic ? 'row-reverse' : 'row', alignItems: 'center', gap: 8 }}>
+                  <Ionicons name="analytics-outline" size={18} color={colors.primary} />
+                  <Text style={styles.monthSummaryTitle}>
+                    {isArabic ? 'ملخص الشهر' : 'Month Summary'}
+                  </Text>
+                </View>
+              </View>
+              
+              {completedTasks.length > 0 && (
+                <View style={[
+                  styles.monthSummaryItem, 
+                  { backgroundColor: colors.success + '12', borderColor: colors.success + '25' },
+                  isArabic && { flexDirection: 'row-reverse' }
+                ]}>
+                  <Ionicons name="checkmark-circle" size={16} color={colors.success} />
+                  <Text style={[styles.monthSummaryItemText, { color: colors.success }, isArabic && { textAlign: 'right' }]}>
+                    {isArabic ? 'مهام مكتملة' : 'Tasks Completed'}
+                  </Text>
+                  <Text style={[styles.monthSummaryItemCount, { color: colors.success }]}>
+                    {completedTasks.length}
+                  </Text>
+                </View>
+              )}
+
+              {notDoneTasks.length > 0 && (
+                <View style={[
+                  styles.monthSummaryItem, 
+                  { backgroundColor: colors.danger + '12', borderColor: colors.danger + '25' },
+                  isArabic && { flexDirection: 'row-reverse' }
+                ]}>
+                  <Ionicons name="alert-circle" size={16} color={colors.danger} />
+                  <Text style={[styles.monthSummaryItemText, { color: colors.danger }, isArabic && { textAlign: 'right' }]}>
+                    {isArabic ? 'مهام لم تنجز' : 'Tasks Pending / Overdue'}
+                  </Text>
+                  <Text style={[styles.monthSummaryItemCount, { color: colors.danger }]}>
+                    {notDoneTasks.length}
+                  </Text>
+                </View>
+              )}
+              
+              {completedGoals.length > 0 && (
+                <View style={[
+                  styles.monthSummaryItem, 
+                  { backgroundColor: colors.primary + '12', borderColor: colors.primary + '25' },
+                  isArabic && { flexDirection: 'row-reverse' }
+                ]}>
+                  <Ionicons name="flag" size={16} color={colors.primary} />
+                  <Text style={[styles.monthSummaryItemText, { color: colors.primary }, isArabic && { textAlign: 'right' }]}>
+                    {isArabic ? 'أهداف محققة' : 'Goals Achieved'}
+                  </Text>
+                  <Text style={[styles.monthSummaryItemCount, { color: colors.primary }]}>
+                    {completedGoals.length}
+                  </Text>
+                </View>
+              )}
+
+              {completedAchievements.length > 0 && (
+                <View style={[
+                  styles.monthSummaryItem, 
+                  { backgroundColor: '#FBBF2415', borderColor: '#FBBF2430' },
+                  isArabic && { flexDirection: 'row-reverse' }
+                ]}>
+                  <Ionicons name="trophy" size={16} color="#FBBF24" />
+                  <Text style={[styles.monthSummaryItemText, { color: '#FBBF24' }, isArabic && { textAlign: 'right' }]}>
+                    {isArabic ? 'إنجازات محققة' : 'Achievements Reached'}
+                  </Text>
+                  <Text style={[styles.monthSummaryItemCount, { color: '#FBBF24' }]}>
+                    {completedAchievements.length}
+                  </Text>
+                </View>
+              )}
+
+              {incompleteGoals.length > 0 && (
+                <View style={[
+                  styles.monthSummaryItem, 
+                  { backgroundColor: isDarkMode ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)', borderColor: colors.border },
+                  isArabic && { flexDirection: 'row-reverse' }
+                ]}>
+                  <Ionicons name="flag-outline" size={16} color={colors.textMuted} />
+                  <Text style={[styles.monthSummaryItemText, { color: colors.textMuted }, isArabic && { textAlign: 'right' }]}>
+                    {isArabic ? 'أهداف متبقية' : 'Goals Incomplete'}
+                  </Text>
+                  <Text style={[styles.monthSummaryItemCount, { color: colors.textMuted }]}>
+                    {incompleteGoals.length}
+                  </Text>
+                </View>
+              )}
+
+              {incompleteAchievements.length > 0 && (
+                <View style={[
+                  styles.monthSummaryItem, 
+                  { backgroundColor: isDarkMode ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)', borderColor: colors.border },
+                  isArabic && { flexDirection: 'row-reverse' }
+                ]}>
+                  <Ionicons name="trophy-outline" size={16} color={colors.textMuted} />
+                  <Text style={[styles.monthSummaryItemText, { color: colors.textMuted }, isArabic && { textAlign: 'right' }]}>
+                    {isArabic ? 'إنجازات قيد العمل' : 'Achievements In Progress'}
+                  </Text>
+                  <Text style={[styles.monthSummaryItemCount, { color: colors.textMuted }]}>
+                    {incompleteAchievements.length}
+                  </Text>
+                </View>
+              )}
+
+              {completedTasks.length === 0 && notDoneTasks.length === 0 && completedGoals.length === 0 && completedAchievements.length === 0 && incompleteGoals.length === 0 && incompleteAchievements.length === 0 && (
+                <View style={{ paddingVertical: 12, alignItems: 'center' }}>
+                  <Text style={{ fontSize: 13, color: colors.textMuted, fontWeight: '600' }}>
+                    {isArabic ? 'لا توجد بيانات مسجلة لهذا الشهر بعد' : 'No recorded activity for this month yet'}
+                  </Text>
+                </View>
+              )}
+            </View>
+          );
+        })()}
+      </ScrollView>
     );
   };
 
@@ -643,563 +820,573 @@ const Planner = () => {
   const renderSpecificDayView = (day: number, month: number, year: number) => {
     const tasks = getTasksForDay(day, month, year);
     const selectedDateTs = new Date(year, month, day).getTime();
+    const palette = getMonthPalette(month);
+    const dayOfWeekIndex = new Date(year, month, day).getDay();
+    const weekdayName = isArabic ? fullWeekdays_ar[dayOfWeekIndex] : fullWeekdays_en[dayOfWeekIndex];
+
+    const activeTasks = tasks.filter(t => t.type !== 'note' && t.type !== 'reminder' && t.status !== 'done');
+    const completedTasks = tasks.filter(t => t.type !== 'note' && t.type !== 'reminder' && t.status === 'done');
+    const reminderTasks = tasks.filter(t => t.type === 'reminder');
+    const noteTasks = tasks.filter(t => t.type === 'note');
 
     return (
-        <ScrollView 
-            ref={scrollViewRef} 
-            contentContainerStyle={{ paddingBottom: 100 }} 
-            showsVerticalScrollIndicator={false} 
-            keyboardShouldPersistTaps="handled"
-        >
-
-
-            <View style={[styles.specificDayHeader, isArabic && { alignItems: 'flex-end' }]}>
-                <Text style={styles.specificDayTitle}>{isArabic ? `${day} ${months[month]}` : `${day} ${months[month]}`}</Text>
-                <Text style={[styles.specificDaySubtitle, isArabic && { textAlign: 'right' }]}>
-                    {tasks.length === 0 ? t.startPlanning : `${tasks.length} ${t.tasksScheduled}`}
-                </Text>
+      <ScrollView 
+        ref={scrollViewRef} 
+        contentContainerStyle={{ paddingBottom: 100, paddingTop: 4 }} 
+        showsVerticalScrollIndicator={false} 
+        keyboardShouldPersistTaps="handled"
+      >
+        {/* ─── Day Glance Header ─── */}
+        <View style={[styles.specificDayHeaderNew, isArabic && { flexDirection: 'row-reverse' }]}>
+          <View style={[styles.specificDayDateGroup, isArabic && { alignItems: 'flex-end' }]}>
+            <Text style={styles.specificDayTitleNew}>
+              {day} {months[month]} {year}
+            </Text>
+            <View style={[styles.specificDayWeekdayPill, isArabic && { flexDirection: 'row-reverse' }]}>
+              <Ionicons name="calendar" size={12} color={colors.primary} />
+              <Text style={styles.specificDayWeekdayText}>{weekdayName}</Text>
             </View>
+          </View>
+          
+          <View style={styles.specificDayTaskCountBadge}>
+            <Text style={styles.specificDayTaskCountNumber}>{activeTasks.length}</Text>
+            <Text style={styles.specificDayTaskCountLabel}>
+              {activeTasks.length === 1 ? (isArabic ? 'مهمة' : 'task') : (isArabic ? 'مهام' : 'tasks')}
+            </Text>
+          </View>
+        </View>
 
-            {/* ─── Daily Goals Card ─── */}
-            {(() => {
-              const dayGoalDocs = allGoals.filter((g: any) => g.year === year && g.month === month && g.day === day);
-              const dayAchievementDocs = allAchievements.filter((a: any) => a.year === year && a.month === month && a.day === day);
+        {/* ─── Daily Goals & Progress Card (Harmonized with Month Palette) ─── */}
+        {(() => {
+          const dayGoalDocs = allGoals.filter((g: any) => g.year === year && g.month === month && g.day === day);
+          const dayAchievementDocs = allAchievements.filter((a: any) => a.year === year && a.month === month && a.day === day);
 
-              let totalGoals = 0;
-              let completedGoals = 0;
-              dayGoalDocs.forEach((doc: any) => {
-                const stats = getChecklistStats(doc.description);
-                totalGoals += stats.total;
-                completedGoals += stats.completed;
-              });
-              if (totalGoals === 0 && dayGoalDocs.length > 0) {
-                totalGoals = dayGoalDocs.length;
-                completedGoals = dayGoalDocs.filter((d: any) => d.isCompleted).length;
-              }
+          let totalGoals = 0;
+          let completedGoals = 0;
+          dayGoalDocs.forEach((doc: any) => {
+            const stats = getChecklistStats(doc.description);
+            totalGoals += stats.total;
+            completedGoals += stats.completed;
+          });
+          if (totalGoals === 0 && dayGoalDocs.length > 0) {
+            totalGoals = dayGoalDocs.length;
+            completedGoals = dayGoalDocs.filter((d: any) => d.isCompleted).length;
+          }
 
-              const goalProgress = totalGoals > 0 ? completedGoals / totalGoals : 0;
-              const achievementCount = dayAchievementDocs.length;
+          const goalProgress = totalGoals > 0 ? completedGoals / totalGoals : 0;
+          const achievementCount = dayAchievementDocs.length;
+          const totalDayTasks = tasks.length;
+          const completedDayTasksCount = completedTasks.length;
+          const taskProgress = totalDayTasks > 0 ? completedDayTasksCount / totalDayTasks : 0;
 
-              return (
-                <TouchableOpacity
-                  style={{
-                    backgroundColor: cardBg,
-                    marginHorizontal: 20,
-                    marginBottom: 20,
-                    borderRadius: 28,
-                    padding: 18,
-                    shadowColor: colors.shadow,
-                    shadowOffset: { width: 0, height: 4 },
-                    shadowOpacity: 0.06,
-                    shadowRadius: 12,
-                    elevation: 3,
-                  }}
-                  onPress={() => router.push({
-                    pathname: '/goals-detail',
-                    params: {
-                      year: year.toString(),
-                      month: month.toString(),
-                      day: day.toString(),
-                      title: isArabic ? `أهداف ${day} ${months[month]}` : `${months[month]} ${day} Goals`,
-                    }
-                  })}
-                  activeOpacity={0.85}
-                >
-                  <View style={{ flexDirection: isArabic ? 'row-reverse' : 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-                    <Text style={{ fontSize: 16, fontWeight: '800', color: colors.text }}>
-                      {isArabic ? 'أهداف اليوم' : "Today's Goals"}
-                    </Text>
-                    <View style={{ flexDirection: isArabic ? 'row-reverse' : 'row', alignItems: 'center', gap: 8 }}>
-                      <Ionicons name="create-outline" size={18} color={colors.textMuted} />
-                    </View>
-                  </View>
-
-                  <View style={{ flexDirection: isArabic ? 'row-reverse' : 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
-                    <View style={{ flex: 1, backgroundColor: colors.bg, borderRadius: 16, padding: 12, alignItems: 'center' }}>
-                      <Ionicons name="flag-outline" size={20} color={colors.primary} />
-                      <Text style={{ fontSize: 13, fontWeight: '700', color: colors.textMuted, marginTop: 4 }}>
-                        {totalGoals > 0 ? `${completedGoals}/${totalGoals}` : '—'}
-                      </Text>
-                      <Text style={{ fontSize: 11, fontWeight: '600', color: colors.textMuted }}>
-                        {isArabic ? 'أهداف' : 'Goals'}
-                      </Text>
-                    </View>
-                    <View style={{ flex: 1, backgroundColor: colors.bg, borderRadius: 16, padding: 12, alignItems: 'center' }}>
-                      <Ionicons name="trophy-outline" size={20} color={colors.success} />
-                      <Text style={{ fontSize: 13, fontWeight: '700', color: colors.textMuted, marginTop: 4 }}>
-                        {achievementCount}
-                      </Text>
-                      <Text style={{ fontSize: 11, fontWeight: '600', color: colors.textMuted }}>
-                        {isArabic ? 'إنجازات' : 'Achievements'}
-                      </Text>
-                    </View>
-                  </View>
-
-                  {totalGoals > 0 && (
-                    <View style={{ marginTop: 14 }}>
-                      <View style={{ height: 6, backgroundColor: colors.border + '40', borderRadius: 3, overflow: 'hidden' }}>
-                        <View style={{ height: '100%', width: `${goalProgress * 100}%`, backgroundColor: colors.primary, borderRadius: 3 }} />
-                      </View>
-                      <Text style={{ fontSize: 11, fontWeight: '700', color: colors.primary, marginTop: 6, textAlign: isArabic ? 'right' : 'left' }}>
-                        {Math.round(goalProgress * 100)}% {isArabic ? 'مكتمل' : 'complete'}
-                      </Text>
-                    </View>
-                  )}
-
-                  {totalGoals === 0 && (
-                    <Text style={{ textAlign: 'center', color: colors.textMuted, fontSize: 13, fontWeight: '500', marginTop: 14 }}>
-                      {isArabic ? 'اضغط للتخطيط' : 'Tap to plan'}
-                    </Text>
-                  )}
-                </TouchableOpacity>
-              );
-            })()}
-
-            {/* Day Lists Section */}
-            <View style={styles.dayListsSection}>
-              <TouchableOpacity 
-                style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}
-                onPress={() => toggleSection('lists')}
-                activeOpacity={0.7}
-              >
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                  <Text style={[{ fontSize: 20, fontWeight: '800', color: colors.text }, isArabic && { textAlign: 'right' }]}>{t.lists || 'Lists'}</Text>
+          return (
+            <LivePress
+              style={[
+                styles.monthGoalsCardNew,
+                {
+                  backgroundColor: palette.bg,
+                  borderColor: palette.ink + '20',
+                  shadowColor: palette.ink,
+                  shadowOpacity: 0.15,
+                  shadowRadius: 12,
+                  elevation: 5,
+                }
+              ]}
+              onPress={() => router.push({
+                pathname: '/goals-detail',
+                params: {
+                  year: year.toString(),
+                  month: month.toString(),
+                  day: day.toString(),
+                  title: isArabic ? `أهداف ${day} ${months[month]}` : `${months[month]} ${day} Goals`,
+                }
+              })}
+              pressScale={0.96}
+            >
+              <View style={[styles.monthGoalsHeaderRow, isArabic && { flexDirection: 'row-reverse' }]}>
+                <View style={{ flexDirection: isArabic ? 'row-reverse' : 'row', alignItems: 'center', gap: 8 }}>
+                  <Text style={[styles.monthGoalsTitleText, { color: palette.ink }]}>
+                    {isArabic ? `أهداف ${day} ${months[month]}` : `Day ${day} Goals`}
+                  </Text>
                 </View>
-                <Ionicons name={collapsedSections.lists ? 'chevron-forward' : 'chevron-down'} size={22} color={colors.textMuted} />
-              </TouchableOpacity>
-              {!collapsedSections.lists && (
-              <View style={styles.dayListsGrid}>
-                {LIST_TYPE_CARDS.map(card => {
-                  const count = getPlannerListCount(card.key);
-                  const label = isArabic
-                    ? (card.key === 'checklist' ? t.checklists : card.key === 'bullet' ? t.bulletPoints : t.toggleLists)
-                    : card.label;
-                  return (
-                    <TouchableOpacity
-                      key={card.key}
-                      style={styles.dayListCard}
-                      onPress={() => openPlannerListModal(card.key)}
-                      activeOpacity={0.82}
-                    >
-                      <View style={[styles.dayListCardIconWrap, { backgroundColor: card.color + '20' }]}>
-                        <Ionicons name={card.icon as any} size={24} color={card.color} />
-                      </View>
-                      <Text style={styles.dayListCardTitle}>{label}</Text>
-                      <Text style={styles.dayListCardCount}>{count} {count === 1 ? (isArabic ? 'عنصر' : 'item') : (isArabic ? 'عناصر' : 'items')}</Text>
-                    </TouchableOpacity>
-                  );
-                })}
+                <View style={{
+                  width: 32,
+                  height: 32,
+                  borderRadius: 10,
+                  backgroundColor: palette.ink + '14',
+                  justifyContent: 'center',
+                  alignItems: 'center'
+                }}>
+                  <Ionicons name="create-outline" size={16} color={palette.ink} />
+                </View>
               </View>
+
+              <View style={[styles.monthStatsRow, isArabic && { flexDirection: 'row-reverse' }]}>
+                {/* Tasks Capsule */}
+                <View style={[styles.monthStatCapsule, { backgroundColor: palette.ink + '0E', borderColor: palette.ink + '18' }]}>
+                  <Ionicons name="checkbox-outline" size={16} color={palette.ink} />
+                  <Text style={[styles.monthStatValueText, { color: palette.ink }]}>
+                    {totalDayTasks > 0 ? `${completedDayTasksCount}/${totalDayTasks}` : '0'}
+                  </Text>
+                  <Text style={[styles.monthStatLabelText, { color: palette.ink + 'B3' }]} numberOfLines={1}>
+                    {isArabic ? 'المهام' : 'Tasks'}
+                  </Text>
+                </View>
+
+                {/* Goals Capsule */}
+                <View style={[styles.monthStatCapsule, { backgroundColor: palette.ink + '0E', borderColor: palette.ink + '18' }]}>
+                  <Ionicons name="flag-outline" size={16} color={palette.ink} />
+                  <Text style={[styles.monthStatValueText, { color: palette.ink }]}>
+                    {totalGoals > 0 ? `${completedGoals}/${totalGoals}` : '—'}
+                  </Text>
+                  <Text style={[styles.monthStatLabelText, { color: palette.ink + 'B3' }]} numberOfLines={1}>
+                    {isArabic ? 'الأهداف' : 'Goals'}
+                  </Text>
+                </View>
+
+                {/* Achievements Capsule */}
+                <View style={[styles.monthStatCapsule, { backgroundColor: palette.ink + '0E', borderColor: palette.ink + '18' }]}>
+                  <Ionicons name="trophy-outline" size={16} color={palette.ink} />
+                  <Text style={[styles.monthStatValueText, { color: palette.ink }]}>
+                    {achievementCount}
+                  </Text>
+                  <Text style={[styles.monthStatLabelText, { color: palette.ink + 'B3' }]} numberOfLines={1}>
+                    {isArabic ? 'إنجازات' : 'Achievements'}
+                  </Text>
+                </View>
+              </View>
+
+              {totalGoals > 0 || totalDayTasks > 0 ? (
+                <View style={[styles.monthProgressContainer, isArabic && { alignItems: 'flex-end' }]}>
+                  <View style={[styles.monthProgressBarTrack, { backgroundColor: palette.ink + '1A', width: '100%' }]}>
+                    <View style={[
+                      styles.monthProgressBarFill,
+                      {
+                        width: `${totalGoals > 0 ? goalProgress * 100 : taskProgress * 100}%`,
+                        backgroundColor: palette.accent,
+                      }
+                    ]} />
+                  </View>
+                  <View style={{ flexDirection: isArabic ? 'row-reverse' : 'row', justifyContent: 'space-between', alignItems: 'center', width: '100%', marginTop: 2 }}>
+                    <Text style={[styles.monthProgressText, { color: palette.ink }]}>
+                      {totalGoals > 0 
+                        ? `${Math.round(goalProgress * 100)}% ${t.goalCompleted || 'complete'}` 
+                        : `${Math.round(taskProgress * 100)}% ${isArabic ? 'مهام مكتملة' : 'tasks done'}`}
+                    </Text>
+                    <Text style={{ fontSize: 10, fontWeight: '700', color: palette.ink + '99' }}>
+                      {isArabic ? 'اضغط للتفاصيل' : 'Tap for details'}
+                    </Text>
+                  </View>
+                </View>
+              ) : (
+                <Text style={{ textAlign: 'center', color: palette.ink + '99', fontSize: 12, fontWeight: '700', marginTop: 4 }}>
+                  {isArabic ? 'اضغط لتحديد أهداف اليوم' : 'Tap to set daily goals'}
+                </Text>
+              )}
+            </LivePress>
+          );
+        })()}
+
+        {/* ─── Day Timeline & Schedule Section (Directly under Goals) ─── */}
+        <DayTimelineSchedule
+          year={year}
+          month={month}
+          day={day}
+          selectedDateTs={selectedDateTs}
+          tasks={tasks}
+          checklistItems={plannerChecklistItems || []}
+          bulletItems={plannerBulletItems || []}
+          toggleItems={plannerToggleItems || []}
+          isArabic={isArabic}
+          t={t}
+          onToggleTodo={(id, currentStatus) => {
+            updateTodoStatus({ id, status: currentStatus === 'done' ? 'not_started' : 'done' });
+          }}
+          onTogglePlannerItem={(id, isCompleted) => {
+            updatePlannerItemMutation({ id, isCompleted: !isCompleted });
+          }}
+          onDeleteTodo={(id) => {
+            deleteTodoMutation({ id });
+          }}
+          onDeletePlannerItem={(id) => {
+            deletePlannerItemMutation({ id });
+          }}
+          onAddTodo={async (payload) => {
+            if (!userId) return;
+            return await addTodoMutation({
+              userId,
+              ...payload,
+            });
+          }}
+          onAddPlannerItem={async (payload) => {
+            if (!userId) return;
+            return await addPlannerItemMutation({
+              userId,
+              ...payload,
+            });
+          }}
+          onOpenTaskDetails={(todoId) => {
+            setSelectedTaskForModal(todoId);
+          }}
+        />
+
+        {/* ─── Dynamic Live Day Summary Card ─── */}
+        {(() => {
+          const dayGoalDocs = allGoals.filter((g: any) => g.year === year && g.month === month && g.day === day);
+          const dayAchievementDocs = allAchievements.filter((a: any) => a.year === year && a.month === month && a.day === day);
+          
+          const completedTasks = tasks.filter(t => t.status === 'done');
+          const pendingTasks = tasks.filter(t => t.status !== 'done');
+          const completedGoals = dayGoalDocs.filter((g: any) => g.isCompleted);
+
+          const totalTrackedItems = tasks.length + dayGoalDocs.length;
+          const totalCompleted = completedTasks.length + completedGoals.length;
+          const completionPct = totalTrackedItems > 0 ? Math.round((totalCompleted / totalTrackedItems) * 100) : 0;
+
+          return (
+            <View style={[styles.monthSummaryCardNew, { marginTop: 6, marginBottom: 28 }]}>
+              {/* Header with Title & Completion Rate Badge */}
+              <View style={[styles.monthSummaryHeaderRow, isArabic && { flexDirection: 'row-reverse' }]}>
+                <View style={{ flexDirection: isArabic ? 'row-reverse' : 'row', alignItems: 'center', gap: 8 }}>
+                  <View style={{ width: 30, height: 30, borderRadius: 9, backgroundColor: colors.primary + '18', justifyContent: 'center', alignItems: 'center' }}>
+                    <Ionicons name="pie-chart" size={16} color={colors.primary} />
+                  </View>
+                  <Text style={styles.monthSummaryTitle}>
+                    {t.daySummary || (isArabic ? 'ملخص اليوم' : 'Day Summary')}
+                  </Text>
+                </View>
+
+                {totalTrackedItems > 0 && (
+                  <View style={{
+                    flexDirection: isArabic ? 'row-reverse' : 'row',
+                    alignItems: 'center',
+                    gap: 4,
+                    paddingHorizontal: 10,
+                    paddingVertical: 4,
+                    borderRadius: 10,
+                    backgroundColor: completionPct === 100 ? '#10B98120' : colors.primary + '18',
+                    borderWidth: 1,
+                    borderColor: completionPct === 100 ? '#10B981' : colors.primary + '40',
+                  }}>
+                    <Text style={{
+                      fontSize: 12,
+                      fontWeight: '800',
+                      color: completionPct === 100 ? '#10B981' : colors.primary,
+                    }}>
+                      {completionPct}% {isArabic ? 'مكتمل' : 'Done'}
+                    </Text>
+                  </View>
+                )}
+              </View>
+
+              {/* Progress Bar */}
+              {totalTrackedItems > 0 && (
+                <View style={{ height: 6, backgroundColor: isDarkMode ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)', borderRadius: 3, overflow: 'hidden', marginVertical: 10 }}>
+                  <View style={{
+                    width: `${completionPct}%`,
+                    height: '100%',
+                    backgroundColor: completionPct === 100 ? '#10B981' : colors.primary,
+                    borderRadius: 3,
+                  }} />
+                </View>
+              )}
+
+              {/* Quick Metrics Grid */}
+              <View style={{ flexDirection: isArabic ? 'row-reverse' : 'row', gap: 8, marginTop: 4, marginBottom: 12 }}>
+                <View style={{
+                  flex: 1,
+                  padding: 10,
+                  borderRadius: 12,
+                  backgroundColor: colors.surface,
+                  borderWidth: 1,
+                  borderColor: colors.border,
+                  alignItems: 'center',
+                }}>
+                  <Ionicons name="checkmark-circle" size={18} color="#10B981" />
+                  <Text style={{ fontSize: 16, fontWeight: '900', color: colors.text, marginTop: 2 }}>
+                    {completedTasks.length}/{tasks.length}
+                  </Text>
+                  <Text style={{ fontSize: 10, fontWeight: '700', color: colors.textMuted, marginTop: 1 }}>
+                    {isArabic ? 'مهام منجزة' : 'Tasks Done'}
+                  </Text>
+                </View>
+
+                <View style={{
+                  flex: 1,
+                  padding: 10,
+                  borderRadius: 12,
+                  backgroundColor: colors.surface,
+                  borderWidth: 1,
+                  borderColor: colors.border,
+                  alignItems: 'center',
+                }}>
+                  <Ionicons name="flag" size={18} color={colors.primary} />
+                  <Text style={{ fontSize: 16, fontWeight: '900', color: colors.text, marginTop: 2 }}>
+                    {completedGoals.length}/{dayGoalDocs.length}
+                  </Text>
+                  <Text style={{ fontSize: 10, fontWeight: '700', color: colors.textMuted, marginTop: 1 }}>
+                    {isArabic ? 'أهداف محققة' : 'Goals Met'}
+                  </Text>
+                </View>
+
+                <View style={{
+                  flex: 1,
+                  padding: 10,
+                  borderRadius: 12,
+                  backgroundColor: pendingTasks.length > 0 ? '#EF444410' : colors.surface,
+                  borderWidth: 1,
+                  borderColor: pendingTasks.length > 0 ? '#EF444435' : colors.border,
+                  alignItems: 'center',
+                }}>
+                  <Ionicons name={pendingTasks.length > 0 ? "alert-circle" : "sparkles"} size={18} color={pendingTasks.length > 0 ? "#EF4444" : colors.textMuted} />
+                  <Text style={{ fontSize: 16, fontWeight: '900', color: pendingTasks.length > 0 ? "#EF4444" : colors.text, marginTop: 2 }}>
+                    {pendingTasks.length}
+                  </Text>
+                  <Text style={{ fontSize: 10, fontWeight: '700', color: pendingTasks.length > 0 ? "#EF4444" : colors.textMuted, marginTop: 1 }}>
+                    {isArabic ? 'لم تُنجز' : 'Pending'}
+                  </Text>
+                </View>
+              </View>
+
+              {/* ─── End of Day Review: Pending Items Section ─── */}
+              {pendingTasks.length > 0 && (
+                <View style={{
+                  marginTop: 6,
+                  marginBottom: 10,
+                  padding: 12,
+                  borderRadius: 14,
+                  backgroundColor: isDarkMode ? '#1E1B24' : '#FFF7F7',
+                  borderWidth: 1,
+                  borderColor: isDarkMode ? 'rgba(239, 68, 68, 0.25)' : 'rgba(239, 68, 68, 0.2)',
+                }}>
+                  <View style={[{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }, isArabic && { flexDirection: 'row-reverse' }]}>
+                    <View style={[{ flexDirection: 'row', alignItems: 'center', gap: 6 }, isArabic && { flexDirection: 'row-reverse' }]}>
+                      <Ionicons name="alert-circle-outline" size={16} color="#EF4444" />
+                      <Text style={{ fontSize: 13, fontWeight: '800', color: '#EF4444' }}>
+                        {t.pendingItems || (isArabic ? 'عناصر قيد الانتظار ولم تنجز' : 'Pending Items')}
+                      </Text>
+                    </View>
+                    <View style={{ paddingHorizontal: 7, paddingVertical: 2, borderRadius: 8, backgroundColor: '#EF444420' }}>
+                      <Text style={{ fontSize: 11, fontWeight: '800', color: '#EF4444' }}>
+                        {pendingTasks.length}
+                      </Text>
+                    </View>
+                  </View>
+
+                  <View style={{ gap: 8 }}>
+                    {pendingTasks.map((item) => {
+                      let timeStr: string | undefined;
+                      if (item.dueDate) {
+                        timeStr = new Date(item.dueDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                      }
+
+                      return (
+                        <LivePress
+                          key={item._id}
+                          style={[{
+                            flexDirection: 'row',
+                            alignItems: 'center',
+                            gap: 10,
+                            padding: 10,
+                            borderRadius: 10,
+                            backgroundColor: colors.surface,
+                            borderWidth: 1,
+                            borderColor: isDarkMode ? 'rgba(239, 68, 68, 0.15)' : 'rgba(239, 68, 68, 0.12)',
+                          }, isArabic && { flexDirection: 'row-reverse' }]}
+                          onPress={() => setSelectedTaskForModal(item._id)}
+                          pressScale={0.97}
+                        >
+                          {/* Quick Toggle Checkbox */}
+                          <TouchableOpacity
+                            style={{
+                              width: 22,
+                              height: 22,
+                              borderRadius: 11,
+                              borderWidth: 1.5,
+                              borderColor: '#EF4444',
+                              justifyContent: 'center',
+                              alignItems: 'center',
+                              backgroundColor: 'transparent',
+                            }}
+                            onPress={() => updateTodoStatus({ id: item._id, status: 'done' })}
+                            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                          >
+                            <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: 'transparent' }} />
+                          </TouchableOpacity>
+
+                          {/* Text Info */}
+                          <View style={{ flex: 1 }}>
+                            <Text style={[{ fontSize: 13, fontWeight: '700', color: colors.text }, isArabic && { textAlign: 'right' }]} numberOfLines={1}>
+                              {item.text || (isArabic ? 'مهمة بدون عنوان' : 'Untitled Task')}
+                            </Text>
+                            {timeStr && (
+                              <View style={[{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 }, isArabic && { flexDirection: 'row-reverse' }]}>
+                                <Ionicons name="time-outline" size={11} color={colors.primary} />
+                                <Text style={{ fontSize: 10, fontWeight: '700', color: colors.primary }}>
+                                  {timeStr}
+                                </Text>
+                              </View>
+                            )}
+                          </View>
+
+                          {/* Chevron */}
+                          <Ionicons name={isArabic ? "chevron-back" : "chevron-forward"} size={14} color={colors.textMuted} />
+                        </LivePress>
+                      );
+                    })}
+                  </View>
+                </View>
+              )}
+
+              {/* ─── Completed Items Section ─── */}
+              {completedTasks.length > 0 && (
+                <View style={{
+                  marginTop: 6,
+                  padding: 12,
+                  borderRadius: 14,
+                  backgroundColor: isDarkMode ? '#13231B' : '#F0FDF4',
+                  borderWidth: 1,
+                  borderColor: isDarkMode ? 'rgba(16, 185, 129, 0.25)' : 'rgba(16, 185, 129, 0.2)',
+                }}>
+                  <View style={[{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }, isArabic && { flexDirection: 'row-reverse' }]}>
+                    <View style={[{ flexDirection: 'row', alignItems: 'center', gap: 6 }, isArabic && { flexDirection: 'row-reverse' }]}>
+                      <Ionicons name="checkmark-done-circle" size={16} color="#10B981" />
+                      <Text style={{ fontSize: 13, fontWeight: '800', color: '#10B981' }}>
+                        {t.completedItems || (isArabic ? 'العناصر المكتملة' : 'Completed Items')}
+                      </Text>
+                    </View>
+                    <View style={{ paddingHorizontal: 7, paddingVertical: 2, borderRadius: 8, backgroundColor: '#10B98120' }}>
+                      <Text style={{ fontSize: 11, fontWeight: '800', color: '#10B981' }}>
+                        {completedTasks.length}
+                      </Text>
+                    </View>
+                  </View>
+
+                  <View style={{ gap: 6 }}>
+                    {completedTasks.map((item) => (
+                      <LivePress
+                        key={item._id}
+                        style={[{
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          gap: 8,
+                          paddingVertical: 4,
+                        }, isArabic && { flexDirection: 'row-reverse' }]}
+                        onPress={() => setSelectedTaskForModal(item._id)}
+                      >
+                        <Ionicons name="checkmark-circle" size={16} color="#10B981" />
+                        <Text style={[{
+                          flex: 1,
+                          fontSize: 12,
+                          fontWeight: '600',
+                          color: colors.textMuted,
+                          textDecorationLine: 'line-through',
+                        }, isArabic && { textAlign: 'right' }]} numberOfLines={1}>
+                          {item.text}
+                        </Text>
+                      </LivePress>
+                    ))}
+                  </View>
+                </View>
+              )}
+
+              {/* Celebratory State when all tasks done */}
+              {tasks.length > 0 && pendingTasks.length === 0 && (
+                <View style={{ paddingVertical: 10, alignItems: 'center' }}>
+                  <Text style={{ fontSize: 13, fontWeight: '700', color: '#10B981' }}>
+                    {t.allDayTasksDone || (isArabic ? 'تم إنجاز جميع مهام اليوم بنجاح! 🎉' : 'All tasks for today are completed! 🎉')}
+                  </Text>
+                </View>
+              )}
+
+              {/* Empty State */}
+              {tasks.length === 0 && dayGoalDocs.length === 0 && dayAchievementDocs.length === 0 && (
+                <View style={{ paddingVertical: 14, alignItems: 'center' }}>
+                  <Ionicons name="calendar-outline" size={24} color={colors.textMuted} style={{ marginBottom: 6 }} />
+                  <Text style={{ fontSize: 12, color: colors.textMuted, fontWeight: '600', textAlign: 'center' }}>
+                    {t.noTasksScheduledDay || (isArabic ? 'لا توجد مهام مجدولة لهذا اليوم حتى الآن.' : 'No tasks scheduled for this day yet.')}
+                  </Text>
+                </View>
               )}
             </View>
+          );
+        })()}
 
-            {tasks.filter(t => t.type === 'reminder').length > 0 && (
-                <View style={{ marginBottom: 32 }}>
-                    <TouchableOpacity 
-                      style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 24, marginBottom: 16 }}
-                      onPress={() => toggleSection('reminders')}
-                      activeOpacity={0.7}
-                    >
-                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                        <Text style={[{ fontSize: 20, fontWeight: '800', color: colors.text }, isArabic && { textAlign: 'right' }]}>{isArabic ? 'التذكيرات' : 'Reminders'}</Text>
-                        <View style={{ backgroundColor: colors.primary + '15', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 10 }}>
-                          <Text style={{ fontSize: 12, fontWeight: '700', color: colors.primary }}>{tasks.filter(t => t.type === 'reminder').length}</Text>
-                        </View>
-                      </View>
-                      <Ionicons name={collapsedSections.reminders ? 'chevron-forward' : 'chevron-down'} size={22} color={colors.textMuted} />
-                    </TouchableOpacity>
-                    {!collapsedSections.reminders && (
-                    <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                        <View style={[styles.horizontalGridContainer]}>
-                            {tasks.filter(t => t.type === 'reminder').map((task) => (
-                                <TouchableOpacity 
-                                    key={task._id}
-                                    style={[styles.gridTaskItem, { backgroundColor: cardBg, borderColor: colors.border }]}
-                                    onPress={() => router.push({ pathname: '/note-detail', params: { id: task._id, isReminder: 'true' } })}
-                                    onLongPress={() => {
-                                        setSelectedItemForAction(task);
-                                        setActionModalVisible(true);
-                                    }}
-                                    activeOpacity={0.7}
-                                >
-                                    <View style={[{ backgroundColor: '#FF6B6B15', width: 44, height: 44, borderRadius: 14, justifyContent: 'center', alignItems: 'center' }]}>
-                                        <Ionicons name="alarm-outline" size={22} color={colors.danger} />
-                                    </View>
-                                    <View style={{ flex: 1, width: '100%', marginTop: 12 }}>
-                                        <Text style={[styles.taskItemText, { fontSize: 15, fontWeight: '700' }, isArabic && { textAlign: 'right' }]} numberOfLines={2}>
-                                            {task.text}
-                                        </Text>
-                                        <Text style={[{ fontSize: 12, color: colors.textMuted, marginTop: 4, fontWeight: '500' }, isArabic && { textAlign: 'right' }]}>...</Text>
-                                        {task.dueDate && (
-                                           <Text style={[{ fontSize: 12, color: colors.textMuted, marginTop: 4, fontWeight: '600' }, isArabic && { textAlign: 'right' }]}>
-                                               {new Date(task.dueDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                           </Text>
-                                        )}
-                                    </View>
-                                </TouchableOpacity>
-                            ))}
-                        </View>
-                    </ScrollView>
-                    )}
-                </View>
-            )}
+        {/* ─── Modals ─── */}
+        <TaskDetailModal
+          visible={!!selectedTaskForModal}
+          onClose={() => setSelectedTaskForModal(null)}
+          todoId={selectedTaskForModal}
+          initialDate={selectedDateTs || undefined}
+        />
 
-            {tasks.filter(t => t.type === 'note').length > 0 && (
-                <View style={{ marginBottom: 32 }}>
-                    <TouchableOpacity 
-                      style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 24, marginBottom: 16 }}
-                      onPress={() => toggleSection('notes')}
-                      activeOpacity={0.7}
-                    >
-                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                        <Text style={[{ fontSize: 20, fontWeight: '800', color: colors.text }, isArabic && { textAlign: 'right' }]}>{isArabic ? 'الملاحظات' : 'Notes'}</Text>
-                        <View style={{ backgroundColor: colors.primary + '15', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 10 }}>
-                          <Text style={{ fontSize: 12, fontWeight: '700', color: colors.primary }}>{tasks.filter(t => t.type === 'note').length}</Text>
-                        </View>
-                      </View>
-                      <Ionicons name={collapsedSections.notes ? 'chevron-forward' : 'chevron-down'} size={22} color={colors.textMuted} />
-                    </TouchableOpacity>
-                    {!collapsedSections.notes && (
-                    <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                        <View style={[styles.horizontalGridContainer]}>
-                            {tasks.filter(t => t.type === 'note').map((task) => (
-                                <TouchableOpacity 
-                                    key={task._id}
-                                    style={[styles.gridTaskItem, { backgroundColor: cardBg, borderColor: colors.border }]}
-                                    onPress={() => router.push({ pathname: '/note-detail', params: { id: task._id, isReminder: 'false' } })}
-                                    onLongPress={() => {
-                                        setSelectedItemForAction(task);
-                                        setActionModalVisible(true);
-                                    }}
-                                    activeOpacity={0.7}
-                                >
-                                    <View style={[{ backgroundColor: colors.primary + '15', width: 44, height: 44, borderRadius: 14, justifyContent: 'center', alignItems: 'center' }]}>
-                                        <Ionicons name="document-text-outline" size={22} color={colors.primary} />
-                                    </View>
-                                    <View style={{ flex: 1, width: '100%', marginTop: 12 }}>
-                                        <Text style={[styles.taskItemText, { fontSize: 15, fontWeight: '700' }, isArabic && { textAlign: 'right' }]} numberOfLines={2}>
-                                            {task.text}
-                                        </Text>
-                                        <Text style={[{ fontSize: 12, color: colors.textMuted, marginTop: 4, fontWeight: '500' }, isArabic && { textAlign: 'right' }]}>...</Text>
-                                    </View>
-                                </TouchableOpacity>
-                            ))}
-                        </View>
-                    </ScrollView>
-                    )}
-                </View>
-            )}
+        <TimerModal 
+          visible={isTimerModalVisible}
+          onClose={() => { setTimerModalVisible(false); setSelectedTodoId(null); }}
+          onSave={(ms, due, dt) => { if (selectedTodoId) setTimerMutation({ id: selectedTodoId, duration: ms, dueDate: due, date: dt }); }}
+          initialDate={tasks.find(t => t._id === selectedTodoId)?.date}
+        />
 
-            <View style={{ marginBottom: 40 }}>
-                {/* ─── Active Tasks Section ─── */}
-                <TouchableOpacity 
-                  style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 24, marginBottom: 16 }}
-                  onPress={() => toggleSection('tasks')}
-                  activeOpacity={0.7}
-                >
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                    <Text style={[{ fontSize: 20, fontWeight: '800', color: colors.text }, isArabic && { textAlign: 'right' }]}>{t.tasks}</Text>
-                    <View style={{ backgroundColor: colors.primary + '15', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 10 }}>
-                      <Text style={{ fontSize: 12, fontWeight: '700', color: colors.primary }}>{tasks.filter(t => t.type !== 'note' && t.type !== 'reminder' && t.status !== 'done').length}</Text>
-                    </View>
-                  </View>
-                  <Ionicons name={collapsedSections.tasks ? 'chevron-forward' : 'chevron-down'} size={22} color={colors.textMuted} />
-                </TouchableOpacity>
-                {!collapsedSections.tasks && tasks.filter(t => t.type !== 'note' && t.type !== 'reminder' && t.status !== 'done').length > 0 && (
-                    <View style={{ marginBottom: 24 }}>
-                        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                            <View style={[styles.horizontalGridContainer, isArabic && { flexDirection: 'column-reverse' }]}>
-                                {tasks.filter(t => t.type !== 'note' && t.type !== 'reminder' && t.status !== 'done').map((task) => {
-                                    const isExpanded = expandedTodoId === task._id;
-                                    return (
-                                        <TouchableOpacity 
-                                            key={task._id}
-                                            style={[styles.gridTaskItem, { backgroundColor: isExpanded ? colors.primary + '10' : cardBg, borderColor: isExpanded ? colors.primary : colors.border }]}
-                                            onPress={() => setExpandedTodoId(isExpanded ? null : task._id)}
-                                            activeOpacity={0.7}
-                                        >
-                                            <View style={{ flexDirection: isArabic ? 'row-reverse' : 'row', width: '100%', justifyContent: 'space-between', alignItems: 'center' }}>
-                                                <TouchableOpacity 
-                                                    onPress={() => updateTodoStatus({ id: task._id, status: task.status === 'done' ? 'not_started' : 'done' })}
-                                                    hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}
-                                                >
-                                                    <Ionicons 
-                                                        name={task.status === 'done' ? "checkmark-circle" : "ellipse-outline"} 
-                                                        size={26} 
-                                                        color={task.status === 'done' ? colors.success : colors.border} 
-                                                    />
-                                                </TouchableOpacity>
-                                            </View>
-                                            <View style={{ flex: 1, width: '100%', marginTop: 8 }}>
-                                                <Text style={[
-                                                    styles.taskItemText, 
-                                                    task.status === 'done' && { textDecorationLine: 'line-through', color: colors.textMuted, opacity: 0.6 },
-                                                    isArabic && { textAlign: 'right' },
-                                                    { fontSize: 15, fontWeight: '700' }
-                                                ]} numberOfLines={2}>
-                                                    {task.text}
-                                                </Text>
-                                            </View>
-                                        </TouchableOpacity>
-                                    );
-                                })}
-                            </View>
-                        </ScrollView>
-                        {expandedTodoId && tasks.find(t => t._id === expandedTodoId && t.type !== 'note' && t.type !== 'reminder' && t.status !== 'done') && (
-                            <View style={{ paddingHorizontal: 24, marginTop: 24 }}>
-                                <TodoCard 
-                                  todo={{ ...tasks.find(t => t._id === expandedTodoId), status: tasks.find(t => t._id === expandedTodoId)?.status || 'not_started' } as any} 
-                                  homeStyles={homeStyles}
-                                  onSetTimer={(id) => { setSelectedTodoId(id as Id<"todos">); setTimerModalVisible(true); }} 
-                                  onLinkProject={(id) => { setSelectedTodoId(id as Id<"todos">); setProjectModalVisible(true); }}
-                                />
-                                <TouchableOpacity 
-                                  style={{ alignSelf: 'center', marginTop: -16, backgroundColor: cardBg, borderRadius: 20, padding: 6, borderWidth: 1, borderColor: colors.border, zIndex: 10, shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4, elevation: 3 }}
-                                  onPress={() => setExpandedTodoId(null)}
-                                >
-                                  <Ionicons name="chevron-up" size={20} color={colors.primary} />
-                                </TouchableOpacity>
-                            </View>
-                        )}
-                    </View>
-                )}
+        <ProjectPickerModal
+          visible={isProjectModalVisible}
+          onClose={() => { setProjectModalVisible(false); setSelectedTodoId(null); }}
+          onSelect={(selection) => { 
+            if (!selectedTodoId) return;
+            if (selection.type === 'none') {
+              linkTaskMutation({ id: selectedTodoId, categoryId: undefined, subCategoryId: undefined, projectId: undefined });
+            } else if (selection.type === 'category') {
+              linkTaskMutation({ id: selectedTodoId, categoryId: selection.categoryId, subCategoryId: undefined, projectId: undefined });
+            } else if (selection.type === 'subCategory') {
+              linkTaskMutation({ id: selectedTodoId, categoryId: selection.categoryId, subCategoryId: selection.subCategoryId, projectId: undefined });
+            } else if (selection.type === 'project') {
+              linkTaskMutation({ id: selectedTodoId, categoryId: undefined, subCategoryId: undefined, projectId: selection.projectId });
+            }
+          }}
+        />
 
-                {/* ─── Add Task (between Tasks and Completed) ─── */}
-                <View style={[styles.addDayTaskContainer, tasks.filter(t => t.type !== 'note' && t.type !== 'reminder' && !t.dueDate).length === 0 && { marginTop: 0 }]}>
-                    <TodoInput initialDate={selectedDateTs} onFocus={scrollToBottom} />
-                </View>
+        <PlannerListModal
+          visible={plannerListModalVisible}
+          onClose={() => setPlannerListModalVisible(false)}
+          date={selectedDateTs || 0}
+          listType={activePlannerListType}
+          colors={colors}
+          styles={styles}
+          userId={userId}
+          isArabic={isArabic}
+          t={t}
+        />
 
-                {/* ─── Completed Tasks Section ─── */}
-                <TouchableOpacity 
-                  style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 24, marginBottom: 16 }}
-                  onPress={() => toggleSection('completed')}
-                  activeOpacity={0.7}
-                >
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                    <Text style={[{ fontSize: 20, fontWeight: '800', color: colors.text }, isArabic && { textAlign: 'right' }]}>{isArabic ? 'المكتملة' : 'Completed'}</Text>
-                    <View style={{ backgroundColor: colors.success + '20', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 10 }}>
-                      <Text style={{ fontSize: 12, fontWeight: '700', color: colors.success }}>{tasks.filter(t => t.type !== 'note' && t.type !== 'reminder' && t.status === 'done').length}</Text>
-                    </View>
-                  </View>
-                  <Ionicons name={collapsedSections.completed ? 'chevron-forward' : 'chevron-down'} size={22} color={colors.textMuted} />
-                </TouchableOpacity>
-                {!collapsedSections.completed && tasks.filter(t => t.type !== 'note' && t.type !== 'reminder' && t.status === 'done').length > 0 && (
-                    <View style={{ marginBottom: 24 }}>
-                        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                            <View style={[styles.horizontalGridContainer, isArabic && { flexDirection: 'column-reverse' }]}>
-                                {tasks.filter(t => t.type !== 'note' && t.type !== 'reminder' && t.status === 'done').map((task) => {
-                                    const isExpanded = expandedTodoId === task._id;
-                                    return (
-                                        <TouchableOpacity 
-                                            key={task._id}
-                                            style={[styles.gridTaskItem, { backgroundColor: isExpanded ? colors.primary + '10' : cardBg, borderColor: isExpanded ? colors.primary : colors.border }]}
-                                            onPress={() => setExpandedTodoId(isExpanded ? null : task._id)}
-                                            activeOpacity={0.7}
-                                        >
-                                            <View style={{ flexDirection: isArabic ? 'row-reverse' : 'row', width: '100%', justifyContent: 'space-between', alignItems: 'center' }}>
-                                                <TouchableOpacity 
-                                                    onPress={() => updateTodoStatus({ id: task._id, status: task.status === 'done' ? 'not_started' : 'done' })}
-                                                    hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}
-                                                >
-                                                    <Ionicons 
-                                                        name={task.status === 'done' ? "checkmark-circle" : "ellipse-outline"} 
-                                                        size={26} 
-                                                        color={task.status === 'done' ? colors.success : colors.border} 
-                                                    />
-                                                </TouchableOpacity>
-                                            </View>
-                                            <View style={{ flex: 1, width: '100%', marginTop: 8 }}>
-                                                <Text style={[
-                                                    styles.taskItemText, 
-                                                    task.status === 'done' && { textDecorationLine: 'line-through', color: colors.textMuted, opacity: 0.6 },
-                                                    isArabic && { textAlign: 'right' },
-                                                    { fontSize: 15, fontWeight: '700' }
-                                                ]} numberOfLines={2}>
-                                                    {task.text}
-                                                </Text>
-                                            </View>
-                                        </TouchableOpacity>
-                                    );
-                                })}
-                            </View>
-                        </ScrollView>
-                        {expandedTodoId && tasks.find(t => t._id === expandedTodoId && t.type !== 'note' && t.type !== 'reminder' && t.status === 'done') && (
-                            <View style={{ paddingHorizontal: 24, marginTop: 24 }}>
-                                <TodoCard 
-                                  todo={{ ...tasks.find(t => t._id === expandedTodoId), status: tasks.find(t => t._id === expandedTodoId)?.status || 'not_started' } as any} 
-                                  homeStyles={homeStyles}
-                                  onSetTimer={(id) => { setSelectedTodoId(id as Id<"todos">); setTimerModalVisible(true); }} 
-                                  onLinkProject={(id) => { setSelectedTodoId(id as Id<"todos">); setProjectModalVisible(true); }}
-                                />
-                                <TouchableOpacity 
-                                  style={{ alignSelf: 'center', marginTop: -16, backgroundColor: cardBg, borderRadius: 20, padding: 6, borderWidth: 1, borderColor: colors.border, zIndex: 10, shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4, elevation: 3 }}
-                                  onPress={() => setExpandedTodoId(null)}
-                                >
-                                  <Ionicons name="chevron-up" size={20} color={colors.primary} />
-                                </TouchableOpacity>
-                            </View>
-                        )}
-                    </View>
-                )}
-
-                {/* ─── Day Bottom Summary (at very bottom) ─── */}
-                {(() => {
-                  const dayGoalDocs = allGoals.filter((g: any) => g.year === year && g.month === month && g.day === day);
-                  const dayAchievementDocs = allAchievements.filter((a: any) => a.year === year && a.month === month && a.day === day);
-                  const notDoneDayTasks = tasks.filter(t => t.status === 'not_done' || (t.status === 'not_started' && t.dueDate && new Date(t.dueDate).setHours(23,59,59,999) < Date.now()));
-                  const completedDayTasks = tasks.filter(t => t.status === 'done');
-                  const incompleteDayGoals = dayGoalDocs.filter((g: any) => !g.isCompleted);
-                  const completedDayGoals = dayGoalDocs.filter((g: any) => g.isCompleted);
-                  const completedDayAchievements = dayAchievementDocs.filter((a: any) => a.isCompleted);
-                  const incompleteDayAchievements = dayAchievementDocs.filter((a: any) => !a.isCompleted);
-
-                  const hasContent = notDoneDayTasks.length > 0 || completedDayTasks.length > 0 || incompleteDayGoals.length > 0 || completedDayGoals.length > 0 || completedDayAchievements.length > 0 || incompleteDayAchievements.length > 0;
-                  if (!hasContent) return null;
-
-                  return (
-                    <View style={{ paddingHorizontal: 20, marginTop: 20, marginBottom: 20 }}>
-                      <View style={{
-                        backgroundColor: cardBg,
-                        borderRadius: 24,
-                        padding: 18,
-                        shadowColor: colors.shadow,
-                        shadowOffset: { width: 0, height: 4 },
-                        shadowOpacity: 0.06,
-                        shadowRadius: 12,
-                        elevation: 3,
-                      }}>
-                        <Text style={{ fontSize: 15, fontWeight: '800', color: colors.text, marginBottom: 10 }}>
-                          {isArabic ? 'ملخص اليوم' : "Day Summary"}
-                        </Text>
-
-                        {completedDayTasks.length > 0 && (
-                          <View style={{ flexDirection: isArabic ? 'row-reverse' : 'row', alignItems: 'center', gap: 6, marginBottom: 6 }}>
-                            <Ionicons name="checkmark-circle" size={14} color={colors.success} />
-                            <Text style={{ fontSize: 12, fontWeight: '700', color: colors.success, flex: 1 }}>
-                              {completedDayTasks.length} {isArabic ? 'مهام مكتملة' : 'tasks completed'}
-                            </Text>
-                          </View>
-                        )}
-
-                        {completedDayGoals.length > 0 && (
-                          <View style={{ flexDirection: isArabic ? 'row-reverse' : 'row', alignItems: 'center', gap: 6, marginBottom: 6 }}>
-                            <Ionicons name="flag" size={14} color={colors.success} />
-                            <Text style={{ fontSize: 12, fontWeight: '700', color: colors.success, flex: 1 }}>
-                              {completedDayGoals.length} {isArabic ? 'أهداف محققة' : 'goals achieved'}
-                            </Text>
-                          </View>
-                        )}
-
-                        {completedDayAchievements.length > 0 && (
-                          <View style={{ flexDirection: isArabic ? 'row-reverse' : 'row', alignItems: 'center', gap: 6, marginBottom: 6 }}>
-                            <Ionicons name="trophy" size={14} color={colors.success} />
-                            <Text style={{ fontSize: 12, fontWeight: '700', color: colors.success, flex: 1 }}>
-                              {completedDayAchievements.length} {isArabic ? 'إنجازات محققة' : 'achievements reached'}
-                            </Text>
-                          </View>
-                        )}
-
-                        {notDoneDayTasks.length > 0 && (
-                          <View style={{ flexDirection: isArabic ? 'row-reverse' : 'row', alignItems: 'center', gap: 6, marginBottom: 6 }}>
-                            <Ionicons name="alert-circle" size={14} color={colors.danger} />
-                            <Text style={{ fontSize: 12, fontWeight: '700', color: colors.danger, flex: 1 }}>
-                              {notDoneDayTasks.length} {isArabic ? 'مهام لم تنجز' : 'tasks not done'}
-                            </Text>
-                          </View>
-                        )}
-
-                        {incompleteDayGoals.length > 0 && (
-                          <View style={{ flexDirection: isArabic ? 'row-reverse' : 'row', alignItems: 'center', gap: 6, marginBottom: 6 }}>
-                            <Ionicons name="flag-outline" size={14} color={colors.danger} />
-                            <Text style={{ fontSize: 12, fontWeight: '700', color: colors.danger, flex: 1 }}>
-                              {incompleteDayGoals.length} {isArabic ? 'أهداف لم تتحقق' : 'goals not met'}
-                            </Text>
-                          </View>
-                        )}
-
-                        {incompleteDayAchievements.length > 0 && (
-                          <View style={{ flexDirection: isArabic ? 'row-reverse' : 'row', alignItems: 'center', gap: 6, marginBottom: 6 }}>
-                            <Ionicons name="trophy-outline" size={14} color={colors.danger} />
-                            <Text style={{ fontSize: 12, fontWeight: '700', color: colors.danger, flex: 1 }}>
-                              {incompleteDayAchievements.length} {isArabic ? 'إنجازات لم تتحقق' : 'achievements not reached'}
-                            </Text>
-                          </View>
-                        )}
-                      </View>
-                    </View>
-                  );
-                })()}
-            </View>
-
-
-            <TimerModal 
-                visible={isTimerModalVisible}
-                onClose={() => { setTimerModalVisible(false); setSelectedTodoId(null); }}
-                onSave={(ms, due, dt) => { if (selectedTodoId) setTimerMutation({ id: selectedTodoId, duration: ms, dueDate: due, date: dt }); }}
-                initialDate={tasks.find(t => t._id === selectedTodoId)?.date}
-            />
-
-            <ProjectPickerModal
-                visible={isProjectModalVisible}
-                onClose={() => { setProjectModalVisible(false); setSelectedTodoId(null); }}
-                onSelect={(selection) => { 
-                  if (!selectedTodoId) return;
-                  if (selection.type === 'none') {
-                    linkTaskMutation({ id: selectedTodoId, categoryId: undefined, subCategoryId: undefined, projectId: undefined });
-                  } else if (selection.type === 'category') {
-                    linkTaskMutation({ id: selectedTodoId, categoryId: selection.categoryId, subCategoryId: undefined, projectId: undefined });
-                  } else if (selection.type === 'subCategory') {
-                    linkTaskMutation({ id: selectedTodoId, categoryId: selection.categoryId, subCategoryId: selection.subCategoryId, projectId: undefined });
-                  } else if (selection.type === 'project') {
-                    linkTaskMutation({ id: selectedTodoId, categoryId: undefined, subCategoryId: undefined, projectId: selection.projectId });
-                  }
-                }}
-            />
-
-            <PlannerListModal
-                visible={plannerListModalVisible}
-                onClose={() => setPlannerListModalVisible(false)}
-                date={selectedDateTs || 0}
-                listType={activePlannerListType}
-                colors={colors}
-                styles={styles}
-                userId={userId}
-                isArabic={isArabic}
-                t={t}
-            />
-
-            <ActionModal 
-                visible={isActionModalVisible}
-                onClose={() => { setActionModalVisible(false); setSelectedItemForAction(null); }}
-                title={selectedItemForAction?.text || (selectedItemForAction?.type === 'reminder' ? (isArabic ? 'تذكير' : 'Reminder') : (isArabic ? 'ملاحظة' : 'Note'))}
-                isArabic={isArabic}
-                options={[
-                    { 
-                        label: isArabic ? 'تعديل' : 'Edit', 
-                        icon: 'create-outline', 
-                        onPress: () => router.push({ pathname: '/note-detail', params: { id: selectedItemForAction?._id, isReminder: selectedItemForAction?.type === 'reminder' ? 'true' : 'false' } }) 
-                    },
-                    { 
-                        label: isArabic ? 'مشاركة' : 'Share', 
-                        icon: 'share-social-outline', 
-                        onPress: () => Share.share({ message: `${selectedItemForAction?.text || 'Untitled'}\n\n${selectedItemForAction?.description || ''}` }) 
-                    },
-                    { 
-                        label: isArabic ? 'حذف' : 'Delete', 
-                        icon: 'trash-outline', 
-                        variant: 'destructive',
-                        onPress: () => {
-                            if (selectedItemForAction) {
-                                deleteTodoMutation({ id: selectedItemForAction._id });
-                            }
-                        }
-                    }
-                ]}
-            />
-        </ScrollView>
+        <ActionModal 
+          visible={isActionModalVisible}
+          onClose={() => { setActionModalVisible(false); setSelectedItemForAction(null); }}
+          title={selectedItemForAction?.text || (selectedItemForAction?.type === 'reminder' ? (isArabic ? 'تذكير' : 'Reminder') : (isArabic ? 'ملاحظة' : 'Note'))}
+          isArabic={isArabic}
+          options={[
+            { 
+              label: isArabic ? 'تعديل' : 'Edit', 
+              icon: 'create-outline', 
+              onPress: () => router.push({ pathname: '/note-detail', params: { id: selectedItemForAction?._id, isReminder: selectedItemForAction?.type === 'reminder' ? 'true' : 'false' } }) 
+            },
+            { 
+              label: isArabic ? 'مشاركة' : 'Share', 
+              icon: 'share-social-outline', 
+              onPress: () => Share.share({ message: `${selectedItemForAction?.text || 'Untitled'}\n\n${selectedItemForAction?.description || ''}` }) 
+            },
+            { 
+              label: isArabic ? 'حذف' : 'Delete', 
+              icon: 'trash-outline', 
+              variant: 'destructive',
+              onPress: () => {
+                if (selectedItemForAction) {
+                  deleteTodoMutation({ id: selectedItemForAction._id });
+                }
+              }
+            }
+          ]}
+        />
+      </ScrollView>
     );
   };
-
 
   return (
     <KeyboardAvoidingView
@@ -1210,16 +1397,58 @@ const Planner = () => {
 
       <StatusBar barStyle={colors.statusBarStyle} backgroundColor={colors.bg} />
       <SafeAreaView style={styles.safeArea}>
-        <View style={[styles.header, isArabic && { flexDirection: 'row-reverse' }]}>
-            <Text style={styles.headerTitle}>{t.planner}</Text>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-              {(selectedMonth !== null || selectedDay !== null) && (
-                <TouchableOpacity onPress={resetAll}>
-                  <Ionicons name="close" size={28} color={colors.text} />
-                </TouchableOpacity>
-              )}
-            </View>
-        </View>
+        <AnimatedWavyHeader backgroundColor={colors.bg} waveHeight={10} contentStyle={{ paddingBottom: 2 }}>
+          <View style={[styles.header, { paddingBottom: 4 }, isArabic && { flexDirection: 'row-reverse' }]}>
+            {selectedMonth === null ? (
+              <>
+                <Text style={styles.headerTitle}>{t.planner}</Text>
+                <View style={{ width: 44 }} />
+              </>
+            ) : selectedDay === null ? (
+              <>
+                <LivePress
+                  style={styles.headerBackBtn}
+                  onPress={() => setSelectedMonth(null)}
+                  pressScale={0.96}
+                  hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+                >
+                  <Ionicons name={isArabic ? "chevron-forward" : "chevron-back"} size={20} color={colors.text} />
+                  <Text style={styles.headerBackText}>{isArabic ? 'الشهور' : 'All Months'}</Text>
+                </LivePress>
+                <View style={{
+                  paddingHorizontal: 12,
+                  paddingVertical: 6,
+                  borderRadius: 10,
+                  backgroundColor: colors.surface,
+                  borderWidth: 1,
+                  borderColor: colors.border,
+                }}>
+                  <Text style={{ fontSize: 13, fontWeight: '800', color: colors.text }}>{currentYear}</Text>
+                </View>
+              </>
+            ) : (
+              <>
+                <LivePress
+                  style={styles.headerBackBtn}
+                  onPress={() => setSelectedDay(null)}
+                  pressScale={0.96}
+                  hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+                >
+                  <Ionicons name={isArabic ? "chevron-forward" : "chevron-back"} size={20} color={colors.text} />
+                  <Text style={styles.headerBackText}>{months[selectedMonth!]}</Text>
+                </LivePress>
+                <LivePress
+                  onPress={resetAll}
+                  style={styles.headerActionBtn}
+                  pressScale={0.96}
+                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                >
+                  <Ionicons name="close" size={22} color={colors.text} />
+                </LivePress>
+              </>
+            )}
+          </View>
+        </AnimatedWavyHeader>
         
         {selectedMonth === null ? (
             renderMonthGrid()

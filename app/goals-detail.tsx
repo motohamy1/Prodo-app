@@ -18,6 +18,7 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import AnimatedWavyHeader from '@/components/AnimatedWavyHeader';
 
 const months_en = ['January', 'February', 'March', 'April', 'May', 'June',
   'July', 'August', 'September', 'October', 'November', 'December'];
@@ -133,20 +134,22 @@ export default function GoalsDetailScreen() {
     >
       <SafeAreaView style={{ flex: 1 }}>
         {/* Header */}
-        <View style={{
-          flexDirection: isArabic ? 'row-reverse' : 'row',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          paddingHorizontal: 24,
-          paddingTop: 20,
-          paddingBottom: 12,
-        }}>
-          <TouchableOpacity onPress={() => router.back()} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-            <Ionicons name={isArabic ? 'arrow-forward' : 'arrow-back'} size={24} color={colors.text} />
-          </TouchableOpacity>
-          <Text style={{ fontSize: 20, fontWeight: '800', color: colors.text }}>{pageTitle}</Text>
-          <View style={{ width: 24 }} />
-        </View>
+        <AnimatedWavyHeader backgroundColor={colors.bg} waveHeight={10} contentStyle={{ paddingBottom: 2 }}>
+          <View style={{
+            flexDirection: isArabic ? 'row-reverse' : 'row',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            paddingHorizontal: 24,
+            paddingTop: 10,
+            paddingBottom: 8,
+          }}>
+            <TouchableOpacity onPress={() => router.back()} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+              <Ionicons name={isArabic ? 'arrow-forward' : 'arrow-back'} size={24} color={colors.text} />
+            </TouchableOpacity>
+            <Text style={{ fontSize: 20, fontWeight: '800', color: colors.text }}>{pageTitle}</Text>
+            <View style={{ width: 24 }} />
+          </View>
+        </AnimatedWavyHeader>
 
         {/* Progress Card */}
         {totalCount > 0 && (

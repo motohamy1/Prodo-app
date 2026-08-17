@@ -14,7 +14,7 @@ export function useOfflineFirstData<T>(
   const [error, setError] = useState<string | null>(null);
   const [isOnline, setIsOnline] = useState(false);
   const { user } = useAuth();
-  const syncTimeoutRef = useRef<NodeJS.Timeout>();
+  const syncTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Fetch data from local storage
   const fetchLocalData = useCallback(async () => {

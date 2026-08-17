@@ -1,5 +1,6 @@
 import { v } from "convex/values";
-import { mutation, query, internalQuery } from "./_generated/server";
+import { mutation, query, internalQuery, internalMutation } from "./_generated/server";
+import { api, internal } from "./_generated/api";
 
 
 export const get = query({
@@ -102,6 +103,17 @@ export const addTodo = mutation({
       ...(args.type !== undefined && { type: args.type }),
       ...(args.hashtags !== undefined && { hashtags: args.hashtags }),
       ...(args.status === 'done' && { completedAt: Date.now() }),
+    });
+
+    // Process hashtags for topic intelligence
+    await ctx.runMutation(internal.topics.processTodoHashtags, {
+      userId: args.userId,
+      todoId,
+      hashtags: args.hashtags,
+      projectId: args.projectId,
+      categoryId: args.categoryId,
+      subCategoryId: args.subCategoryId,
+      isNew: true,
     });
 
     if (args.parentId) {
@@ -468,12 +480,50 @@ export const updateTodo = mutation({
   handler: async (ctx, args) => {
     const { id, ...updates } = args;
     const finalUpdates = { ...updates };
-    if (updates.status === 'done' || updates.isCompleted === true) {
+    const wasCompleted = updates.status === 'done' || updates.isCompleted === true;
+    const wasUncompleted = updates.status && updates.status !== 'done' && updates.isCompleted !== true;
+    
+    if (wasCompleted) {
       finalUpdates.completedAt = Date.now();
-    } else if (updates.status && updates.status !== 'done') {
+    } else if (wasUncompleted) {
       finalUpdates.completedAt = undefined;
     }
+    
+    // Get the old todo to compare hashtags
+    const oldTodo = await ctx.db.get(id);
+    
     await ctx.db.patch(id, finalUpdates as any);
+    
+    // Process hashtags if they changed
+    if (updates.hashtags !== undefined && args.userId) {
+      await ctx.runMutation(internal.topics.processTodoHashtags, {
+        userId: args.userId,
+        todoId: id,
+        hashtags: updates.hashtags,
+        projectId: updates.projectId !== undefined ? updates.projectId : oldTodo?.projectId,
+        categoryId: updates.categoryId,
+        subCategoryId: updates.subCategoryId,
+        isNew: false,
+      });
+      
+      // Update topic metrics on completion change
+      if (wasCompleted || wasUncompleted) {
+        await ctx.runMutation(internal.topics.updateTopicOnCompletion, {
+          userId: args.userId,
+          todoId: id,
+          hashtags: updates.hashtags || oldTodo?.hashtags,
+          completed: wasCompleted,
+        });
+      }
+    } else if ((wasCompleted || wasUncompleted) && args.userId && oldTodo?.hashtags) {
+      // Hashtags didn't change but completion status did
+      await ctx.runMutation(internal.topics.updateTopicOnCompletion, {
+        userId: args.userId,
+        todoId: id,
+        hashtags: oldTodo.hashtags,
+        completed: wasCompleted,
+      });
+    }
   }
 })
 

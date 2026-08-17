@@ -108,14 +108,14 @@ export const createHomeStyles = (colors: ColorScheme, isArabic: boolean = false)
       paddingHorizontal: 12,
       paddingVertical: 5,
       borderRadius: 12,
-      backgroundColor: colors.secondary + '1A',
+      backgroundColor: 'rgba(212, 255, 0, 0.16)',
       borderWidth: 1,
-      borderColor: colors.secondary + '33',
+      borderColor: 'rgba(212, 255, 0, 0.32)',
     },
     dateBarResetText: {
       fontSize: 12,
       fontWeight: '700',
-      color: colors.secondary,
+      color: colors.statusBarStyle === 'light-content' ? '#D4FF00' : '#456000',
     },
     dateBarStrip: {
       paddingHorizontal: 16,
@@ -133,9 +133,13 @@ export const createHomeStyles = (colors: ColorScheme, isArabic: boolean = false)
       gap: 4,
     },
     dateBarDayActive: {
-      backgroundColor: colors.secondary,
-      borderColor: colors.secondary,
-      ...colors.shadows.sm,
+      backgroundColor: '#D4FF00',
+      borderColor: '#D4FF00',
+      shadowColor: '#D4FF00',
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.35,
+      shadowRadius: 10,
+      elevation: 6,
     },
     dateBarWeekday: {
       fontSize: 12,
@@ -143,8 +147,8 @@ export const createHomeStyles = (colors: ColorScheme, isArabic: boolean = false)
       color: colors.textMuted,
     },
     dateBarWeekdayActive: {
-      color: colors.secondaryText,
-      fontWeight: '700',
+      color: '#16270E',
+      fontWeight: '800',
     },
     dateBarDayNum: {
       fontSize: 16,
@@ -152,8 +156,8 @@ export const createHomeStyles = (colors: ColorScheme, isArabic: boolean = false)
       color: colors.text,
     },
     dateBarDayNumActive: {
-      color: colors.secondaryText,
-      fontWeight: '800',
+      color: '#16270E',
+      fontWeight: '900',
     },
     dateBarDot: {
       position: 'absolute',
@@ -161,7 +165,7 @@ export const createHomeStyles = (colors: ColorScheme, isArabic: boolean = false)
       width: 4,
       height: 4,
       borderRadius: 2,
-      backgroundColor: colors.secondary,
+      backgroundColor: '#D4FF00',
     },
 
     // Kanban Board
@@ -436,16 +440,20 @@ export const createHomeStyles = (colors: ColorScheme, isArabic: boolean = false)
     },
     emptyAction: {
       marginTop: 16,
-      backgroundColor: colors.secondary,
+      backgroundColor: '#D4FF00',
       paddingHorizontal: 18,
       paddingVertical: 10,
       borderRadius: colors.radii.md,
-      ...colors.shadows.sm,
+      shadowColor: '#D4FF00',
+      shadowOffset: { width: 0, height: 3 },
+      shadowOpacity: 0.35,
+      shadowRadius: 8,
+      elevation: 4,
     },
     emptyActionText: {
-      color: colors.secondaryText,
+      color: '#16270E',
       fontSize: 14,
-      fontWeight: "700",
+      fontWeight: "800",
     },
     addButton: {
       flexDirection: 'row',
@@ -485,10 +493,14 @@ export const createHomeStyles = (colors: ColorScheme, isArabic: boolean = false)
       height: 44,
       paddingHorizontal: 10,
       borderRadius: colors.radii.lg,
-      backgroundColor: colors.secondary,
+      backgroundColor: '#D4FF00',
       justifyContent: 'center',
       alignItems: 'center',
-      ...colors.shadows.md,
+      shadowColor: '#D4FF00',
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.35,
+      shadowRadius: 10,
+      elevation: 6,
     },
   });
 

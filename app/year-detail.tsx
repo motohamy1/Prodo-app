@@ -17,6 +17,7 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import AnimatedWavyHeader from '@/components/AnimatedWavyHeader';
 
 // ─── Block System ─────────────────────────────────────────────────────────
 interface Block {
@@ -545,64 +546,64 @@ export default function YearDetailScreen() {
       >
         <View style={{ flex: 1 }}>
           {/* Header */}
-          <View style={{
-            flexDirection: isArabic ? 'row-reverse' : 'row',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            paddingHorizontal: 20,
-            paddingVertical: 12,
-            borderBottomWidth: 1,
-            borderColor: colors.border + '20',
-          }}>
-            <TouchableOpacity
-              style={{
-                width: 40, height: 40, borderRadius: 14,
-                backgroundColor: colors.surface,
-                justifyContent: 'center', alignItems: 'center',
-              }}
-              onPress={() => router.back()}
-            >
-              <Ionicons name={isArabic ? 'chevron-forward' : 'chevron-back'} size={22} color={colors.text} />
-            </TouchableOpacity>
-
-            <View style={{ alignItems: 'center' }}>
-              <Text style={{ fontSize: 20, fontWeight: '800', color: colors.text }}>
-                {yearNum}
-              </Text>
-              {isCurrentYear && (
-                <View style={{
-                  backgroundColor: colors.primary + '15',
-                  paddingHorizontal: 8, paddingVertical: 2,
-                  borderRadius: 6, marginTop: 2,
-                }}>
-                  <Text style={{ fontSize: 10, fontWeight: '700', color: colors.primary }}>{t.current}</Text>
-                </View>
-              )}
-            </View>
-
-            <View style={{ flexDirection: isArabic ? 'row-reverse' : 'row', gap: 8 }}>
+          <AnimatedWavyHeader backgroundColor={colors.bg} waveHeight={10} contentStyle={{ paddingBottom: 2 }}>
+            <View style={{
+              flexDirection: isArabic ? 'row-reverse' : 'row',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              paddingHorizontal: 20,
+              paddingVertical: 8,
+            }}>
               <TouchableOpacity
                 style={{
                   width: 40, height: 40, borderRadius: 14,
-                  backgroundColor: colors.success + '15',
+                  backgroundColor: colors.surface,
                   justifyContent: 'center', alignItems: 'center',
                 }}
-                onPress={handleSaveAll}
+                onPress={() => router.back()}
               >
-                <Ionicons name="checkmark" size={22} color={colors.success} />
+                <Ionicons name={isArabic ? 'chevron-forward' : 'chevron-back'} size={22} color={colors.text} />
               </TouchableOpacity>
-              <TouchableOpacity
-                style={{
-                  width: 40, height: 40, borderRadius: 14,
-                  backgroundColor: colors.danger + '10',
-                  justifyContent: 'center', alignItems: 'center',
-                }}
-                onPress={handleDeleteCategory}
-              >
-                <Ionicons name="trash-outline" size={20} color={colors.danger} />
-              </TouchableOpacity>
+
+              <View style={{ alignItems: 'center' }}>
+                <Text style={{ fontSize: 20, fontWeight: '800', color: colors.text }}>
+                  {yearNum}
+                </Text>
+                {isCurrentYear && (
+                  <View style={{
+                    backgroundColor: colors.primary + '15',
+                    paddingHorizontal: 8, paddingVertical: 2,
+                    borderRadius: 6, marginTop: 2,
+                  }}>
+                    <Text style={{ fontSize: 10, fontWeight: '700', color: colors.primary }}>{t.current}</Text>
+                  </View>
+                )}
+              </View>
+
+              <View style={{ flexDirection: isArabic ? 'row-reverse' : 'row', gap: 8 }}>
+                <TouchableOpacity
+                  style={{
+                    width: 40, height: 40, borderRadius: 14,
+                    backgroundColor: colors.success + '15',
+                    justifyContent: 'center', alignItems: 'center',
+                  }}
+                  onPress={handleSaveAll}
+                >
+                  <Ionicons name="checkmark" size={22} color={colors.success} />
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={{
+                    width: 40, height: 40, borderRadius: 14,
+                    backgroundColor: colors.danger + '10',
+                    justifyContent: 'center', alignItems: 'center',
+                  }}
+                  onPress={handleDeleteCategory}
+                >
+                  <Ionicons name="trash-outline" size={20} color={colors.danger} />
+                </TouchableOpacity>
+              </View>
             </View>
-          </View>
+          </AnimatedWavyHeader>
 
           {/* ─── Toggle Segmented Control ─── */}
           <View style={{

@@ -1,5 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { v4 as uuidv4 } from 'react-native-get-random-values';
+
+const generateId = () => `${Date.now().toString(36)}_${Math.random().toString(36).substring(2, 11)}`;
 
 // Types for local storage
 export interface LocalTodo {
@@ -98,7 +99,7 @@ class LocalDatabase {
       const todos = await this.getTodos(userId);
       const newTodo: LocalTodo = {
         ...todo,
-        _id: uuidv4(),
+        _id: generateId(),
         createdAt: Date.now(),
         updatedAt: Date.now(),
         _version: 1,
@@ -180,7 +181,7 @@ class LocalDatabase {
       const projects = await this.getProjects(userId);
       const newProject: LocalProject = {
         ...project,
-        _id: uuidv4(),
+        _id: generateId(),
         createdAt: Date.now(),
         updatedAt: Date.now(),
         _version: 1,

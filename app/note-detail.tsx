@@ -20,17 +20,21 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  View
+  View,
+  Alert,
+  StyleSheet,
+  ActivityIndicator
 } from 'react-native';
+import { useMutation, useAction, useQuery } from 'convex/react';
+import AudioPlayerCard from '@/components/AudioPlayerCard';
+import VoiceWaveform from '@/components/VoiceWaveform';
+import * as FileSystem from 'expo-file-system/legacy';
+import { FileSystemUploadType } from 'expo-file-system/legacy';
+import NoteAIChatSheet from '@/components/NoteAIChatSheet';
+import { useVoiceRecorder } from '@/hooks/useVoiceRecorder';
+import { AIChatMessage } from '@/types/voiceNote';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-
-interface Block {
-  id: string;
-  type: 'text' | 'todo' | 'h1' | 'h2' | 'h3' | 'bullet';
-  content: string;
-  checked?: boolean;
-  color?: string;
-}
+import AnimatedWavyHeader from '@/components/AnimatedWavyHeader';
 
 const NoteHeader = React.memo(({ 
   title, 
@@ -52,7 +56,7 @@ const NoteHeader = React.memo(({
     <View style={{ paddingHorizontal: 24, paddingTop: 16 }}>
       <TextInput
         style={[styles.titleInput, isArabic && { textAlign: 'right' }, { height: Math.max(44, titleHeight) }]}
-        placeholder="Note Title"
+        placeholder={isArabic ? 'عنوان الملاحظة' : 'Note Title'}
         placeholderTextColor={colors.textMuted}
         value={title}
         onChangeText={setTitle}
@@ -67,131 +71,11 @@ const NoteHeader = React.memo(({
 });
 NoteHeader.displayName = 'NoteHeader';
 
-interface BlockItemProps {
-  item: Block;
-  activeFontSize: number;
-  activeFontWeight: 'normal' | '200' | '600' | 'bold';
-  activeFontFamily: string;
-  activeFontColor: string;
-  activeFontStyle: 'normal' | 'italic';
-  isArabic: boolean;
-  colors: any;
-  styles: any;
-  blockRefs: React.MutableRefObject<{ [key: string]: TextInput | null }>;
-  blockYPositions: React.MutableRefObject<{ [key: string]: number }>;
-  onContentChange: (blockId: string, newContent: string) => void;
-  onKeyPress: (e: any, blockId: string) => void;
-  onToggleTodo: (blockId: string) => void;
-  onAddNewBlock: (afterBlockId: string, type: Block['type']) => void;
-  onFocus: (blockId: string) => void;
-}
-
-const BlockItem = React.memo(({
-  item,
-  activeFontSize,
-  activeFontWeight,
-  activeFontFamily,
-  activeFontColor,
-  activeFontStyle,
-  isArabic,
-  colors,
-  styles,
-  blockRefs,
-  blockYPositions,
-  onContentChange,
-  onKeyPress,
-  onToggleTodo,
-  onAddNewBlock,
-  onFocus,
-}: BlockItemProps) => {
-  const [localText, setLocalText] = useState(item.content);
-  const [blockHeight, setBlockHeight] = React.useState(0);
-
-  useEffect(() => {
-    setLocalText(item.content);
-  }, [item.content]);
-
-  const handleTextChange = useCallback((txt: string) => {
-    setLocalText(txt);
-    onContentChange(item.id, txt);
-  }, [item.id, onContentChange]);
-
-  const blockLineHeight = (item.type === 'h1' ? 32 : item.type === 'h2' ? 26 : item.type === 'h3' ? 22 : activeFontSize) * 1.5;
-
-  return (
-    <View
-      onLayout={(e) => { blockYPositions.current[item.id] = e.nativeEvent.layout.y; }}
-      style={[
-        styles.checklistContainer,
-        {
-          paddingHorizontal: 24,
-          alignItems: 'flex-start',
-          flexDirection: isArabic ? 'row-reverse' : 'row'
-        },
-        (item.type === 'h1' || item.type === 'h2' || item.type === 'h3') && { marginVertical: 8 }
-      ]}>
-      {item.type === 'todo' && (
-        <TouchableOpacity onPress={() => onToggleTodo(item.id)} style={{ marginTop: 8 }}>
-          <View style={[
-            styles.checkbox,
-            item.checked && styles.checkboxChecked
-          ]}>
-            {item.checked && <Ionicons name="checkmark" size={16} color={colors.primaryText} />}
-          </View>
-        </TouchableOpacity>
-      )}
-
-      {item.type === 'bullet' && (
-        <View style={{ width: 24, paddingTop: 8, alignItems: 'center' }}>
-          <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: colors.primary, marginTop: 11 }} />
-        </View>
-      )}
-
-      <TextInput
-        ref={el => { blockRefs.current[item.id] = el; }}
-        style={[
-          styles.bodyInput,
-          {
-            paddingTop: 8,
-            paddingBottom: 8,
-            marginVertical: 0,
-            fontSize: item.type === 'h1' ? 32 : item.type === 'h2' ? 26 : item.type === 'h3' ? 22 : activeFontSize,
-            fontWeight: (item.type === 'h1' || item.type === 'h2' || item.type === 'h3') ? '800' : activeFontWeight,
-            fontFamily: activeFontFamily === 'System' ? undefined : activeFontFamily,
-            color: item.color || activeFontColor,
-            fontStyle: activeFontStyle,
-            lineHeight: (item.type === 'h1' || item.type === 'h2' || item.type === 'h3') ? blockLineHeight : undefined,
-            textDecorationLine: (item.type === 'todo' && item.checked) ? 'line-through' : 'none',
-            opacity: (item.type === 'todo' && item.checked) ? 0.6 : 1,
-            textAlign: isArabic ? 'right' : 'left',
-            height: Math.max(40, blockHeight + 16),
-          }
-        ]}
-        placeholder={item.type.startsWith('h') ? `HEADING ${item.type.charAt(1)}` : "Type away..."}
-        placeholderTextColor={colors.textMuted + '60'}
-        value={localText}
-        onChangeText={handleTextChange}
-        onFocus={() => onFocus(item.id)}
-        onKeyPress={e => onKeyPress(e, item.id)}
-        onSubmitEditing={() => {
-          if (item.type !== 'text') {
-            onAddNewBlock(item.id, 'text');
-          }
-        }}
-        multiline={true}
-        blurOnSubmit={false}
-        scrollEnabled={false}
-        onContentSizeChange={(e) => setBlockHeight(e.nativeEvent.contentSize.height)}
-      />
-    </View>
-  );
-});
-BlockItem.displayName = 'BlockItem';
-
 export default function NoteDetailScreen() {
   const router = useRouter();
-  const { id, isReminder } = useLocalSearchParams<{ id: string, isReminder: string }>();
+  const { id, isReminder, tag } = useLocalSearchParams<{ id: string; isReminder: string; tag?: string }>();
   const { colors, isDarkMode } = useTheme();
+  const isDark = isDarkMode;
   const { userId, language } = useAuth();
   const { t, isArabic } = useTranslation(language);
   const styles = useMemo(() => createNotesStyles(colors, isArabic), [colors, isArabic]);
@@ -199,15 +83,15 @@ export default function NoteDetailScreen() {
 
   // Note State
   const [title, setTitle] = useState('');
+  const [body, setBody] = useState('');
+  const [selection, setSelection] = useState<{ start: number; end: number }>({ start: 0, end: 0 });
+  const [noteTag, setNoteTag] = useState<string>(tag || '#work');
   const [dueDate, setDueDate] = useState<number>(0);
   const [isScheduleVisible, setScheduleVisible] = useState(isReminder === 'true');
   const [dateTimeConfirmed, setDateTimeConfirmed] = useState(false);
-  const [activeBlockId, setActiveBlockId] = useState<string | null>(null);
 
-  const [blocks, setBlocks] = useState<Block[]>([{ id: 'first', type: 'text', content: '' }]);
-  const blockRefs = useRef<{ [key: string]: TextInput | null }>({});
+  const bodyInputRef = useRef<TextInput | null>(null);
   const scrollViewRef = useRef<ScrollView | null>(null);
-  const blockYPositions = useRef<{ [key: string]: number }>({});
 
   const scrollToBottom = () => {
     setTimeout(() => {
@@ -215,28 +99,14 @@ export default function NoteDetailScreen() {
     }, 100);
   };
 
-  const scrollToBlock = useCallback((blockId: string) => {
-    setTimeout(() => {
-      const y = blockYPositions.current[blockId];
-      if (y !== undefined) {
-        scrollViewRef.current?.scrollTo({ y: Math.max(0, y - 80), animated: true });
-      }
-    }, 150);
-  }, []);
-
-  const handleBlockFocus = useCallback((blockId: string) => {
-    setActiveBlockId(blockId);
-    scrollToBlock(blockId);
-  }, [scrollToBlock]);
-
   // Typography State
-  const [activeFontSize, setActiveFontSize] = useState(18);
-  const [activeFontFamily, setActiveFontFamily] = useState(Platform.OS === 'ios' ? 'Baskerville' : 'serif');
+  const [activeFontSize, setActiveFontSize] = useState(17);
+  const [activeFontFamily, setActiveFontFamily] = useState(Platform.OS === 'ios' ? 'System' : 'sans-serif');
   const [activeFontColor, setActiveFontColor] = useState(colors.text);
-  const [activeFontWeight, setActiveFontWeight] = useState<'normal' | '200' | '600' | 'bold'>('normal');
+  const [activeFontWeight, setActiveFontWeight] = useState<'normal' | 'bold'>('normal');
   const [activeFontStyle, setActiveFontStyle] = useState<'normal' | 'italic'>('normal');
 
-  type ActiveMenuType = 'none' | 'fontFamily' | 'fontSize' | 'color' | 'fontShape';
+  type ActiveMenuType = 'none' | 'fontFamily' | 'fontSize' | 'color';
   const [activeMenu, setActiveMenu] = useState<ActiveMenuType>('none');
   const [keyboardHeight, setKeyboardHeight] = useState(0);
 
@@ -246,50 +116,6 @@ export default function NoteDetailScreen() {
     return () => { show.remove(); hide.remove(); };
   }, []);
 
-  // Parser & Serializer
-  const parseMarkdown = (text: string): Block[] => {
-    if (!text.trim()) return [{ id: Math.random().toString(), type: 'text', content: '' }];
-    return text.split('\n').map((line, idx) => {
-      let type: Block['type'] = 'text';
-      let content = line;
-      let checked = false;
-
-      if (line.startsWith('☐ ')) {
-        type = 'todo';
-        content = line.substring(2);
-        checked = false;
-      } else if (line.startsWith('☑ ')) {
-        type = 'todo';
-        content = line.substring(2);
-        checked = true;
-      } else if (line.startsWith('### ')) {
-        type = 'h3';
-        content = line.substring(4);
-      } else if (line.startsWith('## ')) {
-        type = 'h2';
-        content = line.substring(3);
-      } else if (line.startsWith('• ')) {
-        type = 'bullet';
-        content = line.substring(2);
-      } else if (line.startsWith('# ')) {
-        type = 'h1';
-        content = line.substring(2);
-      }
-      return { id: `block-${idx}-${Date.now()}`, type, content, checked };
-    });
-  };
-
-  const serializeBlocks = (blocksToSave: Block[]): string => {
-    return blocksToSave.map(b => {
-      if (b.type === 'todo') return (b.checked ? '☑ ' : '☐ ') + b.content;
-      if (b.type === 'h1') return '# ' + b.content;
-      if (b.type === 'h2') return '## ' + b.content;
-      if (b.type === 'h3') return '### ' + b.content;
-      if (b.type === 'bullet') return '• ' + b.content;
-      return b.content;
-    }).join('\n');
-  };
-
   // Custom Calendar State
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [currentMonth, setCurrentMonth] = useState<Date>(new Date());
@@ -298,16 +124,58 @@ export default function NoteDetailScreen() {
   const [selectedTime, setSelectedTime] = useState<Date>(new Date());
   const [showTimePicker, setShowTimePicker] = useState(false);
 
+  // Voice & AI State
+  const [isAIChatVisible, setAIChatVisible] = useState(false);
+  const [isAILoading, setIsAILoading] = useState(false);
+  const [isTranscribing, setIsTranscribing] = useState(false);
+
+  // Native Voice Recorder Hook (Inline, No Disruptive Modals)
+  const {
+    isRecording,
+    isPaused,
+    duration: recordingDuration,
+    audioLevel,
+    startRecording,
+    pauseRecording,
+    resumeRecording,
+    stopRecording,
+    cancelRecording,
+  } = useVoiceRecorder();
+
+  const formatRecordingTime = (seconds: number) => {
+    const m = Math.floor(seconds / 60);
+    const s = seconds % 60;
+    return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+  };
+
   // Queries & Mutations
   const existingNote = useOfflineQuery<any[]>('todos', api.todos.get, userId ? { userId } : 'skip')?.find((t: any) => t._id === id);
   const addNote = useOfflineMutation(api.todos.addTodo, "todos:addTodo");
   const updateNote = useOfflineMutation(api.todos.updateTodo, "todos:updateTodo");
   const deleteNoteMutation = useOfflineMutation(api.todos.deleteTodo, "todos:deleteTodo");
+
+  // Audio & AI Convex Actions
+  const generateAudioUploadUrl = useMutation(api.audio.generateAudioUploadUrl);
+  const attachAudioToNote = useMutation(api.audio.attachAudioToNote);
+  const removeAudioFromNote = useMutation(api.audio.removeAudioFromNote);
+  const transcribeAudioAction = useAction(api.audio.transcribeAudio);
+  const generateNoteSummaryAction = useAction(api.aiNotes.generateNoteSummary);
+  const extractActionItemsAction = useAction(api.aiNotes.extractActionItems);
+  const chatWithNoteAction = useAction(api.aiNotes.chatWithNote);
+  const convertActionItemsToTasks = useMutation(api.aiNotes.convertActionItemsToTasks);
+
+  const audioUrl = useQuery(
+    api.audio.getAudioUrl,
+    existingNote?.audioStorageId ? { storageId: existingNote.audioStorageId } : 'skip'
+  );
   
   useEffect(() => {
     if (existingNote) {
       setTitle(existingNote.text || '');
-      setBlocks(parseMarkdown(existingNote.description || ''));
+      setBody(existingNote.description || '');
+      if (existingNote.hashtags && existingNote.hashtags.length > 0) {
+        setNoteTag(existingNote.hashtags[0]);
+      }
       if (existingNote.dueDate) {
         setDueDate(existingNote.dueDate);
         const d = new Date(existingNote.dueDate);
@@ -321,8 +189,8 @@ export default function NoteDetailScreen() {
   }, [existingNote]);
 
   const handleSaveNote = async () => {
-    const bodyStr = serializeBlocks(blocks);
-    if (!title.trim() && !bodyStr.trim()) {
+    const bodyStr = body.trim();
+    if (!title.trim() && !bodyStr) {
       router.back();
       return;
     }
@@ -333,19 +201,21 @@ export default function NoteDetailScreen() {
           await addNote({
             userId,
             text: title.trim() || 'Untitled',
-            description: bodyStr.trim(),
+            description: bodyStr,
             dueDate: isScheduleVisible ? (dueDate || Date.now()) : undefined,
             date: isScheduleVisible ? (dueDate || Date.now()) : Date.now(),
             status: 'not_started',
             type: isScheduleVisible ? 'reminder' : 'note',
+            hashtags: [noteTag || '#work'],
           });
         } else {
           await updateNote({
             id: id as any,
             text: title.trim() || 'Untitled',
-            description: bodyStr.trim(),
+            description: bodyStr,
             dueDate: isScheduleVisible ? (dueDate || Date.now()) : 0,
             type: isScheduleVisible ? 'reminder' : 'note',
+            hashtags: [noteTag || '#work'],
           });
         }
         // Schedule sound notification for reminders with future due dates
@@ -383,154 +253,446 @@ export default function NoteDetailScreen() {
     year: 'numeric'
   });
 
-  // Block Manipulation Handlers
-  const handleBlockTextChange = useCallback((blockId: string, newContent: string) => {
-    // Check if a newline was added somewhere in the content
-    if (newContent.includes('\n')) {
-      const parts = newContent.split('\n');
-      const textBefore = parts[0];
-      const textAfter = parts.slice(1).join('\n');
+  // Audio Recording & Upload Handler
+  const handleToggleRecording = async () => {
+    if (isRecording) {
+      const result = await stopRecording();
+      if (result) {
+        await handleVoiceRecordingFinished(result);
+      }
+    } else {
+      await startRecording();
+    }
+  };
 
-      setBlocks(prev => {
-        const idx = prev.findIndex(b => b.id === blockId);
-        if (idx === -1) return prev;
-        
-        const currentBlock = prev[idx];
-        const newBlocks = [...prev];
-        
-        // Update current block content
-        newBlocks[idx] = { ...currentBlock, content: textBefore };
-        
-        // Create new block inheriting type if checkbox or bullet
-        const newType = (currentBlock.type === 'todo' || currentBlock.type === 'bullet') 
-          ? currentBlock.type 
-          : 'text';
-          
-        const newBlock: Block = { 
-          id: Math.random().toString(), 
-          type: newType, 
-          content: textAfter, 
-          color: activeFontColor 
-        };
-        
-        newBlocks.splice(idx + 1, 0, newBlock);
-        
-        setTimeout(() => {
-          blockRefs.current[newBlock.id]?.focus();
-          // If we inserted in the middle, we might need to scroll
-          scrollToBottom();
-        }, 50);
-        
-        return newBlocks;
-      });
+  const handleVoiceRecordingFinished = async (result: { uri: string; duration: number }) => {
+    if (!id || !userId) {
+      Alert.alert(
+        t.noteNotSavedYet || 'Please save the note first',
+        t.saveNoteBeforeAudio || 'Save the note title once before recording audio to it.'
+      );
       return;
     }
-    setBlocks(prev => prev.map(b => b.id === blockId ? { ...b, content: newContent } : b));
-  }, [activeFontColor]);
 
-  const changeActiveColor = useCallback((color: string) => {
-    setActiveFontColor(color);
-    if (activeBlockId) {
-      setBlocks(prev => prev.map(b => b.id === activeBlockId ? { ...b, color } : b));
+    try {
+      setIsTranscribing(true);
+
+      // 1. Get pre-signed Convex storage upload URL
+      const uploadUrl = await generateAudioUploadUrl();
+
+      // 2. Upload audio file binary directly to Convex storage
+      const uploadResult = await FileSystem.uploadAsync(uploadUrl, result.uri, {
+        httpMethod: 'POST',
+        uploadType: FileSystemUploadType.BINARY_CONTENT,
+        headers: {
+          'Content-Type': 'audio/m4a',
+        },
+      });
+
+      if (uploadResult.status !== 200) {
+        throw new Error(`Upload failed with status ${uploadResult.status}`);
+      }
+
+      const { storageId } = JSON.parse(uploadResult.body);
+
+      // 3. Attach audio metadata to Note record in Convex
+      await attachAudioToNote({
+        noteId: id as any,
+        storageId,
+        duration: Math.round(result.duration),
+      });
+
+      // 4. Trigger AI transcription asynchronously via action
+      await transcribeAudioAction({
+        noteId: id as any,
+        storageId,
+        languageHint: isArabic ? 'ar' : 'en',
+      });
+    } catch (err) {
+      console.warn('Failed to upload/transcribe audio:', err);
+      Alert.alert(t.audioUploadError || 'Audio Error', t.audioUploadErrorDesc || 'Failed to upload or transcribe audio.');
+    } finally {
+      setIsTranscribing(false);
     }
-  }, [activeBlockId]);
+  };
 
-  const toggleTodo = useCallback((blockId: string) => {
-    setBlocks(prev => prev.map(b => b.id === blockId ? { ...b, checked: !b.checked } : b));
-  }, []);
+  const handleDeleteAudio = async () => {
+    if (!id) return;
+    try {
+      await removeAudioFromNote({ noteId: id as any });
+    } catch (err) {
+      console.warn('Failed to remove audio from note:', err);
+    }
+  };
 
-  const addNewBlock = useCallback((afterBlockId: string, type: Block['type'] = 'text') => {
-    setBlocks(prev => {
-      const idx = prev.findIndex(b => b.id === afterBlockId);
-      const newBlock: Block = { id: Math.random().toString(), type, content: '', color: activeFontColor };
-      const newBlocks = [...prev];
-      newBlocks.splice(idx + 1, 0, newBlock);
-      setTimeout(() => {
-        blockRefs.current[newBlock.id]?.focus();
-        scrollToBottom();
-      }, 100);
-      return newBlocks;
-    });
-  }, [scrollToBottom, activeFontColor]);
+  const handleRetryTranscribe = async () => {
+    if (!id || !existingNote?.audioStorageId) return;
+    try {
+      setIsTranscribing(true);
+      await transcribeAudioAction({
+        noteId: id as any,
+        storageId: existingNote.audioStorageId,
+        languageHint: isArabic ? 'ar' : 'en',
+      });
+    } catch (err) {
+      console.warn('Error retrying transcription:', err);
+    } finally {
+      setIsTranscribing(false);
+    }
+  };
 
-  const deleteBlock = useCallback((blockId: string) => {
-    setBlocks(prev => {
-      if (prev.length <= 1) return prev;
-      const idx = prev.findIndex(b => b.id === blockId);
-      const newBlocks = prev.filter(b => b.id !== blockId);
-      const prevBlock = prev[idx - 1];
-      if (prevBlock) setTimeout(() => blockRefs.current[prevBlock.id]?.focus(), 100);
-      return newBlocks;
-    });
-  }, []);
+  // AI Quick Actions
+  const handleSummarizeNote = async () => {
+    if (!id) return;
+    try {
+      setIsAILoading(true);
+      const res = await generateNoteSummaryAction({
+        noteId: id as any,
+        language: isArabic ? 'ar' : 'en',
+      });
+      if (res.summary) {
+        Alert.alert(
+          t.aiSummary || 'AI Summary',
+          res.summary,
+          [
+            { text: t.cancel, style: 'cancel' },
+            {
+              text: t.insertToNote || 'Insert into Note',
+              onPress: () => {
+                const header = isArabic ? '\n\n📝 **الملخص:**\n' : '\n\n📝 **Summary:**\n';
+                setBody(prev => (prev ? prev + header + res.summary : header.trim() + '\n' + res.summary));
+                scrollToBottom();
+              },
+            },
+          ]
+        );
+      }
+    } catch (err) {
+      console.warn('Error generating AI summary:', err);
+    } finally {
+      setIsAILoading(false);
+    }
+  };
 
-  const toggleInteractiveCheckbox = useCallback(() => {
-    if (!activeBlockId) return;
-    setBlocks(prev => {
-      const block = prev.find(b => b.id === activeBlockId);
-      if (!block) return prev;
-      const nextType = block.type === 'todo' ? 'text' : 'todo';
-      return prev.map(b => b.id === activeBlockId ? { ...b, type: nextType } : b);
-    });
-  }, [activeBlockId]);
+  const handleExtractTasks = async () => {
+    if (!id) return;
+    try {
+      setIsAILoading(true);
+      const res = await extractActionItemsAction({
+        noteId: id as any,
+        language: isArabic ? 'ar' : 'en',
+      });
 
-  const toggleInteractiveHeading = useCallback(() => {
-    if (!activeBlockId) return;
-    setBlocks(prev => {
-      const block = prev.find(b => b.id === activeBlockId);
-      if (!block) return prev;
-      let nextType: Block['type'] = 'h1';
-      if (block.type === 'h1') nextType = 'h2';
-      else if (block.type === 'h2') nextType = 'h3';
-      else if (block.type === 'h3') nextType = 'text';
-      return prev.map(b => b.id === activeBlockId ? { ...b, type: nextType } : b);
-    });
-  }, [activeBlockId]);
+      if (res.tasks && res.tasks.length > 0) {
+        Alert.alert(
+          t.aiTasksExtracted || 'Tasks Extracted',
+          `${res.tasks.length} task(s) found:\n` +
+            res.tasks.map((t) => `• ${t.text}`).join('\n') +
+            '\n\nAdd them to your To-Do task list?',
+          [
+            { text: t.cancel, style: 'cancel' },
+            {
+              text: t.addToTodoList || 'Add to Tasks',
+              onPress: async () => {
+                await convertActionItemsToTasks({
+                  noteId: id as any,
+                  tasks: res.tasks,
+                });
+                Alert.alert(t.actionSuccess || 'Success', 'Tasks added to your To-Do board.');
+              },
+            },
+          ]
+        );
+      }
+    } catch (err) {
+      console.warn('Error extracting action items:', err);
+    } finally {
+      setIsAILoading(false);
+    }
+  };
 
-  const toggleInteractiveBullet = useCallback(() => {
-    if (!activeBlockId) return;
-    setBlocks(prev => {
-      const block = prev.find(b => b.id === activeBlockId);
-      if (!block) return prev;
-      const nextType = block.type === 'bullet' ? 'text' : 'bullet';
-      return prev.map(b => b.id === activeBlockId ? { ...b, type: nextType } : b);
-    });
-  }, [activeBlockId]);
+  const handleExplainNote = async () => {
+    if (!id) return;
+    try {
+      setIsAILoading(true);
+      setAIChatVisible(true);
+      await chatWithNoteAction({
+        noteId: id as any,
+        message: isArabic
+          ? 'يرجى تقديم شرح وافٍ ومبسط للنقاط والمفاهيم الرئيسية في هذه الملاحظة.'
+          : 'Please explain the main concepts and key points in this note in a clear, easy-to-understand way.',
+        chatHistory: existingNote?.aiChatHistory || [],
+        language: isArabic ? 'ar' : 'en',
+      });
+    } catch (err) {
+      console.warn('Error in AI explain:', err);
+    } finally {
+      setIsAILoading(false);
+    }
+  };
 
-  const handleKeyPress = useCallback((e: any, blockId: string) => {
-    if (e.nativeEvent.key === 'Backspace') {
-      const block = blocks.find(b => b.id === blockId);
-      if (block?.content === '') {
-        deleteBlock(blockId);
+  const handleSendAIChat = async (msg: string) => {
+    if (!id) return;
+    try {
+      setIsAILoading(true);
+      await chatWithNoteAction({
+        noteId: id as any,
+        message: msg,
+        chatHistory: existingNote?.aiChatHistory || [],
+        language: isArabic ? 'ar' : 'en',
+      });
+    } catch (err) {
+      console.warn('Error in AI chat:', err);
+    } finally {
+      setIsAILoading(false);
+    }
+  };
+
+  const handleInsertToNote = (content: string) => {
+    setBody(prev => (prev ? prev + '\n\n' + content : content));
+    setAIChatVisible(false);
+    scrollToBottom();
+  };
+
+  const handleInsertTranscript = () => {
+    if (!existingNote?.transcript) return;
+    setBody(prev => (prev ? prev + '\n\n' + existingNote.transcript : existingNote.transcript));
+    scrollToBottom();
+  };
+
+  // --- Smart Body Change & List Auto-Continuation ---
+  const handleBodyChange = useCallback((newText: string) => {
+    // Detect single Enter key press to auto-continue lists or clear empty prefixes
+    if (newText.length === body.length + 1) {
+      const cursorPos = selection.start;
+      if (newText[cursorPos] === '\n' || newText[cursorPos - 1] === '\n') {
+        const beforeText = newText.slice(0, cursorPos);
+        const lines = beforeText.split('\n');
+        const lastLine = lines[lines.length - 2];
+
+        if (lastLine !== undefined) {
+          // 1. Checklist
+          const checklistMatch = lastLine.match(/^(\s*)([☐☑]|- \[[ x]\])\s*(.*)$/);
+          if (checklistMatch) {
+            const [_, indent, marker, content] = checklistMatch;
+            if (!content.trim()) {
+              // Pressed Enter on empty checklist -> revert line to clean empty
+              const linesAll = newText.split('\n');
+              const finishedLineIdx = lines.length - 2;
+              linesAll[finishedLineIdx] = indent;
+              setBody(linesAll.join('\n'));
+              return;
+            } else {
+              // Continue checklist item
+              const afterText = newText.slice(cursorPos);
+              setBody(beforeText + '☐ ' + afterText);
+              return;
+            }
+          }
+
+          // 2. Bullet list
+          const bulletMatch = lastLine.match(/^(\s*)([•\-\*])\s*(.*)$/);
+          if (bulletMatch) {
+            const [_, indent, marker, content] = bulletMatch;
+            if (!content.trim()) {
+              const linesAll = newText.split('\n');
+              const finishedLineIdx = lines.length - 2;
+              linesAll[finishedLineIdx] = indent;
+              setBody(linesAll.join('\n'));
+              return;
+            } else {
+              const afterText = newText.slice(cursorPos);
+              setBody(beforeText + '• ' + afterText);
+              return;
+            }
+          }
+
+          // 3. Numbered list
+          const numberMatch = lastLine.match(/^(\s*)(\d+)\.\s*(.*)$/);
+          if (numberMatch) {
+            const [_, indent, numStr, content] = numberMatch;
+            if (!content.trim()) {
+              const linesAll = newText.split('\n');
+              const finishedLineIdx = lines.length - 2;
+              linesAll[finishedLineIdx] = indent;
+              setBody(linesAll.join('\n'));
+              return;
+            } else {
+              const nextNum = parseInt(numStr, 10) + 1;
+              const afterText = newText.slice(cursorPos);
+              setBody(beforeText + `${nextNum}. ` + afterText);
+              return;
+            }
+          }
+
+          // 4. Quote block
+          const quoteMatch = lastLine.match(/^(\s*)>\s*(.*)$/);
+          if (quoteMatch) {
+            const [_, indent, content] = quoteMatch;
+            if (!content.trim()) {
+              const linesAll = newText.split('\n');
+              const finishedLineIdx = lines.length - 2;
+              linesAll[finishedLineIdx] = indent;
+              setBody(linesAll.join('\n'));
+              return;
+            } else {
+              const afterText = newText.slice(cursorPos);
+              setBody(beforeText + '> ' + afterText);
+              return;
+            }
+          }
+        }
       }
     }
-  }, [blocks, deleteBlock]);
+    setBody(newText);
+  }, [body, selection]);
 
-  const renderHeader = useCallback(() => (
-    <TouchableOpacity 
-      activeOpacity={1} 
-      onPress={() => {
-        Keyboard.dismiss();
-        if (blocks.length > 0) {
-          const firstBlock = blocks[0];
-          setActiveBlockId(firstBlock.id);
-          setTimeout(() => {
-            blockRefs.current[firstBlock.id]?.focus();
-          }, 100);
-        }
-      }}
-    >
-      <NoteHeader 
-        title={title}
-        setTitle={setTitle}
-        formattedNoteDate={formattedNoteDate}
-        isArabic={isArabic}
-        colors={colors}
-        styles={styles}
-      />
-    </TouchableOpacity>
-  ), [title, formattedNoteDate, isArabic, colors, styles, blocks]);
+  // --- Line Info Helper for Cursor ---
+  const getCurrentLineInfo = useCallback(() => {
+    const pos = selection.start || 0;
+    const before = body.slice(0, pos);
+    const after = body.slice(pos);
+    const lastNewlineBefore = before.lastIndexOf('\n');
+    const lineStart = lastNewlineBefore === -1 ? 0 : lastNewlineBefore + 1;
+    const nextNewlineAfter = after.indexOf('\n');
+    const lineEnd = nextNewlineAfter === -1 ? body.length : pos + nextNewlineAfter;
+    const lineText = body.slice(lineStart, lineEnd);
+    return { lineStart, lineEnd, lineText, before, after };
+  }, [body, selection]);
 
+  // Current line analysis for active toolbar highlight states
+  const currentLine = useMemo(() => {
+    const pos = selection.start || 0;
+    const before = body.slice(0, pos);
+    const after = body.slice(pos);
+    const lastNewlineBefore = before.lastIndexOf('\n');
+    const lineStart = lastNewlineBefore === -1 ? 0 : lastNewlineBefore + 1;
+    const nextNewlineAfter = after.indexOf('\n');
+    const lineEnd = nextNewlineAfter === -1 ? body.length : pos + nextNewlineAfter;
+    return body.slice(lineStart, lineEnd);
+  }, [body, selection]);
+
+  const isH1Active = currentLine.startsWith('# ');
+  const isH2Active = currentLine.startsWith('## ');
+  const isH3Active = currentLine.startsWith('### ');
+  const isChecklistActive = currentLine.startsWith('☐ ') || currentLine.startsWith('☑ ');
+  const isBulletActive = currentLine.startsWith('• ') || currentLine.startsWith('- ');
+  const isNumberActive = /^\d+\.\s/.test(currentLine);
+  const isQuoteActive = currentLine.startsWith('> ');
+
+  // --- Toolbar Formatting Commands ---
+  const toggleHeading = useCallback((level: 1 | 2 | 3) => {
+    const { lineStart, lineEnd, lineText } = getCurrentLineInfo();
+    const prefix = '#'.repeat(level) + ' ';
+    const cleanText = lineText.replace(/^#{1,6}\s*/, '');
+    let newLineText = '';
+    if (lineText.startsWith(prefix)) {
+      newLineText = cleanText;
+    } else {
+      newLineText = prefix + cleanText;
+    }
+    const newBody = body.slice(0, lineStart) + newLineText + body.slice(lineEnd);
+    setBody(newBody);
+  }, [body, getCurrentLineInfo]);
+
+  const toggleChecklist = useCallback(() => {
+    const { lineStart, lineEnd, lineText } = getCurrentLineInfo();
+    let newLineText = '';
+    if (lineText.startsWith('☐ ') || lineText.startsWith('☑ ')) {
+      newLineText = lineText.slice(2);
+    } else if (lineText.startsWith('• ')) {
+      newLineText = '☐ ' + lineText.slice(2);
+    } else {
+      newLineText = '☐ ' + lineText;
+    }
+    const newBody = body.slice(0, lineStart) + newLineText + body.slice(lineEnd);
+    setBody(newBody);
+  }, [body, getCurrentLineInfo]);
+
+  const toggleBulletList = useCallback(() => {
+    const { lineStart, lineEnd, lineText } = getCurrentLineInfo();
+    let newLineText = '';
+    if (lineText.startsWith('• ')) {
+      newLineText = lineText.slice(2);
+    } else if (lineText.startsWith('☐ ') || lineText.startsWith('☑ ')) {
+      newLineText = '• ' + lineText.slice(2);
+    } else {
+      newLineText = '• ' + lineText;
+    }
+    const newBody = body.slice(0, lineStart) + newLineText + body.slice(lineEnd);
+    setBody(newBody);
+  }, [body, getCurrentLineInfo]);
+
+  const toggleNumberedList = useCallback(() => {
+    const { lineStart, lineEnd, lineText } = getCurrentLineInfo();
+    let newLineText = '';
+    if (/^\d+\.\s/.test(lineText)) {
+      newLineText = lineText.replace(/^\d+\.\s*/, '');
+    } else {
+      newLineText = '1. ' + lineText.replace(/^[•☐☑]\s*/, '');
+    }
+    const newBody = body.slice(0, lineStart) + newLineText + body.slice(lineEnd);
+    setBody(newBody);
+  }, [body, getCurrentLineInfo]);
+
+  const toggleQuote = useCallback(() => {
+    const { lineStart, lineEnd, lineText } = getCurrentLineInfo();
+    let newLineText = '';
+    if (lineText.startsWith('> ')) {
+      newLineText = lineText.slice(2);
+    } else {
+      newLineText = '> ' + lineText;
+    }
+    const newBody = body.slice(0, lineStart) + newLineText + body.slice(lineEnd);
+    setBody(newBody);
+  }, [body, getCurrentLineInfo]);
+
+  const insertInlineFormat = useCallback((wrapper: string) => {
+    const start = selection.start || 0;
+    const end = selection.end || 0;
+    if (start !== end) {
+      const selectedText = body.slice(start, end);
+      const wrapped = `${wrapper}${selectedText}${wrapper}`;
+      const newBody = body.slice(0, start) + wrapped + body.slice(end);
+      setBody(newBody);
+    } else {
+      const newBody = body.slice(0, start) + `${wrapper}${wrapper}` + body.slice(start);
+      setBody(newBody);
+    }
+  }, [body, selection]);
+
+  const insertDivider = useCallback(() => {
+    const start = selection.start || 0;
+    const newBody = body.slice(0, start) + '\n---\n' + body.slice(start);
+    setBody(newBody);
+  }, [body, selection]);
+
+  // Interactive Checklist toggle for any line index in body
+  const checklistItems = useMemo(() => {
+    const lines = body.split('\n');
+    const items: { lineIndex: number; text: string; checked: boolean }[] = [];
+    lines.forEach((l, idx) => {
+      if (l.startsWith('☐ ')) {
+        items.push({ lineIndex: idx, text: l.slice(2), checked: false });
+      } else if (l.startsWith('☑ ')) {
+        items.push({ lineIndex: idx, text: l.slice(2), checked: true });
+      }
+    });
+    return items;
+  }, [body]);
+
+  const toggleCheckmarkAtLine = useCallback((targetLineIdx: number) => {
+    const lines = body.split('\n');
+    if (lines[targetLineIdx] !== undefined) {
+      const line = lines[targetLineIdx];
+      if (line.startsWith('☐ ')) {
+        lines[targetLineIdx] = '☑ ' + line.slice(2);
+      } else if (line.startsWith('☑ ')) {
+        lines[targetLineIdx] = '☐ ' + line.slice(2);
+      }
+      setBody(lines.join('\n'));
+    }
+  }, [body]);
 
   // Calendar Helpers
   const daysInMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0).getDate();
@@ -569,272 +731,791 @@ export default function NoteDetailScreen() {
         keyboardVerticalOffset={0}
       >
         <View style={{ flex: 1 }}>
-            <View style={[styles.detailHeader, isArabic && { flexDirection: 'row-reverse' }]}>
-          <TouchableOpacity style={styles.detailHeaderBtn} onPress={handleSaveNote}>
-            <Ionicons name="chevron-back" size={24} style={styles.detailHeaderBtnIcon} />
-          </TouchableOpacity>
-          
-          <View style={styles.detailHeaderRight}>
-            <TouchableOpacity 
-              style={[styles.detailHeaderBtn, isScheduleVisible && { backgroundColor: colors.warning + '20' }]} 
-              onPress={() => {
-                if (isScheduleVisible && dateTimeConfirmed) {
-                  // Re-open picker to edit
-                  setDateTimeConfirmed(false);
-                } else {
-                  setScheduleVisible(!isScheduleVisible);
-                  setDateTimeConfirmed(false);
-                }
-              }}
-            >
-               <Ionicons 
-                 name={isScheduleVisible ? "alarm" : "alarm-outline"} 
-                 size={22} 
-                 color={isScheduleVisible ? colors.warning : colors.text} 
-               />
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.detailHeaderBtn} onPress={handleSaveNote}>
-               <Ionicons name="checkmark" size={24} color={colors.success} />
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.detailHeaderBtn} onPress={() => {
-               if (id) handleDeleteNote();
-               else router.back();
-            }}>
-               <Ionicons name="trash-outline" size={20} color={colors.danger} />
-            </TouchableOpacity>
-          </View>
-        </View>
-
-        <ScrollView 
-          ref={scrollViewRef}
-          style={{ flex: 1 }}
-          contentContainerStyle={{ paddingBottom: 24 }}
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
-          keyboardDismissMode="interactive"
-        >
-          {renderHeader()}
-          
-          {isScheduleVisible && (
-            <View style={{ paddingHorizontal: 24, marginBottom: 16 }}>
-              {dateTimeConfirmed ? (
-                // Collapsed summary chip
-                <TouchableOpacity
-                  onPress={() => setDateTimeConfirmed(false)}
-                  style={{
-                    flexDirection: isArabic ? 'row-reverse' : 'row',
-                    alignItems: 'center',
-                    gap: 10,
-                    backgroundColor: colors.warning + '18',
-                    borderWidth: 1,
-                    borderColor: colors.warning + '50',
-                    borderRadius: 12,
-                    paddingHorizontal: 14,
-                    paddingVertical: 10,
-                    alignSelf: 'flex-start',
+          {/* Top Header Bar */}
+          <AnimatedWavyHeader backgroundColor={colors.bg} waveHeight={10} contentStyle={{ paddingBottom: 2 }}>
+            <View style={[styles.detailHeader, { paddingBottom: 6 }, isArabic && { flexDirection: 'row-reverse' }]}>
+              <TouchableOpacity style={styles.detailHeaderBtn} onPress={handleSaveNote}>
+                <Ionicons name="chevron-back" size={24} style={styles.detailHeaderBtnIcon} />
+              </TouchableOpacity>
+              
+              <View style={styles.detailHeaderRight}>
+                <TouchableOpacity 
+                  style={[styles.detailHeaderBtn, isScheduleVisible && { backgroundColor: colors.warning + '20' }]} 
+                  onPress={() => {
+                    if (isScheduleVisible && dateTimeConfirmed) {
+                      setDateTimeConfirmed(false);
+                    } else {
+                      setScheduleVisible(!isScheduleVisible);
+                      setDateTimeConfirmed(false);
+                    }
                   }}
                 >
-                  <Ionicons name="alarm" size={18} color={colors.warning} />
-                  <Text style={{ color: colors.warning, fontWeight: '700', fontSize: 14 }}>
-                    {new Date(dueDate).toLocaleDateString(isArabic ? 'ar-SA' : 'en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-                    {'  '}
-                    {new Date(dueDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                  </Text>
-                  <Ionicons name="pencil-outline" size={14} color={colors.warning} />
+                   <Ionicons 
+                     name={isScheduleVisible ? "alarm" : "alarm-outline"} 
+                     size={22} 
+                     color={isScheduleVisible ? colors.warning : colors.text} 
+                   />
                 </TouchableOpacity>
-              ) : (
-                // Full picker
-                <View style={styles.inlineReminderHeader}>
-                  <Text style={[styles.inlineReminderTitle, isArabic && { textAlign: 'right' }]}>
-                    {isArabic ? 'موعد التذكير' : 'Reminder Schedule'}
-                  </Text>
-                  
-                  <View style={styles.calendarCard}>
-                    <View style={[styles.calendarHeader, isArabic && { flexDirection: 'row-reverse' }]}>
-                      <TouchableOpacity onPress={prevMonth}>
-                        <Ionicons name="chevron-back" size={20} color={colors.text} />
-                      </TouchableOpacity>
-                      <Text style={styles.calendarTitle}>
-                        {currentMonth.toLocaleString('en-US', { month: 'long', year: 'numeric' })}
-                      </Text>
-                      <TouchableOpacity onPress={nextMonth}>
-                        <Ionicons name="chevron-forward" size={20} color={colors.text} />
-                      </TouchableOpacity>
-                    </View>
 
-                    <View style={[styles.weekDaysRow, isArabic && { flexDirection: 'row-reverse' }]}>
-                      {['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'].map((d) => (
-                        <Text key={d} style={styles.weekDayText}>{d}</Text>
-                      ))}
-                    </View>
+                {/* Voice Record Button in Header */}
+                <TouchableOpacity 
+                  style={[
+                    styles.detailHeaderBtn,
+                    isRecording && { backgroundColor: 'rgba(239, 68, 68, 0.18)' },
+                    !isRecording && { backgroundColor: isDark ? 'rgba(99, 102, 241, 0.15)' : 'rgba(99, 102, 241, 0.1)' }
+                  ]} 
+                  onPress={handleToggleRecording}
+                >
+                   <Ionicons
+                     name={isRecording ? "stop-circle" : "mic"}
+                     size={20}
+                     color={isRecording ? "#EF4444" : "#6366F1"}
+                   />
+                </TouchableOpacity>
 
-                    <View style={[styles.daysGrid, isArabic && { flexDirection: 'row-reverse' }]}>
-                      {renderCalendarDays()}
-                    </View>
-                  </View>
-
-                  <View style={[styles.timePresetsRow, isArabic && { flexDirection: 'row-reverse' }, { alignItems: 'center', marginTop: 16 }]}>
-                    {Platform.OS === 'ios' ? (
-                      <DateTimePicker
-                        value={selectedTime}
-                        mode="time"
-                        display="spinner"
-                        themeVariant={isDarkMode ? 'dark' : 'light'}
-                        style={{ flex: 1, height: 100 }}
-                        onChange={(e, d) => {
-                          if (d) {
-                            setSelectedTime(d);
-                            const finalDate = new Date(selectedDate);
-                            finalDate.setHours(d.getHours(), d.getMinutes(), 0, 0);
-                            setDueDate(finalDate.getTime());
-                          }
-                        }}
-                      />
-                    ) : (
-                      <>
-                        <TouchableOpacity 
-                          style={[styles.timePresetBtn, { backgroundColor: colors.bg, flexDirection: 'row', alignItems: 'center', height: 50, borderRadius: 12 }]}
-                          onPress={() => setShowTimePicker(true)}
-                        >
-                          <Ionicons name="time-outline" size={20} color={colors.text} style={{ marginRight: 8 }} />
-                          <Text style={[styles.timePresetMain, { color: colors.text, fontSize: 18 }]}>
-                            {selectedTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                          </Text>
-                        </TouchableOpacity>
-                        {showTimePicker && (
-                          <DateTimePicker
-                            value={selectedTime}
-                            mode="time"
-                            display="default"
-                            themeVariant={isDarkMode ? 'dark' : 'light'}
-                            is24Hour={true}
-                            onChange={(e, d) => {
-                               setShowTimePicker(false);
-                               if (d) {
-                                 setSelectedTime(d);
-                                 const finalDate = new Date(selectedDate);
-                                 finalDate.setHours(d.getHours(), d.getMinutes(), 0, 0);
-                                 setDueDate(finalDate.getTime());
-                               }
-                            }}
-                          />
-                        )}
-                      </>
-                    )}
-                  </View>
-
-                  {/* Confirm button */}
-                  <TouchableOpacity
-                    onPress={() => {
-                      const finalDate = new Date(selectedDate);
-                      finalDate.setHours(selectedTime.getHours(), selectedTime.getMinutes(), 0, 0);
-                      setDueDate(finalDate.getTime());
-                      setDateTimeConfirmed(true);
-                    }}
-                    style={{
-                      marginTop: 16,
-                      backgroundColor: colors.warning,
-                      borderRadius: 12,
-                      paddingVertical: 12,
-                      alignItems: 'center',
-                    }}
-                  >
-                    <Text style={{ color: colors.text, fontWeight: '800', fontSize: 15 }}>
-                      {isArabic ? 'تأكيد الموعد' : 'Confirm Date & Time'}
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-              )}
+                <TouchableOpacity style={styles.detailHeaderBtn} onPress={handleSaveNote}>
+                   <Ionicons name="checkmark" size={24} color={colors.success} />
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.detailHeaderBtn} onPress={() => {
+                   if (id) handleDeleteNote();
+                   else router.back();
+                }}>
+                   <Ionicons name="trash-outline" size={20} color={colors.danger} />
+                </TouchableOpacity>
+              </View>
             </View>
-          )}
+          </AnimatedWavyHeader>
 
-          {blocks.map((item) => (
-            <BlockItem
-              key={item.id}
-              item={item}
-              activeFontSize={activeFontSize}
-              activeFontWeight={activeFontWeight}
-              activeFontFamily={activeFontFamily}
-              activeFontColor={activeFontColor}
-              activeFontStyle={activeFontStyle}
+          <ScrollView 
+            ref={scrollViewRef}
+            style={{ flex: 1 }}
+            contentContainerStyle={{ paddingBottom: 24 }}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+            keyboardDismissMode="interactive"
+          >
+            {/* Note Title & Date */}
+            <NoteHeader 
+              title={title}
+              setTitle={setTitle}
+              formattedNoteDate={formattedNoteDate}
               isArabic={isArabic}
               colors={colors}
               styles={styles}
-              blockRefs={blockRefs}
-              blockYPositions={blockYPositions}
-              onContentChange={handleBlockTextChange}
-              onKeyPress={handleKeyPress}
-              onToggleTodo={toggleTodo}
-              onAddNewBlock={addNewBlock}
-              onFocus={handleBlockFocus}
             />
-          ))}
 
-          <TouchableOpacity 
-            style={{ height: 100, padding: 24 }}
-            onPress={() => {
-              Keyboard.dismiss();
-              if (blocks.length > 0) {
-                const lastBlock = blocks[blocks.length - 1];
-                setActiveBlockId(lastBlock.id);
-                setTimeout(() => {
-                  blockRefs.current[lastBlock.id]?.focus();
-                }, 100);
-              }
+            {/* Inline Active Voice Recording Bar */}
+            {isRecording && (
+              <View
+                style={{
+                  marginHorizontal: 24,
+                  marginBottom: 16,
+                  padding: 16,
+                  borderRadius: 20,
+                  backgroundColor: isDark ? 'rgba(30, 41, 59, 0.7)' : 'rgba(241, 245, 249, 0.95)',
+                  borderWidth: 1.5,
+                  borderColor: isDark ? 'rgba(99, 102, 241, 0.4)' : 'rgba(99, 102, 241, 0.3)',
+                  shadowColor: '#6366F1',
+                  shadowOpacity: 0.15,
+                  shadowRadius: 10,
+                  elevation: 4,
+                }}
+              >
+                <View
+                  style={[
+                    {
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      marginBottom: 10,
+                    },
+                    isArabic && { flexDirection: 'row-reverse' },
+                  ]}
+                >
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                    <View
+                      style={{
+                        width: 9,
+                        height: 9,
+                        borderRadius: 5,
+                        backgroundColor: isPaused ? '#F59E0B' : '#EF4444',
+                      }}
+                    />
+                    <Text style={{ fontSize: 13, fontWeight: '700', color: colors.text }}>
+                      {isPaused
+                        ? (isArabic ? 'متوقف مؤقتاً' : 'Paused')
+                        : (isArabic ? 'جارِ التسجيل' : 'Recording')}
+                    </Text>
+                    <Text style={{ fontSize: 13, fontWeight: '600', color: '#6366F1' }}>
+                      {formatRecordingTime(recordingDuration)}
+                    </Text>
+                  </View>
+
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                    <TouchableOpacity
+                      onPress={isPaused ? resumeRecording : pauseRecording}
+                      style={{
+                        padding: 7,
+                        borderRadius: 10,
+                        backgroundColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.05)',
+                      }}
+                    >
+                      <Ionicons
+                        name={isPaused ? 'play' : 'pause'}
+                        size={16}
+                        color={colors.text}
+                      />
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                      onPress={cancelRecording}
+                      style={{
+                        padding: 7,
+                        borderRadius: 10,
+                        backgroundColor: 'rgba(239, 68, 68, 0.12)',
+                      }}
+                    >
+                      <Ionicons name="close" size={16} color="#EF4444" />
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                      onPress={handleToggleRecording}
+                      style={{
+                        paddingHorizontal: 12,
+                        paddingVertical: 7,
+                        borderRadius: 10,
+                        backgroundColor: '#6366F1',
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        gap: 4,
+                      }}
+                    >
+                      <Ionicons name="checkmark" size={16} color="#FFFFFF" />
+                      <Text style={{ fontSize: 12, fontWeight: '700', color: '#FFFFFF' }}>
+                        {isArabic ? 'تم' : 'Done'}
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+
+                {/* Real-time Dynamic Waveform */}
+                <View style={{ height: 65, justifyContent: 'center', alignItems: 'center' }}>
+                  <VoiceWaveform isListening={!isPaused} audioLevel={audioLevel} />
+                </View>
+              </View>
+            )}
+
+            {/* Audio Player Card (if audio attached) */}
+            {(existingNote?.audioStorageId || audioUrl) && !isRecording && (
+              <View style={{ paddingHorizontal: 24 }}>
+                <AudioPlayerCard
+                  audioUrl={audioUrl}
+                  duration={existingNote?.audioDuration || 0}
+                  transcriptStatus={existingNote?.transcriptStatus || (isTranscribing ? 'transcribing' : 'none')}
+                  transcript={existingNote?.transcript}
+                  onDeleteAudio={handleDeleteAudio}
+                  onRetryTranscribe={handleRetryTranscribe}
+                  isArabic={isArabic}
+                />
+              </View>
+            )}
+
+            {/* Live Transcribing Indicator */}
+            {(existingNote?.transcriptStatus === 'transcribing' || isTranscribing) && !existingNote?.transcript && (
+              <View
+                style={{
+                  marginHorizontal: 24,
+                  marginBottom: 16,
+                  padding: 14,
+                  borderRadius: 16,
+                  backgroundColor: isDark ? 'rgba(99, 102, 241, 0.12)' : 'rgba(99, 102, 241, 0.08)',
+                  borderWidth: 1,
+                  borderColor: isDark ? 'rgba(99, 102, 241, 0.3)' : 'rgba(99, 102, 241, 0.2)',
+                  flexDirection: isArabic ? 'row-reverse' : 'row',
+                  alignItems: 'center',
+                  gap: 10,
+                }}
+              >
+                <ActivityIndicator size="small" color="#6366F1" />
+                <Text style={{ fontSize: 13, fontWeight: '600', color: '#6366F1' }}>
+                  {isArabic ? 'جارِ تفريغ التسجيل بالذكاء الاصطناعي...' : 'Transcribing audio with AI...'}
+                </Text>
+              </View>
+            )}
+
+            {/* Transcript Box */}
+            {existingNote?.transcript && (
+              <View
+                style={{
+                  marginHorizontal: 24,
+                  marginBottom: 16,
+                  padding: 14,
+                  borderRadius: 16,
+                  backgroundColor: isDark ? 'rgba(30, 41, 59, 0.5)' : 'rgba(248, 250, 252, 0.9)',
+                  borderWidth: 1,
+                  borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.05)',
+                }}
+              >
+                <View
+                  style={[
+                    {
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      marginBottom: 8,
+                    },
+                    isArabic && { flexDirection: 'row-reverse' },
+                  ]}
+                >
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                    <Ionicons name="document-text-outline" size={16} color="#6366F1" />
+                    <Text style={{ fontSize: 13, fontWeight: '700', color: colors.text }}>
+                      {t.transcript}
+                    </Text>
+                  </View>
+                  <TouchableOpacity
+                    onPress={handleInsertTranscript}
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      gap: 4,
+                      paddingHorizontal: 8,
+                      paddingVertical: 4,
+                      borderRadius: 8,
+                      backgroundColor: isDark ? 'rgba(99, 102, 241, 0.2)' : 'rgba(99, 102, 241, 0.1)',
+                    }}
+                  >
+                    <Ionicons name="add" size={14} color="#6366F1" />
+                    <Text style={{ fontSize: 11, fontWeight: '700', color: '#6366F1' }}>
+                      {t.insertToNote}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+                <Text
+                  style={{
+                    fontSize: 13,
+                    lineHeight: 20,
+                    color: colors.textMuted,
+                    textAlign: isArabic ? 'right' : 'left',
+                  }}
+                >
+                  {existingNote.transcript}
+                </Text>
+              </View>
+            )}
+            
+            {/* Reminder Picker */}
+            {isScheduleVisible && (
+              <View style={{ paddingHorizontal: 24, marginBottom: 16 }}>
+                {dateTimeConfirmed ? (
+                  <TouchableOpacity
+                    onPress={() => setDateTimeConfirmed(false)}
+                    style={{
+                      flexDirection: isArabic ? 'row-reverse' : 'row',
+                      alignItems: 'center',
+                      gap: 10,
+                      backgroundColor: colors.warning + '18',
+                      borderWidth: 1,
+                      borderColor: colors.warning + '50',
+                      borderRadius: 12,
+                      paddingHorizontal: 14,
+                      paddingVertical: 10,
+                      alignSelf: 'flex-start',
+                    }}
+                  >
+                    <Ionicons name="alarm" size={18} color={colors.warning} />
+                    <Text style={{ color: colors.warning, fontWeight: '700', fontSize: 14 }}>
+                      {new Date(dueDate).toLocaleDateString(isArabic ? 'ar-SA' : 'en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                      {'  '}
+                      {new Date(dueDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </Text>
+                    <Ionicons name="pencil-outline" size={14} color={colors.warning} />
+                  </TouchableOpacity>
+                ) : (
+                  <View style={styles.inlineReminderHeader}>
+                    <Text style={[styles.inlineReminderTitle, isArabic && { textAlign: 'right' }]}>
+                      {isArabic ? 'موعد التذكير' : 'Reminder Schedule'}
+                    </Text>
+                    
+                    <View style={styles.calendarCard}>
+                      <View style={[styles.calendarHeader, isArabic && { flexDirection: 'row-reverse' }]}>
+                        <TouchableOpacity onPress={prevMonth}>
+                          <Ionicons name="chevron-back" size={20} color={colors.text} />
+                        </TouchableOpacity>
+                        <Text style={styles.calendarTitle}>
+                          {currentMonth.toLocaleString('en-US', { month: 'long', year: 'numeric' })}
+                        </Text>
+                        <TouchableOpacity onPress={nextMonth}>
+                          <Ionicons name="chevron-forward" size={20} color={colors.text} />
+                        </TouchableOpacity>
+                      </View>
+
+                      <View style={[styles.weekDaysRow, isArabic && { flexDirection: 'row-reverse' }]}>
+                        {['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'].map((d) => (
+                          <Text key={d} style={styles.weekDayText}>{d}</Text>
+                        ))}
+                      </View>
+
+                      <View style={[styles.daysGrid, isArabic && { flexDirection: 'row-reverse' }]}>
+                        {renderCalendarDays()}
+                      </View>
+                    </View>
+
+                    <View style={[styles.timePresetsRow, isArabic && { flexDirection: 'row-reverse' }, { alignItems: 'center', marginTop: 16 }]}>
+                      {Platform.OS === 'ios' ? (
+                        <DateTimePicker
+                          value={selectedTime}
+                          mode="time"
+                          display="spinner"
+                          themeVariant={isDarkMode ? 'dark' : 'light'}
+                          style={{ flex: 1, height: 100 }}
+                          onChange={(e, d) => {
+                            if (d) {
+                              setSelectedTime(d);
+                              const finalDate = new Date(selectedDate);
+                              finalDate.setHours(d.getHours(), d.getMinutes(), 0, 0);
+                              setDueDate(finalDate.getTime());
+                            }
+                          }}
+                        />
+                      ) : (
+                        <>
+                          <TouchableOpacity 
+                            style={[styles.timePresetBtn, { backgroundColor: colors.bg, flexDirection: 'row', alignItems: 'center', height: 50, borderRadius: 12 }]}
+                            onPress={() => setShowTimePicker(true)}
+                          >
+                            <Ionicons name="time-outline" size={20} color={colors.text} style={{ marginRight: 8 }} />
+                            <Text style={[styles.timePresetMain, { color: colors.text, fontSize: 18 }]}>
+                              {selectedTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                            </Text>
+                          </TouchableOpacity>
+                          {showTimePicker && (
+                            <DateTimePicker
+                              value={selectedTime}
+                              mode="time"
+                              display="default"
+                              themeVariant={isDarkMode ? 'dark' : 'light'}
+                              is24Hour={true}
+                              onChange={(e, d) => {
+                                 setShowTimePicker(false);
+                                 if (d) {
+                                   setSelectedTime(d);
+                                   const finalDate = new Date(selectedDate);
+                                   finalDate.setHours(d.getHours(), d.getMinutes(), 0, 0);
+                                   setDueDate(finalDate.getTime());
+                                 }
+                              }}
+                            />
+                          )}
+                        </>
+                      )}
+                    </View>
+
+                    {/* Confirm button */}
+                    <TouchableOpacity
+                      onPress={() => {
+                        const finalDate = new Date(selectedDate);
+                        finalDate.setHours(selectedTime.getHours(), selectedTime.getMinutes(), 0, 0);
+                        setDueDate(finalDate.getTime());
+                        setDateTimeConfirmed(true);
+                      }}
+                      style={{
+                        marginTop: 16,
+                        backgroundColor: colors.warning,
+                        borderRadius: 12,
+                        paddingVertical: 12,
+                        alignItems: 'center',
+                      }}
+                    >
+                      <Text style={{ color: colors.text, fontWeight: '800', fontSize: 15 }}>
+                        {isArabic ? 'تأكيد الموعد' : 'Confirm Date & Time'}
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                )}
+              </View>
+            )}
+
+            {/* Interactive Checklist Quick Toggle Bar (if note has checklists) */}
+            {checklistItems.length > 0 && (
+              <View style={styles.interactiveChecklistStrip}>
+                <View style={[{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }, isArabic && { flexDirection: 'row-reverse' }]}>
+                  <Text style={{ fontSize: 12, fontWeight: '700', color: colors.textMuted }}>
+                    {isArabic ? 'قوائم المهام التفاعلية' : 'Interactive Checklist'}
+                  </Text>
+                  <Text style={{ fontSize: 11, fontWeight: '600', color: colors.primary }}>
+                    {checklistItems.filter(i => i.checked).length} / {checklistItems.length}
+                  </Text>
+                </View>
+                {checklistItems.map((item) => (
+                  <TouchableOpacity
+                    key={`chk-${item.lineIndex}`}
+                    onPress={() => toggleCheckmarkAtLine(item.lineIndex)}
+                    style={[
+                      {
+                        flexDirection: isArabic ? 'row-reverse' : 'row',
+                        alignItems: 'center',
+                        gap: 8,
+                        paddingVertical: 4,
+                      },
+                    ]}
+                  >
+                    <View style={[styles.checkbox, item.checked && styles.checkboxChecked, { width: 18, height: 18, borderRadius: 5 }]}>
+                      {item.checked && <Ionicons name="checkmark" size={13} color={colors.primaryText} />}
+                    </View>
+                    <Text
+                      style={[
+                        {
+                          fontSize: 14,
+                          color: colors.text,
+                          flex: 1,
+                          textAlign: isArabic ? 'right' : 'left',
+                        },
+                        item.checked && { textDecorationLine: 'line-through', opacity: 0.5 },
+                      ]}
+                      numberOfLines={1}
+                    >
+                      {item.text || (isArabic ? 'مهمة بدون عنوان' : 'Empty task')}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            )}
+
+            {/* Unified Note Body Editor Container */}
+            <TouchableOpacity 
+              activeOpacity={1} 
+              style={styles.editorContainer}
+              onPress={() => {
+                bodyInputRef.current?.focus();
+              }}
+            >
+              <TextInput
+                ref={bodyInputRef}
+                style={[
+                  styles.mainBodyInput,
+                  {
+                    fontSize: activeFontSize,
+                    lineHeight: Math.round(activeFontSize * 1.55),
+                    fontFamily: activeFontFamily === 'System' ? undefined : activeFontFamily,
+                    color: activeFontColor,
+                    fontWeight: activeFontWeight,
+                    fontStyle: activeFontStyle,
+                    textAlign: isArabic ? 'right' : 'left',
+                  }
+                ]}
+                placeholder={isArabic ? 'ابدأ في كتابة ملاحظتك هنا...\n• استخدم الشريط أدناه لإضافة العناوين، القوائم، أو المهام.' : 'Start typing your note here...\n• Use the toolbar below to add Headings, Checklists, Bullets, or Formats.'}
+                placeholderTextColor={colors.textMuted + '60'}
+                value={body}
+                onChangeText={handleBodyChange}
+                onSelectionChange={(e) => setSelection(e.nativeEvent.selection)}
+                multiline={true}
+                scrollEnabled={false}
+                textAlignVertical="top"
+                blurOnSubmit={false}
+              />
+            </TouchableOpacity>
+          </ScrollView>
+
+          {/* AI Quick Actions Bar */}
+          <View
+            style={{
+              paddingVertical: 8,
+              paddingHorizontal: 14,
+              backgroundColor: isDark ? 'rgba(15, 23, 42, 0.95)' : 'rgba(248, 250, 252, 0.98)',
+              borderTopWidth: StyleSheet.hairlineWidth,
+              borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.06)',
             }}
-            activeOpacity={1}
           >
-            <Text style={{ color: colors.textMuted, opacity: 0.5 }}>
-              {isArabic ? 'اضغط للإضافة...' : 'Tap to add more...'}
-            </Text>
-          </TouchableOpacity>
-        </ScrollView>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={{
+                gap: 8,
+                flexDirection: isArabic ? 'row-reverse' : 'row',
+                alignItems: 'center',
+              }}
+            >
+              <TouchableOpacity
+                onPress={handleSummarizeNote}
+                disabled={isAILoading}
+                style={{
+                  flexDirection: isArabic ? 'row-reverse' : 'row',
+                  alignItems: 'center',
+                  gap: 5,
+                  paddingHorizontal: 12,
+                  paddingVertical: 6,
+                  borderRadius: 12,
+                  backgroundColor: isDark ? 'rgba(99, 102, 241, 0.18)' : 'rgba(99, 102, 241, 0.1)',
+                  borderWidth: 1,
+                  borderColor: isDark ? 'rgba(99, 102, 241, 0.35)' : 'rgba(99, 102, 241, 0.2)',
+                }}
+              >
+                <Ionicons name="sparkles" size={13} color="#6366F1" />
+                <Text style={{ fontSize: 12, fontWeight: '700', color: '#6366F1' }}>
+                  {t.aiSummarize}
+                </Text>
+              </TouchableOpacity>
 
-          {/* Toolbar — natural flow, KAV pushes it above keyboard automatically */}
+              <TouchableOpacity
+                onPress={handleExtractTasks}
+                disabled={isAILoading}
+                style={{
+                  flexDirection: isArabic ? 'row-reverse' : 'row',
+                  alignItems: 'center',
+                  gap: 5,
+                  paddingHorizontal: 12,
+                  paddingVertical: 6,
+                  borderRadius: 12,
+                  backgroundColor: isDark ? 'rgba(16, 185, 129, 0.18)' : 'rgba(16, 185, 129, 0.1)',
+                  borderWidth: 1,
+                  borderColor: isDark ? 'rgba(16, 185, 129, 0.35)' : 'rgba(16, 185, 129, 0.2)',
+                }}
+              >
+                <Ionicons name="checkbox-outline" size={13} color="#10B981" />
+                <Text style={{ fontSize: 12, fontWeight: '700', color: '#10B981' }}>
+                  {t.aiExtractTasks}
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                onPress={handleExplainNote}
+                disabled={isAILoading}
+                style={{
+                  flexDirection: isArabic ? 'row-reverse' : 'row',
+                  alignItems: 'center',
+                  gap: 5,
+                  paddingHorizontal: 12,
+                  paddingVertical: 6,
+                  borderRadius: 12,
+                  backgroundColor: isDark ? 'rgba(245, 158, 11, 0.18)' : 'rgba(245, 158, 11, 0.1)',
+                  borderWidth: 1,
+                  borderColor: isDark ? 'rgba(245, 158, 11, 0.35)' : 'rgba(245, 158, 11, 0.2)',
+                }}
+              >
+                <Ionicons name="bulb-outline" size={13} color="#F59E0B" />
+                <Text style={{ fontSize: 12, fontWeight: '700', color: '#F59E0B' }}>
+                  {t.aiExplain}
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                onPress={() => setAIChatVisible(true)}
+                style={{
+                  flexDirection: isArabic ? 'row-reverse' : 'row',
+                  alignItems: 'center',
+                  gap: 5,
+                  paddingHorizontal: 12,
+                  paddingVertical: 6,
+                  borderRadius: 12,
+                  backgroundColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.05)',
+                  borderWidth: 1,
+                  borderColor: isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(0, 0, 0, 0.08)',
+                }}
+              >
+                <Ionicons name="chatbubbles-outline" size={13} color={colors.text} />
+                <Text style={{ fontSize: 12, fontWeight: '600', color: colors.text }}>
+                  {t.aiAsk}
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                onPress={handleToggleRecording}
+                style={{
+                  flexDirection: isArabic ? 'row-reverse' : 'row',
+                  alignItems: 'center',
+                  gap: 5,
+                  paddingHorizontal: 12,
+                  paddingVertical: 6,
+                  borderRadius: 12,
+                  backgroundColor: isRecording
+                    ? 'rgba(239, 68, 68, 0.25)'
+                    : isDark
+                    ? 'rgba(239, 68, 68, 0.18)'
+                    : 'rgba(239, 68, 68, 0.1)',
+                  borderWidth: 1,
+                  borderColor: isRecording
+                    ? '#EF4444'
+                    : isDark
+                    ? 'rgba(239, 68, 68, 0.35)'
+                    : 'rgba(239, 68, 68, 0.2)',
+                }}
+              >
+                <Ionicons
+                  name={isRecording ? 'stop-circle' : 'mic-outline'}
+                  size={13}
+                  color="#EF4444"
+                />
+                <Text style={{ fontSize: 12, fontWeight: '700', color: '#EF4444' }}>
+                  {isRecording ? (isArabic ? 'إيقاف وحفظ' : 'Stop & Save') : t.voiceRecord}
+                </Text>
+              </TouchableOpacity>
+            </ScrollView>
+          </View>
+
+          {/* Rich Formatting Toolbar */}
           <View style={[
             styles.toolbarWrapper,
             {
               backgroundColor: colors.bg,
-              paddingVertical: 12,
-              paddingHorizontal: 20,
-              paddingBottom: keyboardHeight > 0 ? 12 : insets.bottom + 12,
+              paddingBottom: keyboardHeight > 0 ? 8 : insets.bottom + 8,
               borderTopWidth: 1,
-              borderColor: colors.surfaceText + '1A',
+              borderColor: colors.border,
             }
           ]}>
-            <View style={[
-              { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-              isArabic && { flexDirection: 'row-reverse' }
-            ]}>
-              <View style={{ flexDirection: 'row', gap: 16, alignItems: 'center' }}>
-                <TouchableOpacity style={styles.toolbarIconBtn} onPress={toggleInteractiveHeading}>
-                  <Ionicons name="text-outline" size={22} color={colors.surfaceText} />
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.toolbarIconBtn} onPress={toggleInteractiveCheckbox}>
-                  <Ionicons name="checkbox-outline" size={22} color={colors.surfaceText} />
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.toolbarIconBtn} onPress={toggleInteractiveBullet}>
-                  <Ionicons name="list-outline" size={22} color={colors.surfaceText} />
-                </TouchableOpacity>
-              </View>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={[
+                { flexDirection: isArabic ? 'row-reverse' : 'row', alignItems: 'center', gap: 6, paddingHorizontal: 4 },
+              ]}
+            >
+              {/* Headings */}
+              <TouchableOpacity 
+                style={[styles.toolbarIconBtn, isH1Active && styles.toolbarIconBtnActive]} 
+                onPress={() => toggleHeading(1)}
+              >
+                <Text style={{ fontSize: 15, fontWeight: '800', color: isH1Active ? colors.primary : colors.surfaceText }}>H1</Text>
+              </TouchableOpacity>
 
-              <View style={{ flexDirection: 'row', gap: 16, alignItems: 'center' }}>
-                <TouchableOpacity onPress={() => setActiveMenu('fontSize')} style={{ paddingHorizontal: 4 }}>
-                  <Text style={{ color: colors.surfaceText, fontSize: 16, fontWeight: '700' }}>{activeFontSize}pt</Text>
-                </TouchableOpacity>
-                <TouchableOpacity onPress={() => setActiveMenu('color')}>
-                  <View style={{ width: 26, height: 26, borderRadius: 13, backgroundColor: activeFontColor, borderWidth: 2, borderColor: colors.surfaceText }} />
-                </TouchableOpacity>
-                <TouchableOpacity onPress={() => setActiveMenu('fontFamily')}>
-                  <Ionicons name="language-outline" size={22} color={colors.surfaceText} />
-                </TouchableOpacity>
-              </View>
-            </View>
+              <TouchableOpacity 
+                style={[styles.toolbarIconBtn, isH2Active && styles.toolbarIconBtnActive]} 
+                onPress={() => toggleHeading(2)}
+              >
+                <Text style={{ fontSize: 14, fontWeight: '700', color: isH2Active ? colors.primary : colors.surfaceText }}>H2</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity 
+                style={[styles.toolbarIconBtn, isH3Active && styles.toolbarIconBtnActive]} 
+                onPress={() => toggleHeading(3)}
+              >
+                <Text style={{ fontSize: 13, fontWeight: '700', color: isH3Active ? colors.primary : colors.surfaceText }}>H3</Text>
+              </TouchableOpacity>
+
+              <View style={{ width: 1, height: 20, backgroundColor: colors.border, marginHorizontal: 2 }} />
+
+              {/* Checklist */}
+              <TouchableOpacity 
+                style={[styles.toolbarIconBtn, isChecklistActive && styles.toolbarIconBtnActive]} 
+                onPress={toggleChecklist}
+              >
+                <Ionicons 
+                  name={isChecklistActive ? "checkbox" : "checkbox-outline"} 
+                  size={20} 
+                  color={isChecklistActive ? colors.primary : colors.surfaceText} 
+                />
+              </TouchableOpacity>
+
+              {/* Bullet List */}
+              <TouchableOpacity 
+                style={[styles.toolbarIconBtn, isBulletActive && styles.toolbarIconBtnActive]} 
+                onPress={toggleBulletList}
+              >
+                <Ionicons 
+                  name="list-outline" 
+                  size={20} 
+                  color={isBulletActive ? colors.primary : colors.surfaceText} 
+                />
+              </TouchableOpacity>
+
+              {/* Numbered List */}
+              <TouchableOpacity 
+                style={[styles.toolbarIconBtn, isNumberActive && styles.toolbarIconBtnActive]} 
+                onPress={toggleNumberedList}
+              >
+                <Ionicons 
+                  name="reorder-four-outline" 
+                  size={20} 
+                  color={isNumberActive ? colors.primary : colors.surfaceText} 
+                />
+              </TouchableOpacity>
+
+              {/* Quote */}
+              <TouchableOpacity 
+                style={[styles.toolbarIconBtn, isQuoteActive && styles.toolbarIconBtnActive]} 
+                onPress={toggleQuote}
+              >
+                <Ionicons 
+                  name="chatbox-ellipses-outline" 
+                  size={19} 
+                  color={isQuoteActive ? colors.primary : colors.surfaceText} 
+                />
+              </TouchableOpacity>
+
+              <View style={{ width: 1, height: 20, backgroundColor: colors.border, marginHorizontal: 2 }} />
+
+              {/* Bold */}
+              <TouchableOpacity 
+                style={styles.toolbarIconBtn} 
+                onPress={() => insertInlineFormat('**')}
+              >
+                <Text style={{ fontSize: 16, fontWeight: '900', color: colors.surfaceText }}>B</Text>
+              </TouchableOpacity>
+
+              {/* Italic */}
+              <TouchableOpacity 
+                style={styles.toolbarIconBtn} 
+                onPress={() => insertInlineFormat('*')}
+              >
+                <Text style={{ fontSize: 16, fontWeight: '700', fontStyle: 'italic', color: colors.surfaceText }}>I</Text>
+              </TouchableOpacity>
+
+              {/* Strikethrough */}
+              <TouchableOpacity 
+                style={styles.toolbarIconBtn} 
+                onPress={() => insertInlineFormat('~~')}
+              >
+                <Text style={{ fontSize: 15, fontWeight: '700', textDecorationLine: 'line-through', color: colors.surfaceText }}>S</Text>
+              </TouchableOpacity>
+
+              {/* Divider */}
+              <TouchableOpacity 
+                style={styles.toolbarIconBtn} 
+                onPress={insertDivider}
+              >
+                <Ionicons name="remove-outline" size={22} color={colors.surfaceText} />
+              </TouchableOpacity>
+
+              <View style={{ width: 1, height: 20, backgroundColor: colors.border, marginHorizontal: 2 }} />
+
+              {/* Font Size */}
+              <TouchableOpacity 
+                onPress={() => setActiveMenu('fontSize')} 
+                style={{ paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8, backgroundColor: colors.surface }}
+              >
+                <Text style={{ color: colors.surfaceText, fontSize: 13, fontWeight: '700' }}>{activeFontSize}pt</Text>
+              </TouchableOpacity>
+
+              {/* Color */}
+              <TouchableOpacity onPress={() => setActiveMenu('color')}>
+                <View style={{ width: 22, height: 22, borderRadius: 11, backgroundColor: activeFontColor, borderWidth: 2, borderColor: colors.border }} />
+              </TouchableOpacity>
+
+              {/* Font Family */}
+              <TouchableOpacity 
+                onPress={() => setActiveMenu('fontFamily')}
+                style={[styles.toolbarIconBtn]}
+              >
+                <Ionicons name="text" size={18} color={colors.surfaceText} />
+              </TouchableOpacity>
+            </ScrollView>
           </View>
         </View>
       </KeyboardAvoidingView>
 
-      {/* Action Menu Bottom Sheet */}
+      {/* AI Assistant Interactive Chat Bottom Sheet */}
+      <NoteAIChatSheet
+        visible={isAIChatVisible}
+        onClose={() => setAIChatVisible(false)}
+        noteTitle={title || 'Untitled Note'}
+        chatHistory={existingNote?.aiChatHistory || []}
+        onSendMessage={handleSendAIChat}
+        onInsertToNote={handleInsertToNote}
+        isArabic={isArabic}
+        isLoading={isAILoading}
+      />
+
+      {/* Action Menu Bottom Sheet (Font Size, Font Family, Color) */}
       <Modal
         visible={activeMenu !== 'none'}
         animationType="slide"
@@ -849,10 +1530,9 @@ export default function NoteDetailScreen() {
           <View style={[styles.modalContent, { marginTop: 'auto', marginBottom: 0, borderBottomLeftRadius: 0, borderBottomRightRadius: 0, maxHeight: '60%' }]}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>
-                {activeMenu === 'fontFamily' && 'Select Font Family'}
-                {activeMenu === 'fontSize' && 'Select Font Size'}
-                {activeMenu === 'color' && 'Select Text Color'}
-                {activeMenu === 'fontShape' && 'Select Font Style'}
+                {activeMenu === 'fontFamily' && (isArabic ? 'اختر نوع الخط' : 'Select Font Family')}
+                {activeMenu === 'fontSize' && (isArabic ? 'اختر حجم الخط' : 'Select Font Size')}
+                {activeMenu === 'color' && (isArabic ? 'اختر لون النص' : 'Select Text Color')}
               </Text>
               <TouchableOpacity onPress={() => setActiveMenu('none')}>
                 <Ionicons name="close" size={24} color={colors.text} />
@@ -866,25 +1546,25 @@ export default function NoteDetailScreen() {
                 </TouchableOpacity>
               ))}
 
-              {activeMenu === 'fontSize' && [16, 18, 20, 24, 28, 32].map(s => (
+              {activeMenu === 'fontSize' && [14, 16, 17, 18, 20, 22, 24, 28].map(s => (
                 <TouchableOpacity key={s} onPress={() => { setActiveFontSize(s); setActiveMenu('none'); }} style={{ padding: 16, borderBottomWidth: 1, borderColor: colors.border }}>
-                  <Text style={{ color: colors.text, fontSize: s }}>{s}pt</Text>
+                  <Text style={{ color: colors.text, fontSize: s, fontWeight: activeFontSize === s ? '700' : '400' }}>{s}pt</Text>
                 </TouchableOpacity>
               ))}
 
               {activeMenu === 'color' && (
                 <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 16, padding: 16, justifyContent: 'space-around' }}>
-                  {[colors.text, colors.primary, colors.danger, colors.success, colors.warning, colors.border, colors.textMuted].map(c => (
+                  {[colors.text, colors.primary, colors.danger, colors.success, colors.warning, colors.border, colors.textMuted, '#6366F1', '#EC4899', '#8B5CF6', '#14B8A6'].map(c => (
                     <TouchableOpacity 
                       key={c} 
-                      onPress={() => { changeActiveColor(c); setActiveMenu('none'); }} 
+                      onPress={() => { setActiveFontColor(c); setActiveMenu('none'); }} 
                       style={{ 
-                        width: 56, 
-                        height: 56, 
-                        borderRadius: 28, 
+                        width: 48, 
+                        height: 48, 
+                        borderRadius: 24, 
                         backgroundColor: c, 
                         borderWidth: 3, 
-                        borderColor: activeFontColor === c ? colors.surfaceText : 'transparent',
+                        borderColor: activeFontColor === c ? colors.primary : 'transparent',
                         shadowColor: colors.text,
                         shadowOpacity: 0.2,
                         shadowRadius: 4,

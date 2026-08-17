@@ -485,8 +485,8 @@ export const createScrollStackStyles = (colors: ColorScheme, isArabic: boolean =
     },
     modalSaveBtnText: {
       fontSize: 16,
-      fontWeight: '700',
-      color: '#FFFFFF',
+      fontWeight: '800',
+      color: '#16270E',
     },
     modalDeleteBtn: {
       backgroundColor: isDarkMode ? 'rgba(239, 68, 68, 0.15)' : 'rgba(239, 68, 68, 0.1)',

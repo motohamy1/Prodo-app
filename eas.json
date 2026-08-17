@@ -10,6 +10,9 @@
     },
     "preview": {
       "distribution": "internal",
+      "android": {
+        "buildType": "apk"
+      },
       "env": {
         "EXPO_PUBLIC_CONVEX_URL": "https://energetic-narwhal-56.convex.cloud",
         "EXPO_PUBLIC_CONVEX_SITE_URL": "https://energetic-narwhal-56.convex.site"

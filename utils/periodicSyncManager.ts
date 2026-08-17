@@ -243,9 +243,9 @@ class PeriodicSyncManager {
     if (this.syncConfig.conflictResolution === 'manual') {
       // For manual resolution, we'd need to trigger UI
       // For now, fall back to auto-resolution
-      resolutions = conflictResolver.autoResolveConflicts(allConflicts, 'latest');
+      resolutions = conflictResolver.autoResolveConflicts(allConflicts as any, 'latest');
     } else {
-      resolutions = conflictResolver.autoResolveConflicts(allConflicts, this.syncConfig.conflictResolution);
+      resolutions = conflictResolver.autoResolveConflicts(allConflicts as any, this.syncConfig.conflictResolution);
     }
 
     await this.applyConflictResolutions(userId, resolutions);

@@ -25,6 +25,13 @@ export const VoiceWaveform: React.FC<VoiceWaveformProps> = ({
   const phase1 = useSharedValue(0);
   const phase2 = useSharedValue(0);
   const amplitude = useSharedValue(isListening ? 1 : 0);
+  const targetLevel = useSharedValue(0.5);
+
+  useEffect(() => {
+    if (audioLevel !== undefined) {
+      targetLevel.value = withTiming(Math.max(0.2, Math.min(1.2, audioLevel)), { duration: 150 });
+    }
+  }, [audioLevel]);
 
   useEffect(() => {
     if (isListening) {
@@ -33,7 +40,7 @@ export const VoiceWaveform: React.FC<VoiceWaveformProps> = ({
 
       phase1.value = withRepeat(
         withTiming(2 * Math.PI, {
-          duration: 2800,
+          duration: 2200,
           easing: Easing.linear,
         }),
         -1,
@@ -42,7 +49,7 @@ export const VoiceWaveform: React.FC<VoiceWaveformProps> = ({
 
       phase2.value = withRepeat(
         withTiming(2 * Math.PI, {
-          duration: 2200,
+          duration: 1800,
           easing: Easing.linear,
         }),
         -1,
@@ -56,7 +63,7 @@ export const VoiceWaveform: React.FC<VoiceWaveformProps> = ({
 
   const animatedWaveProps1 = useAnimatedProps(() => {
     const p = phase1.value;
-    const a = amplitude.value;
+    const a = amplitude.value * targetLevel.value;
     const w = 360;
     const midY = 45;
 
