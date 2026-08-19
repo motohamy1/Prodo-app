@@ -606,85 +606,99 @@ export default function NoteDetailScreen() {
     // Only intercept when text grows and contains a newline (i.e. Enter was tapped)
     if (newText.length > body.length && newText.includes('\n')) {
       const cursorPos = selection.start || newText.length;
-      const isNewlineAtCursor = newText[cursorPos - 1] === '\n' || newText[cursorPos] === '\n';
-
-      if (isNewlineAtCursor) {
-        const textBefore = newText.slice(0, cursorPos);
-        const linesBefore = textBefore.split('\n');
-        // The line that was just ended by pressing Enter:
+      
+      // Look for the newline that was just typed
+      const textBefore = newText.slice(0, cursorPos);
+      const linesBefore = textBefore.split('\n');
+      
+      // If a newline was just inserted, linesBefore has at least 2 elements
+      if (linesBefore.length >= 2) {
         const prevLine = linesBefore[linesBefore.length - 2];
+        const currentLineAfterEnter = linesBefore[linesBefore.length - 1];
 
-        if (prevLine !== undefined) {
-          // 1. Empty Checklist -> Exit checklist mode cleanly
-          const emptyCheckMatch = prevLine.match(/^(\s*)([☐☑]|- \[[ x]\])\s*$/);
-          if (emptyCheckMatch) {
-            linesBefore[linesBefore.length - 2] = emptyCheckMatch[1]; // clear prefix
-            const textAfter = newText.slice(cursorPos);
-            const reconstructed = linesBefore.join('\n') + textAfter;
-            setBody(reconstructed);
-            return;
-          }
+        // 1. Empty Checklist -> Exit checklist mode cleanly
+        const emptyCheckMatch = prevLine.match(/^(\s*)([☐☑]|- \[[ x]\])\s*$/);
+        if (emptyCheckMatch) {
+          linesBefore[linesBefore.length - 2] = emptyCheckMatch[1]; // clear prefix
+          const textAfter = newText.slice(cursorPos);
+          const reconstructed = linesBefore.join('\n') + textAfter;
+          setBody(reconstructed);
+          return;
+        }
 
-          // 2. Checklist with content -> Auto-continue with next checkbox
-          const checkMatch = prevLine.match(/^(\s*)([☐☑]|- \[[ x]\])\s+(.+)$/);
-          if (checkMatch) {
-            const indent = checkMatch[1];
-            const textAfter = newText.slice(cursorPos);
-            const reconstructed = linesBefore.join('\n') + `${indent}☐ ` + textAfter;
-            setBody(reconstructed);
-            return;
-          }
+        // 2. Checklist with content -> Auto-continue with next checkbox
+        const checkMatch = prevLine.match(/^(\s*)([☐☑]|- \[[ x]\])\s+(.*)$/);
+        if (checkMatch && checkMatch[3].trim().length > 0) {
+          const indent = checkMatch[1];
+          const textAfter = newText.slice(cursorPos);
+          linesBefore[linesBefore.length - 1] = `${indent}☐ ` + currentLineAfterEnter;
+          const reconstructed = linesBefore.join('\n') + textAfter;
+          setBody(reconstructed);
+          return;
+        }
 
-          // 3. Empty Bullet -> Exit bullet mode
-          const emptyBulletMatch = prevLine.match(/^(\s*)([•\-\*])\s*$/);
-          if (emptyBulletMatch) {
-            linesBefore[linesBefore.length - 2] = emptyBulletMatch[1];
-            const textAfter = newText.slice(cursorPos);
-            const reconstructed = linesBefore.join('\n') + textAfter;
-            setBody(reconstructed);
-            return;
-          }
+        // 3. Empty Numbered list -> Exit numbered list
+        const emptyNumMatch = prevLine.match(/^(\s*)(\d+)\.\s*$/);
+        if (emptyNumMatch) {
+          linesBefore[linesBefore.length - 2] = emptyNumMatch[1];
+          const textAfter = newText.slice(cursorPos);
+          const reconstructed = linesBefore.join('\n') + textAfter;
+          setBody(reconstructed);
+          return;
+        }
 
-          // 4. Bullet with content -> Auto-continue bullet
-          const bulletMatch = prevLine.match(/^(\s*)([•\-\*])\s+(.+)$/);
-          if (bulletMatch) {
-            const indent = bulletMatch[1];
-            const textAfter = newText.slice(cursorPos);
-            const reconstructed = linesBefore.join('\n') + `${indent}• ` + textAfter;
-            setBody(reconstructed);
-            return;
-          }
+        // 4. Numbered list with content -> Auto-continue with NEXT sequential number
+        const numMatch = prevLine.match(/^(\s*)(\d+)\.\s+(.*)$/);
+        if (numMatch && numMatch[3].trim().length > 0) {
+          const indent = numMatch[1];
+          const nextNum = parseInt(numMatch[2], 10) + 1;
+          const textAfter = newText.slice(cursorPos);
+          linesBefore[linesBefore.length - 1] = `${indent}${nextNum}. ` + currentLineAfterEnter;
+          const reconstructed = linesBefore.join('\n') + textAfter;
+          setBody(reconstructed);
+          return;
+        }
 
-          // 5. Empty Numbered list -> Exit numbered list
-          const emptyNumMatch = prevLine.match(/^(\s*)(\d+)\.\s*$/);
-          if (emptyNumMatch) {
-            linesBefore[linesBefore.length - 2] = emptyNumMatch[1];
-            const textAfter = newText.slice(cursorPos);
-            const reconstructed = linesBefore.join('\n') + textAfter;
-            setBody(reconstructed);
-            return;
-          }
+        // 5. Empty Bullet -> Exit bullet mode
+        const emptyBulletMatch = prevLine.match(/^(\s*)([•\-\*])\s*$/);
+        if (emptyBulletMatch) {
+          linesBefore[linesBefore.length - 2] = emptyBulletMatch[1];
+          const textAfter = newText.slice(cursorPos);
+          const reconstructed = linesBefore.join('\n') + textAfter;
+          setBody(reconstructed);
+          return;
+        }
 
-          // 6. Numbered list with content -> Auto-continue next number
-          const numMatch = prevLine.match(/^(\s*)(\d+)\.\s+(.+)$/);
-          if (numMatch) {
-            const indent = numMatch[1];
-            const nextNum = parseInt(numMatch[2], 10) + 1;
-            const textAfter = newText.slice(cursorPos);
-            const reconstructed = linesBefore.join('\n') + `${indent}${nextNum}. ` + textAfter;
-            setBody(reconstructed);
-            return;
-          }
+        // 6. Bullet with content -> Auto-continue bullet
+        const bulletMatch = prevLine.match(/^(\s*)([•\-\*])\s+(.*)$/);
+        if (bulletMatch && bulletMatch[3].trim().length > 0) {
+          const indent = bulletMatch[1];
+          const textAfter = newText.slice(cursorPos);
+          linesBefore[linesBefore.length - 1] = `${indent}• ` + currentLineAfterEnter;
+          const reconstructed = linesBefore.join('\n') + textAfter;
+          setBody(reconstructed);
+          return;
+        }
 
-          // 7. Empty Quote -> Exit quote mode
-          const emptyQuoteMatch = prevLine.match(/^(\s*)>\s*$/);
-          if (emptyQuoteMatch) {
-            linesBefore[linesBefore.length - 2] = emptyQuoteMatch[1];
-            const textAfter = newText.slice(cursorPos);
-            const reconstructed = linesBefore.join('\n') + textAfter;
-            setBody(reconstructed);
-            return;
-          }
+        // 7. Empty Quote -> Exit quote mode
+        const emptyQuoteMatch = prevLine.match(/^(\s*)>\s*$/);
+        if (emptyQuoteMatch) {
+          linesBefore[linesBefore.length - 2] = emptyQuoteMatch[1];
+          const textAfter = newText.slice(cursorPos);
+          const reconstructed = linesBefore.join('\n') + textAfter;
+          setBody(reconstructed);
+          return;
+        }
+
+        // 8. Quote with content -> Auto-continue quote
+        const quoteMatch = prevLine.match(/^(\s*)>\s+(.*)$/);
+        if (quoteMatch && quoteMatch[2].trim().length > 0) {
+          const indent = quoteMatch[1];
+          const textAfter = newText.slice(cursorPos);
+          linesBefore[linesBefore.length - 1] = `${indent}> ` + currentLineAfterEnter;
+          const reconstructed = linesBefore.join('\n') + textAfter;
+          setBody(reconstructed);
+          return;
         }
       }
     }
@@ -734,8 +748,10 @@ export default function NoteDetailScreen() {
     let newLineText = '';
     if (lineText.startsWith(prefix)) {
       newLineText = cleanText;
+      setActiveFontSize(17);
     } else {
       newLineText = prefix + cleanText;
+      setActiveFontSize(level === 1 ? 24 : level === 2 ? 20 : 18);
     }
     const newBody = body.slice(0, lineStart) + newLineText + body.slice(lineEnd);
     setBody(newBody);
@@ -746,8 +762,12 @@ export default function NoteDetailScreen() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     const { lineStart, lineEnd, lineText } = getCurrentLineInfo();
     let newLineText = '';
-    if (lineText.startsWith('☐ ') || lineText.startsWith('☑ ')) {
-      newLineText = lineText.replace(/^[☐☑]\s*/, '');
+    if (lineText.startsWith('☐ ')) {
+      // Toggle to checked
+      newLineText = '☑ ' + lineText.slice(2);
+    } else if (lineText.startsWith('☑ ')) {
+      // Toggle off
+      newLineText = lineText.slice(2);
     } else {
       const cleanText = lineText.replace(/^(#{1,6}|[•\-*]|\d+\.|>)\s*/, '');
       newLineText = '☐ ' + cleanText;
@@ -779,8 +799,15 @@ export default function NoteDetailScreen() {
     if (/^\d+\.\s/.test(lineText)) {
       newLineText = lineText.replace(/^\d+\.\s*/, '');
     } else {
+      // Check the line before this one to find next sequence number
+      const textBefore = body.slice(0, lineStart);
+      const prevLines = textBefore.trimEnd().split('\n');
+      const lastLine = prevLines[prevLines.length - 1] || '';
+      const prevNumMatch = lastLine.match(/^(\s*)(\d+)\.\s+/);
+      const nextNum = prevNumMatch ? parseInt(prevNumMatch[2], 10) + 1 : 1;
+
       const cleanText = lineText.replace(/^(#{1,6}|[•☐☑\-*]|>)\s*/, '');
-      newLineText = '1. ' + cleanText;
+      newLineText = `${nextNum}. ` + cleanText;
     }
     const newBody = body.slice(0, lineStart) + newLineText + body.slice(lineEnd);
     setBody(newBody);
@@ -802,6 +829,22 @@ export default function NoteDetailScreen() {
     keepFocus();
   }, [body, getCurrentLineInfo, keepFocus]);
 
+  const insertHashtag = useCallback((tagText?: string) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    const pos = selection.start || 0;
+    const tagToInsert = tagText ? (tagText.startsWith('#') ? tagText + ' ' : '#' + tagText + ' ') : '#';
+    const before = body.slice(0, pos);
+    const after = body.slice(pos);
+    const needsSpace = before.length > 0 && !before.endsWith(' ') && !before.endsWith('\n');
+    const inserted = (needsSpace ? ' ' : '') + tagToInsert;
+    const newBody = before + inserted + after;
+    setBody(newBody);
+    const newPos = pos + inserted.length;
+    cursorPosRef.current = newPos;
+    setSelection({ start: newPos, end: newPos });
+    keepFocus();
+  }, [body, selection, keepFocus]);
+
   const insertInlineFormat = useCallback((wrapper: string) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     const start = selection.start || 0;
@@ -814,6 +857,9 @@ export default function NoteDetailScreen() {
     } else {
       const newBody = body.slice(0, start) + `${wrapper}${wrapper}` + body.slice(start);
       setBody(newBody);
+      const newPos = start + wrapper.length;
+      cursorPosRef.current = newPos;
+      setSelection({ start: newPos, end: newPos });
     }
     keepFocus();
   }, [body, selection, keepFocus]);
@@ -1290,52 +1336,6 @@ export default function NoteDetailScreen() {
               </View>
             )}
 
-            {/* Interactive Checklist Quick Toggle Bar (if note has checklists) */}
-            {checklistItems.length > 0 && (
-              <View style={styles.interactiveChecklistStrip}>
-                <View style={[{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }, isArabic && { flexDirection: 'row-reverse' }]}>
-                  <Text style={{ fontSize: 12, fontWeight: '700', color: colors.textMuted }}>
-                    {isArabic ? 'قوائم المهام التفاعلية' : 'Interactive Checklist'}
-                  </Text>
-                  <Text style={{ fontSize: 11, fontWeight: '600', color: colors.primary }}>
-                    {checklistItems.filter(i => i.checked).length} / {checklistItems.length}
-                  </Text>
-                </View>
-                {checklistItems.map((item) => (
-                  <TouchableOpacity
-                    key={`chk-${item.lineIndex}`}
-                    onPress={() => toggleCheckmarkAtLine(item.lineIndex)}
-                    style={[
-                      {
-                        flexDirection: isArabic ? 'row-reverse' : 'row',
-                        alignItems: 'center',
-                        gap: 8,
-                        paddingVertical: 4,
-                      },
-                    ]}
-                  >
-                    <View style={[styles.checkbox, item.checked && styles.checkboxChecked, { width: 18, height: 18, borderRadius: 5 }]}>
-                      {item.checked && <Ionicons name="checkmark" size={13} color={colors.primaryText} />}
-                    </View>
-                    <Text
-                      style={[
-                        {
-                          fontSize: 14,
-                          color: colors.text,
-                          flex: 1,
-                          textAlign: isArabic ? 'right' : 'left',
-                        },
-                        item.checked && { textDecorationLine: 'line-through', opacity: 0.5 },
-                      ]}
-                      numberOfLines={1}
-                    >
-                      {item.text || (isArabic ? 'مهمة بدون عنوان' : 'Empty task')}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            )}
-
             {/* Unified Note Body Editor Container */}
             <TouchableOpacity 
               activeOpacity={1} 
@@ -1362,7 +1362,10 @@ export default function NoteDetailScreen() {
                 placeholderTextColor={colors.textMuted + '60'}
                 value={body}
                 onChangeText={handleBodyChange}
-                onSelectionChange={(e) => setSelection(e.nativeEvent.selection)}
+                onSelectionChange={(e) => {
+                  setSelection(e.nativeEvent.selection);
+                  cursorPosRef.current = e.nativeEvent.selection.start;
+                }}
                 multiline={true}
                 scrollEnabled={false}
                 textAlignVertical="top"
@@ -1598,6 +1601,18 @@ export default function NoteDetailScreen() {
                 />
               </TouchableOpacity>
 
+              {/* Hashtag */}
+              <TouchableOpacity 
+                style={styles.toolbarIconBtn} 
+                onPress={() => insertHashtag()}
+              >
+                <Ionicons 
+                  name="pricetag-outline" 
+                  size={18} 
+                  color={colors.surfaceText} 
+                />
+              </TouchableOpacity>
+
               <View style={{ width: 1, height: 20, backgroundColor: colors.border, marginHorizontal: 2 }} />
 
               {/* Bold */}
@@ -1696,15 +1711,59 @@ export default function NoteDetailScreen() {
             </View>
 
             <ScrollView showsVerticalScrollIndicator={false}>
-              {activeMenu === 'fontFamily' && ['System', 'Baskerville', 'Georgia', 'serif', 'sans-serif'].map(f => (
-                <TouchableOpacity key={f} onPress={() => { setActiveFontFamily(f); setActiveMenu('none'); }} style={{ padding: 16, borderBottomWidth: 1, borderColor: colors.border }}>
-                  <Text style={{ color: colors.text, fontFamily: f === 'System' ? undefined : f, fontSize: 18 }}>{f}</Text>
+              {activeMenu === 'fontFamily' && [
+                { label: isArabic ? 'الخط الافتراضي (System)' : 'System Default', val: 'System' },
+                { label: isArabic ? 'خط كلاسيكي (Serif / Georgia)' : 'Editorial Serif', val: Platform.OS === 'ios' ? 'Georgia' : 'serif' },
+                { label: isArabic ? 'خط برمجي (Monospace)' : 'Monospace (Code)', val: Platform.OS === 'ios' ? 'Courier New' : 'monospace' },
+                { label: isArabic ? 'خط حديث (Modern Sans)' : 'Modern Sans', val: Platform.OS === 'ios' ? 'Helvetica Neue' : 'sans-serif' },
+                { label: isArabic ? 'خط عريض (Clean Medium)' : 'Clean Medium', val: Platform.OS === 'ios' ? 'System' : 'sans-serif-medium' },
+              ].map(f => (
+                <TouchableOpacity 
+                  key={f.val} 
+                  onPress={() => { 
+                    setActiveFontFamily(f.val); 
+                    setActiveMenu('none'); 
+                  }} 
+                  style={{ 
+                    padding: 16, 
+                    borderBottomWidth: 1, 
+                    borderColor: colors.border,
+                    flexDirection: isArabic ? 'row-reverse' : 'row',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                  }}
+                >
+                  <Text style={{ color: colors.text, fontFamily: f.val === 'System' ? undefined : f.val, fontSize: 18 }}>
+                    {f.label}
+                  </Text>
+                  {activeFontFamily === f.val && (
+                    <Ionicons name="checkmark" size={20} color={colors.primary} />
+                  )}
                 </TouchableOpacity>
               ))}
 
               {activeMenu === 'fontSize' && [14, 16, 17, 18, 20, 22, 24, 28].map(s => (
-                <TouchableOpacity key={s} onPress={() => { setActiveFontSize(s); setActiveMenu('none'); }} style={{ padding: 16, borderBottomWidth: 1, borderColor: colors.border }}>
-                  <Text style={{ color: colors.text, fontSize: s, fontWeight: activeFontSize === s ? '700' : '400' }}>{s}pt</Text>
+                <TouchableOpacity 
+                  key={s} 
+                  onPress={() => { 
+                    setActiveFontSize(s); 
+                    setActiveMenu('none'); 
+                  }} 
+                  style={{ 
+                    padding: 16, 
+                    borderBottomWidth: 1, 
+                    borderColor: colors.border,
+                    flexDirection: isArabic ? 'row-reverse' : 'row',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                  }}
+                >
+                  <Text style={{ color: colors.text, fontSize: s, fontWeight: activeFontSize === s ? '700' : '400' }}>
+                    {s}pt
+                  </Text>
+                  {activeFontSize === s && (
+                    <Ionicons name="checkmark" size={20} color={colors.primary} />
+                  )}
                 </TouchableOpacity>
               ))}
 

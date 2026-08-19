@@ -18,10 +18,17 @@ import useTheme from '@/hooks/useTheme';
 import LivePress from '@/components/LivePress';
 import Reanimated, { FadeInDown, FadeIn, FadeOut } from 'react-native-reanimated';
 
+import { 
+  PrayerTimeItem, 
+  calculateLocalPrayerTimes, 
+  getDynamicPrayerTimes, 
+  getUserLocationConfig 
+} from '@/utils/prayerTimes';
+
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
-const START_HOUR = 5; // 05:00 AM
-const END_HOUR = 24; // 12:00 AM midnight (19 hours total)
+const START_HOUR = 4; // 04:00 AM (accommodates Fajr in all seasons)
+const END_HOUR = 24; // 12:00 AM midnight (20 hours total)
 const TOTAL_HOURS = END_HOUR - START_HOUR;
 
 export interface DayTimelineItem {
@@ -60,15 +67,6 @@ interface DayTimelineScheduleProps {
   onAddPlannerItem: (payload: any) => Promise<any>;
   onOpenTaskDetails?: (todoId: Id<'todos'>) => void;
 }
-
-// Fixed calculated prayer times for daily structure
-const DAILY_PRAYERS = [
-  { key: 'fajr', en: 'Fajr', ar: 'الفجر', hour: 5, minute: 0, duration: 25, icon: 'weather-sunset-up', color: '#818CF8' },
-  { key: 'dhuhr', en: 'Dhuhr', ar: 'الظهر', hour: 12, minute: 15, duration: 30, icon: 'weather-sunny', color: '#F59E0B' },
-  { key: 'asr', en: 'Asr', ar: 'العصر', hour: 15, minute: 45, duration: 30, icon: 'weather-partly-cloudy', color: '#10B981' },
-  { key: 'maghrib', en: 'Maghrib', ar: 'المغرب', hour: 18, minute: 30, duration: 25, icon: 'weather-sunset-down', color: '#EC4899' },
-  { key: 'isha', en: 'Isha', ar: 'العشاء', hour: 20, minute: 0, duration: 30, icon: 'weather-night', color: '#8B5CF6' },
-];
 
 const KIND_CONFIG: Record<string, { labelEn: string; labelAr: string; icon: string; defaultColor: string }> = {
   meeting: { labelEn: 'Meeting', labelAr: 'اجتماع', icon: 'videocam', defaultColor: '#38BDF8' },
@@ -110,6 +108,28 @@ export const DayTimelineSchedule: React.FC<DayTimelineScheduleProps> = ({
 }) => {
   const { colors, isDarkMode } = useTheme();
   const timelineScrollRef = useRef<ScrollView>(null);
+
+  // Dynamic Prayer Times according to User Location (Egypt/Cairo and global)
+  const locationConfig = useMemo(() => getUserLocationConfig(), []);
+  const [prayerTimes, setPrayerTimes] = useState<PrayerTimeItem[]>(() =>
+    calculateLocalPrayerTimes(year, month, day, locationConfig)
+  );
+
+  useEffect(() => {
+    let isMounted = true;
+    const local = calculateLocalPrayerTimes(year, month, day, locationConfig);
+    setPrayerTimes(local);
+
+    getDynamicPrayerTimes(year, month, day).then((times) => {
+      if (isMounted && times && times.length === 5) {
+        setPrayerTimes(times);
+      }
+    });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [year, month, day, locationConfig]);
 
   // Zoom state
   const [zoomLevel, setZoomLevel] = useState<ZoomLevel>('standard');
@@ -529,8 +549,8 @@ export const DayTimelineSchedule: React.FC<DayTimelineScheduleProps> = ({
             );
           })}
 
-          {/* 2. Slim Non-Intrusive Floating Prayer Ribbons */}
-          {DAILY_PRAYERS.map((prayer) => {
+          {/* 2. Slim Non-Intrusive Floating Prayer Ribbons (Accurate Dynamic Location Times) */}
+          {prayerTimes.map((prayer) => {
             const pStartMin = (prayer.hour - START_HOUR) * 60 + prayer.minute;
             if (pStartMin < 0 || pStartMin > TOTAL_HOURS * 60) return null;
             const topPos = pStartMin * minuteHeight + TOP_OFFSET;

@@ -24,6 +24,15 @@ interface UpcomingEventsCardProps {
   onOpenEventModal: (eventToEdit?: UpcomingEventDisplay) => void;
 }
 
+const VIOLET_THEME = {
+  primary: '#8B5CF6',
+  light: '#dbd4fd',
+  badgeBgDark: 'rgba(219, 212, 253, 0.2)',
+  badgeBgLight: 'rgba(219, 212, 253, 0.35)',
+  pillBgDark: 'rgba(139, 92, 246, 0.18)',
+  pillBgLight: 'rgba(139, 92, 246, 0.12)',
+};
+
 export const UpcomingEventsCard: React.FC<UpcomingEventsCardProps> = ({
   events,
   onOpenEventModal,
@@ -50,8 +59,8 @@ export const UpcomingEventsCard: React.FC<UpcomingEventsCardProps> = ({
         activeOpacity={0.8}
       >
         <View style={styles.cardHeaderLeft}>
-          <View style={[styles.iconBadge, { backgroundColor: isDarkMode ? 'rgba(219, 212, 253, 0.18)' : 'rgba(219, 212, 253, 0.3)' }]}>
-            <Ionicons name="calendar" size={20} color="#dbd4fd" />
+          <View style={[styles.iconBadge, { backgroundColor: isDarkMode ? VIOLET_THEME.badgeBgDark : VIOLET_THEME.badgeBgLight }]}>
+            <Ionicons name="calendar" size={20} color={isDarkMode ? VIOLET_THEME.light : VIOLET_THEME.primary} />
           </View>
           <View style={isArabic ? { alignItems: 'flex-end' } : { alignItems: 'flex-start' }}>
             <Text style={styles.cardTitle}>{t.upcomingEvents}</Text>
@@ -62,27 +71,27 @@ export const UpcomingEventsCard: React.FC<UpcomingEventsCardProps> = ({
         </View>
 
         <TouchableOpacity
-          style={styles.headerPill}
+          style={[styles.headerPill, { backgroundColor: isDarkMode ? VIOLET_THEME.pillBgDark : VIOLET_THEME.pillBgLight }]}
           onPress={() => onOpenEventModal()}
           activeOpacity={0.7}
         >
-          <Ionicons name="add-circle" size={15} color={colors.primary} />
-          <Text style={styles.headerPillText}>{t.addEvent}</Text>
+          <Ionicons name="add-circle" size={15} color={isDarkMode ? VIOLET_THEME.light : VIOLET_THEME.primary} />
+          <Text style={[styles.headerPillText, { color: isDarkMode ? VIOLET_THEME.light : VIOLET_THEME.primary }]}>{t.addEvent}</Text>
         </TouchableOpacity>
       </TouchableOpacity>
 
       {/* Body: Events list with Nested Scroll or Empty State */}
       {events.length === 0 ? (
         <View style={styles.emptyCardContent}>
-          <Ionicons name="calendar-outline" size={28} color="#dbd4fd" />
+          <Ionicons name="calendar-outline" size={28} color={isDarkMode ? VIOLET_THEME.light : VIOLET_THEME.primary} />
           <Text style={styles.emptyCardTitle}>{t.noUpcomingEvents}</Text>
           <TouchableOpacity 
-            style={styles.emptyCardBtn} 
+            style={[styles.emptyCardBtn, { borderColor: isDarkMode ? VIOLET_THEME.badgeBgDark : VIOLET_THEME.badgeBgLight }]} 
             onPress={() => onOpenEventModal()}
             activeOpacity={0.8}
           >
-            <Ionicons name="add" size={16} color={colors.primary} />
-            <Text style={styles.emptyCardBtnText}>{t.addEvent}</Text>
+            <Ionicons name="add" size={16} color={isDarkMode ? VIOLET_THEME.light : VIOLET_THEME.primary} />
+            <Text style={[styles.emptyCardBtnText, { color: isDarkMode ? VIOLET_THEME.light : VIOLET_THEME.primary }]}>{t.addEvent}</Text>
           </TouchableOpacity>
         </View>
       ) : (
@@ -188,7 +197,7 @@ export const UpcomingEventsCard: React.FC<UpcomingEventsCardProps> = ({
         </TouchableOpacity>
 
         <TouchableOpacity onPress={() => onOpenEventModal()}>
-          <Text style={styles.footerHintText}>{t.addReminder} +</Text>
+          <Text style={[styles.footerHintText, { color: isDarkMode ? VIOLET_THEME.light : VIOLET_THEME.primary }]}>{t.addReminder} +</Text>
         </TouchableOpacity>
       </View>
     </View>
