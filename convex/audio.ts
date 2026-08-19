@@ -118,7 +118,7 @@ export const updateTranscriptStatus = mutation({
  */
 export const transcribeAudio = action({
   args: {
-    noteId: v.id("todos"),
+    noteId: v.optional(v.id("todos")),
     storageId: v.id("_storage"),
     languageHint: v.optional(v.string()),
   },
@@ -226,17 +226,22 @@ function arrayBufferToBase64(buffer: ArrayBuffer): string {
       }
 
       if (!transcript) {
-        // If no keys configured or both failed, set clean mock/friendly fallback
         transcript = "[Audio transcription ready. Add GROQ_API_KEY or GEMINI_API_KEY in Convex dashboard to enable live cloud AI transcription.]";
       }
 
-      // Persist transcript into note
-      await ctx.runMutation(api.audio.updateTranscriptStatus, {
-        noteId: args.noteId,
-        transcript: transcript.trim(),
-        transcriptLanguage: detectedLanguage,
-        status: "completed",
-      });
+      // Persist transcript into note if noteId provided
+      if (args.noteId) {
+        try {
+          await ctx.runMutation(api.audio.updateTranscriptStatus, {
+            noteId: args.noteId,
+            transcript: transcript.trim(),
+            transcriptLanguage: detectedLanguage,
+            status: "completed",
+          });
+        } catch (saveErr) {
+          console.warn("Could not update transcript status on note record:", saveErr);
+        }
+      }
 
       return {
         success: true,
@@ -245,11 +250,17 @@ function arrayBufferToBase64(buffer: ArrayBuffer): string {
       };
     } catch (err: any) {
       console.error("transcribeAudio error:", err);
-      await ctx.runMutation(api.audio.updateTranscriptStatus, {
-        noteId: args.noteId,
-        status: "failed",
-        error: err.message || "Failed to transcribe audio",
-      });
+      if (args.noteId) {
+        try {
+          await ctx.runMutation(api.audio.updateTranscriptStatus, {
+            noteId: args.noteId,
+            status: "failed",
+            error: err.message || "Failed to transcribe audio",
+          });
+        } catch (e) {
+          // ignore
+        }
+      }
       return {
         success: false,
         error: err.message,

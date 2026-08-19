@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { ScrollView, Text, View, TouchableOpacity, LayoutAnimation } from 'react-native';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { ScrollView, Text, View, TouchableOpacity, LayoutAnimation, useWindowDimensions } from 'react-native';
 import Animated, { Easing, FadeInDown } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
@@ -588,52 +588,167 @@ const KanbanCard: React.FC<{
 export const TaskKanban: React.FC<TaskKanbanProps> = ({ columns, homeStyles, isArabic = false, now, onOpenDetail }) => {
   const { colors, isDarkMode } = useTheme();
   const { t } = useTranslation(isArabic ? 'ar' : 'en');
+  const { width: screenWidth } = useWindowDimensions();
+
+  const scrollViewRef = React.useRef<ScrollView>(null);
+  const [activeColIndex, setActiveColIndex] = useState(0);
+
+  const COLUMN_WIDTH = Math.min(Math.max(screenWidth - 56, 280), 340);
+  const COLUMN_GAP = 12;
+  const SNAP_INTERVAL = COLUMN_WIDTH + COLUMN_GAP;
+  const HORIZONTAL_PADDING = 16;
+
+  const handleScroll = (event: any) => {
+    const offsetX = event.nativeEvent.contentOffset.x;
+    const index = Math.round(offsetX / SNAP_INTERVAL);
+    if (index !== activeColIndex && index >= 0 && index < columns.length) {
+      setActiveColIndex(index);
+    }
+  };
+
+  const handleSelectTab = (index: number) => {
+    setActiveColIndex(index);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    if (scrollViewRef.current) {
+      scrollViewRef.current.scrollTo({ x: index * SNAP_INTERVAL, animated: true });
+    }
+  };
 
   return (
-    <ScrollView
-      horizontal
-      showsHorizontalScrollIndicator={false}
-      contentContainerStyle={[
-        { 
-          flexDirection: isArabic ? 'row-reverse' : 'row', 
-          paddingHorizontal: 16, 
-          gap: 12, 
-          paddingBottom: 16,
-          alignItems: 'flex-start', // Ensures each column dynamically sizes its height to its own items
-        }
-      ]}
-    >
-      {columns.map(column => (
-        <View
-          key={column.key}
-          style={{
-            width: 270,
-            borderRadius: 20,
-            borderWidth: 1,
-            borderColor: colors.border,
-            backgroundColor: isDarkMode ? 'rgba(255,255,255,0.02)' : 'rgba(15,23,42,0.03)',
-            padding: 12,
-            alignSelf: 'flex-start', // Wraps tightly around the tasks in this column
-          }}
-        >
-          <View style={[homeStyles.kanbanColumnHeader, isArabic && { flexDirection: 'row-reverse' }, { marginBottom: column.tasks.length === 0 ? 8 : 12 }]}>
-            <View style={[homeStyles.kanbanColumnDot, { backgroundColor: column.color }]} />
-            <Text style={homeStyles.kanbanColumnTitle}>{column.title}</Text>
-            <Text style={homeStyles.kanbanColumnCount}>{column.tasks.length}</Text>
-          </View>
+    <View>
+      {/* 1. Quick Column Switcher Tabs (All 4 items fully visible across the screen) */}
+      <View
+        style={{
+          flexDirection: isArabic ? 'row-reverse' : 'row',
+          paddingHorizontal: 16,
+          gap: 6,
+          marginBottom: 12,
+          width: '100%',
+        }}
+      >
+        {columns.map((col, idx) => {
+          const isActive = activeColIndex === idx;
+          return (
+            <TouchableOpacity
+              key={col.key}
+              onPress={() => handleSelectTab(idx)}
+              activeOpacity={0.75}
+              style={{
+                flex: 1,
+                minWidth: 0,
+                flexDirection: isArabic ? 'row-reverse' : 'row',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 4,
+                paddingHorizontal: 4,
+                paddingVertical: 6.5,
+                borderRadius: 14,
+                backgroundColor: isActive
+                  ? (isDarkMode ? `${col.color}25` : `${col.color}18`)
+                  : (isDarkMode ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)'),
+                borderWidth: 1,
+                borderColor: isActive
+                  ? col.color
+                  : (isDarkMode ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)'),
+              }}
+            >
+              <View
+                style={{
+                  width: 5.5,
+                  height: 5.5,
+                  borderRadius: 3,
+                  backgroundColor: col.color,
+                  flexShrink: 0,
+                }}
+              />
+              <Text
+                style={{
+                  fontSize: 10.5,
+                  fontWeight: isActive ? '700' : '600',
+                  color: isActive ? (isDarkMode ? '#FFFFFF' : col.color) : colors.textMuted,
+                  flexShrink: 1,
+                }}
+                numberOfLines={1}
+              >
+                {col.title}
+              </Text>
+              <View
+                style={{
+                  backgroundColor: isActive ? col.color : (isDarkMode ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)'),
+                  paddingHorizontal: 4.5,
+                  paddingVertical: 1,
+                  borderRadius: 8,
+                  flexShrink: 0,
+                }}
+              >
+                <Text
+                  style={{
+                    fontSize: 9.5,
+                    fontWeight: '800',
+                    color: isActive ? '#0E0F14' : colors.textMuted,
+                  }}
+                >
+                  {col.tasks.length}
+                </Text>
+              </View>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
 
-          {column.tasks.length === 0 ? (
-            <View style={[homeStyles.kanbanEmpty, { paddingVertical: 14 }]}>
-              <Text style={homeStyles.kanbanEmptyText}>{t.noTasksDay}</Text>
+      {/* 2. Snapped Column ScrollView */}
+      <ScrollView
+        ref={scrollViewRef}
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        snapToInterval={SNAP_INTERVAL}
+        snapToAlignment="start"
+        decelerationRate="fast"
+        disableIntervalMomentum={true}
+        onMomentumScrollEnd={handleScroll}
+        scrollEventThrottle={16}
+        contentContainerStyle={[
+          { 
+            flexDirection: isArabic ? 'row-reverse' : 'row', 
+            paddingHorizontal: HORIZONTAL_PADDING, 
+            gap: COLUMN_GAP, 
+            paddingBottom: 16,
+            alignItems: 'flex-start',
+          }
+        ]}
+      >
+        {columns.map((column) => (
+          <View
+            key={column.key}
+            style={{
+              width: COLUMN_WIDTH,
+              borderRadius: 20,
+              borderWidth: 1,
+              borderColor: colors.border,
+              backgroundColor: isDarkMode ? 'rgba(255,255,255,0.02)' : 'rgba(15,23,42,0.03)',
+              padding: 12,
+              alignSelf: 'flex-start',
+            }}
+          >
+            <View style={[homeStyles.kanbanColumnHeader, isArabic && { flexDirection: 'row-reverse' }, { marginBottom: column.tasks.length === 0 ? 8 : 12 }]}>
+              <View style={[homeStyles.kanbanColumnDot, { backgroundColor: column.color }]} />
+              <Text style={homeStyles.kanbanColumnTitle}>{column.title}</Text>
+              <Text style={homeStyles.kanbanColumnCount}>{column.tasks.length}</Text>
             </View>
-          ) : (
-            column.tasks.map(task => (
-              <KanbanCard key={task._id} task={task} homeStyles={homeStyles} isArabic={isArabic} now={now} onOpenDetail={onOpenDetail} />
-            ))
-          )}
-        </View>
-      ))}
-    </ScrollView>
+
+            {column.tasks.length === 0 ? (
+              <View style={[homeStyles.kanbanEmpty, { paddingVertical: 14 }]}>
+                <Text style={homeStyles.kanbanEmptyText}>{t.noTasksDay}</Text>
+              </View>
+            ) : (
+              column.tasks.map(task => (
+                <KanbanCard key={task._id} task={task} homeStyles={homeStyles} isArabic={isArabic} now={now} onOpenDetail={onOpenDetail} />
+              ))
+            )}
+          </View>
+        ))}
+      </ScrollView>
+    </View>
   );
 };
 

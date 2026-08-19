@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, StatusBar, Animated, StyleSheet, BackHandler, KeyboardAvoidingView, Platform, FlatList, Share, TextInput, Dimensions, LayoutAnimation } from 'react-native';
-import { useRouter } from 'expo-router';
+import { View, Text, TouchableOpacity, ScrollView, StatusBar, Animated, StyleSheet, BackHandler, KeyboardAvoidingView, Platform, FlatList, Share, TextInput, Dimensions, LayoutAnimation, PanResponder } from 'react-native';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import useTheme from '@/hooks/useTheme';
@@ -56,6 +56,7 @@ const LIST_TYPE_CARDS = [
 ];
 
 const Planner = () => {
+  const params = useLocalSearchParams<{ year?: string; month?: string; day?: string; from?: string }>();
   const { colors, isDarkMode } = useTheme();
   const { userId, language } = useAuth();
   const { t, isArabic } = useTranslation(language);
@@ -78,6 +79,24 @@ const Planner = () => {
   
   const [selectedMonth, setSelectedMonth] = useState<number | null>(null);
   const [selectedDay, setSelectedDay] = useState<number | null>(null);
+
+  // Sync navigation params from home or external links
+  useEffect(() => {
+    if (params.month !== undefined && params.day !== undefined) {
+      const m = parseInt(params.month, 10);
+      const d = parseInt(params.day, 10);
+      if (!isNaN(m) && !isNaN(d)) {
+        setSelectedMonth(m);
+        setSelectedDay(d);
+      }
+    } else if (params.month !== undefined) {
+      const m = parseInt(params.month, 10);
+      if (!isNaN(m)) {
+        setSelectedMonth(m);
+        setSelectedDay(null);
+      }
+    }
+  }, [params.month, params.day]);
   
   const [expandedTodoId, setExpandedTodoId] = useState<Id<"todos"> | null>(null);
   const [selectedTaskForModal, setSelectedTaskForModal] = useState<Id<"todos"> | null>(null);
@@ -141,15 +160,49 @@ const Planner = () => {
 
 
 
+  const isFromHome = params.from === 'home';
+
+  const handleGoBack = () => {
+    if (isFromHome) {
+      router.replace('/(tabs)');
+    } else if (selectedDay !== null) {
+      setSelectedDay(null);
+    } else if (selectedMonth !== null) {
+      setSelectedMonth(null);
+    }
+  };
+
+  const dayViewPanResponder = useRef(
+    PanResponder.create({
+      onMoveShouldSetPanResponder: (_, gestureState) => {
+        const isHorizontal = Math.abs(gestureState.dx) > Math.abs(gestureState.dy) * 1.6;
+        const isSignificant = Math.abs(gestureState.dx) > 15;
+        if (isArabic) {
+          return isHorizontal && isSignificant && gestureState.dx < -15;
+        }
+        return isHorizontal && isSignificant && gestureState.dx > 15;
+      },
+      onPanResponderRelease: (_, gestureState) => {
+        const isQuickSwipe = Math.abs(gestureState.vx) > 0.35;
+        const isLongSwipe = Math.abs(gestureState.dx) > 55;
+        const correctDirection = isArabic ? gestureState.dx < -40 : gestureState.dx > 40;
+
+        if ((isQuickSwipe || isLongSwipe) && correctDirection) {
+          handleGoBack();
+        }
+      },
+    })
+  ).current;
+
   // Handle system back button
   useEffect(() => {
     const backAction = () => {
       if (selectedDay !== null) {
-        setSelectedDay(null);
+        handleGoBack();
         return true;
       }
       if (selectedMonth !== null) {
-        setSelectedMonth(null);
+        handleGoBack();
         return true;
       }
       return false; // let default behavior happen
@@ -161,7 +214,7 @@ const Planner = () => {
     );
 
     return () => backHandler.remove();
-  }, [selectedMonth, selectedDay]);
+  }, [selectedMonth, selectedDay, isFromHome]);
 
   
   const todos = useOfflineQuery<any[]>('todos', api.todos.get, userId ? { userId } : "skip") || [];
@@ -1430,15 +1483,23 @@ const Planner = () => {
               <>
                 <LivePress
                   style={styles.headerBackBtn}
-                  onPress={() => setSelectedDay(null)}
+                  onPress={handleGoBack}
                   pressScale={0.96}
                   hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
                 >
                   <Ionicons name={isArabic ? "chevron-forward" : "chevron-back"} size={20} color={colors.text} />
-                  <Text style={styles.headerBackText}>{months[selectedMonth!]}</Text>
+                  <Text style={styles.headerBackText}>
+                    {isFromHome ? (isArabic ? 'الرئيسية' : 'Home') : months[selectedMonth!]}
+                  </Text>
                 </LivePress>
                 <LivePress
-                  onPress={resetAll}
+                  onPress={() => {
+                    if (isFromHome) {
+                      router.replace('/(tabs)');
+                    } else {
+                      resetAll();
+                    }
+                  }}
                   style={styles.headerActionBtn}
                   pressScale={0.96}
                   hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
@@ -1455,7 +1516,9 @@ const Planner = () => {
         ) : selectedDay === null ? (
             renderDayGrid(selectedMonth)
         ) : (
-            renderSpecificDayView(selectedDay, selectedMonth, currentYear)
+            <View style={{ flex: 1 }} {...dayViewPanResponder.panHandlers}>
+              {renderSpecificDayView(selectedDay, selectedMonth, currentYear)}
+            </View>
         )}
       </SafeAreaView>
 

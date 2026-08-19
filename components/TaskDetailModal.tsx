@@ -175,7 +175,18 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ visible, onClose, tod
     }
   }, [visible, initialSection]);
 
-  const handleClose = async () => {
+  const isClosingRef = useRef(false);
+
+  useEffect(() => {
+    if (visible) {
+      isClosingRef.current = false;
+    }
+  }, [visible]);
+
+  const handleClose = () => {
+    if (isClosingRef.current) return;
+    isClosingRef.current = true;
+
     if (todoId) {
       saveText();
       saveDescription();
@@ -185,7 +196,7 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ visible, onClose, tod
       const m = parseInt(minutes) || 0;
       const ms = (h * 3600 + m * 60) * 1000;
       
-      const parentId = await addTodo({
+      addTodo({
         userId,
         text: editText.trim(),
         description: description.trim(),
@@ -198,19 +209,20 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ visible, onClose, tod
         ...(draftLink?.projectId ? { projectId: draftLink.projectId } : projectId ? { projectId } : {}),
         ...(hashtags.length > 0 ? { hashtags } : {}),
         ...(timerDirection === 'up' ? { timerDirection: 'up' } : ms > 0 ? { timerDuration: ms, timerDirection: 'down' } : {}),
-      });
-
-      for (const sub of pendingSubtasks) {
-        await addTodo({
-          userId: userId!,
-          text: sub.text,
-          parentId,
-          status: "not_started",
-          ...(projectId ? { projectId } : {}),
-          ...(sub.timerDuration ? { timerDuration: sub.timerDuration } : {}),
-          ...(sub.timerDirection ? { timerDirection: sub.timerDirection } : {})
-        });
-      }
+      }).then((parentIdResult: any) => {
+        const parentId = typeof parentIdResult === 'string' ? parentIdResult : parentIdResult?._id;
+        for (const sub of pendingSubtasks) {
+          addTodo({
+            userId: userId!,
+            text: sub.text,
+            parentId,
+            status: "not_started",
+            ...(projectId ? { projectId } : {}),
+            ...(sub.timerDuration ? { timerDuration: sub.timerDuration } : {}),
+            ...(sub.timerDirection ? { timerDirection: sub.timerDirection } : {})
+          }).catch(() => {});
+        }
+      }).catch((e: any) => console.warn('Offline add todo error', e));
     }
     
     setTaskStack([]);
@@ -444,7 +456,7 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ visible, onClose, tod
         </TouchableWithoutFeedback>
         <View style={[styles.container, { backgroundColor: colors.bg }]}>
               <KeyboardAvoidingView 
-                behavior={Platform.OS === 'ios' ? 'padding' : 'height'} 
+                behavior={Platform.OS === 'ios' ? 'padding' : undefined} 
                 style={{ flex: 1 }}
               >
             {/* Header */}

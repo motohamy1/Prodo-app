@@ -9,9 +9,10 @@ import {
   KeyboardAvoidingView,
   TouchableWithoutFeedback,
   StyleSheet,
+  Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useMutation } from 'convex/react';
+import { useOfflineMutation } from '@/hooks/useOfflineMutation';
 import { api } from '@/convex/_generated/api';
 import { Id } from '@/convex/_generated/dataModel';
 import { useOfflineQuery } from '@/hooks/useOfflineQuery';
@@ -59,9 +60,9 @@ export default function PlannerListModal({
   });
 
   // Mutations
-  const addItem = useMutation(api.projects.addPlannerItem);
-  const updateItem = useMutation(api.projects.updatePlannerItem);
-  const deleteItem = useMutation(api.projects.deletePlannerItem);
+  const addItem = useOfflineMutation(api.projects.addPlannerItem, 'projects:addPlannerItem');
+  const updateItem = useOfflineMutation(api.projects.updatePlannerItem, 'projects:updatePlannerItem');
+  const deleteItem = useOfflineMutation(api.projects.deletePlannerItem, 'projects:deletePlannerItem');
 
   // Local state
   const [newText, setNewText] = useState('');
@@ -71,17 +72,21 @@ export default function PlannerListModal({
   const items = plannerItems || [];
 
   const handleAdd = () => {
-    if (!newText.trim() || !userId) return;
+    const textToAdd = newText.trim();
+    const contentToAdd = newContent.trim();
+    if (!textToAdd || !userId) return;
+
+    setNewText('');
+    setNewContent('');
+    setIsAdding(false);
+
     addItem({
       userId,
       date,
       listType,
-      text: newText.trim(),
-      content: isToggle ? newContent.trim() || undefined : undefined,
+      text: textToAdd,
+      content: isToggle ? contentToAdd || undefined : undefined,
     });
-    setNewText('');
-    setNewContent('');
-    setIsAdding(false);
   };
 
   const handleToggleCheck = (item: any) => {
@@ -122,7 +127,7 @@ export default function PlannerListModal({
           <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(0,0,0,0.6)' }]} />
         </TouchableWithoutFeedback>
         <View pointerEvents="box-none" style={StyleSheet.absoluteFill}>
-          <KeyboardAvoidingView style={{ flex: 1, justifyContent: 'flex-end' }} behavior="padding">
+          <KeyboardAvoidingView style={{ flex: 1, justifyContent: 'flex-end' }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
             <ScrollView
               style={{ maxHeight: '90%' }}
               contentContainerStyle={{ justifyContent: 'flex-end', flexGrow: 1 }}

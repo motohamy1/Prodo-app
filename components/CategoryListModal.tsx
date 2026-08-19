@@ -9,9 +9,10 @@ import {
   KeyboardAvoidingView,
   TouchableWithoutFeedback,
   StyleSheet,
+  Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useMutation } from 'convex/react';
+import { useOfflineMutation } from '@/hooks/useOfflineMutation';
 import { api } from '@/convex/_generated/api';
 import { Id } from '@/convex/_generated/dataModel';
 import { useOfflineQuery } from '@/hooks/useOfflineQuery';
@@ -57,12 +58,12 @@ export default function CategoryListModal({
   });
 
   // Mutations
-  const addTodoMutation = useMutation(api.todos.addTodo);
-  const updateTodoStatus = useMutation(api.todos.updateStatus);
-  const deleteTodoMutation = useMutation(api.todos.deleteTodo);
-  const addItem = useMutation(api.projects.addCategoryItem);
-  const updateItem = useMutation(api.projects.updateCategoryItem);
-  const deleteItem = useMutation(api.projects.deleteCategoryItem);
+  const addTodoMutation = useOfflineMutation(api.todos.addTodo, 'todos:addTodo');
+  const updateTodoStatus = useOfflineMutation(api.todos.updateStatus, 'todos:updateStatus');
+  const deleteTodoMutation = useOfflineMutation(api.todos.deleteTodo, 'todos:deleteTodo');
+  const addItem = useOfflineMutation(api.projects.addCategoryItem, 'projects:addCategoryItem');
+  const updateItem = useOfflineMutation(api.projects.updateCategoryItem, 'projects:updateCategoryItem');
+  const deleteItem = useOfflineMutation(api.projects.deleteCategoryItem, 'projects:deleteCategoryItem');
 
   // Local state
   const [newText, setNewText] = useState('');
@@ -78,11 +79,18 @@ export default function CategoryListModal({
     : categoryItems || [];
 
   const handleAdd = () => {
-    if (!newText.trim() || !userId) return;
+    const textToAdd = newText.trim();
+    const contentToAdd = newContent.trim();
+    if (!textToAdd || !userId) return;
+
+    setNewText('');
+    setNewContent('');
+    setIsAdding(false);
+
     if (isTodo) {
       addTodoMutation({
         userId,
-        text: newText.trim(),
+        text: textToAdd,
         date: Date.now(),
         status: 'not_started',
         ...(subCategoryId ? { subCategoryId } : { categoryId }),
@@ -92,13 +100,10 @@ export default function CategoryListModal({
         userId,
         ...(subCategoryId ? { subCategoryId } : { categoryId }),
         listType,
-        text: newText.trim(),
-        content: isToggle ? newContent.trim() || undefined : undefined,
+        text: textToAdd,
+        content: isToggle ? contentToAdd || undefined : undefined,
       });
     }
-    setNewText('');
-    setNewContent('');
-    setIsAdding(false);
   };
 
   const handleToggleCheck = (item: any) => {
@@ -144,7 +149,7 @@ export default function CategoryListModal({
           <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(0,0,0,0.6)' }]} />
         </TouchableWithoutFeedback>
         <View pointerEvents="box-none" style={StyleSheet.absoluteFill}>
-          <KeyboardAvoidingView style={{ flex: 1, justifyContent: 'flex-end' }} behavior="padding">
+          <KeyboardAvoidingView style={{ flex: 1, justifyContent: 'flex-end' }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
             <ScrollView
               style={{ maxHeight: '90%' }}
               contentContainerStyle={{ justifyContent: 'flex-end', flexGrow: 1 }}

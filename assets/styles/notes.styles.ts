@@ -311,7 +311,9 @@ export const createNotesStyles = (colors: ColorScheme, isArabic: boolean = false
       borderWidth: 1,
       borderColor: colors.border,
     },
-    detailHeaderBtnIcon: {},
+    detailHeaderBtnIcon: {
+      color: colors.text,
+    },
     detailHeaderRight: {
       flexDirection: 'row',
       gap: 8,

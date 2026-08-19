@@ -89,13 +89,23 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         if (id) {
           setUserId(id as Id<"users">);
         } else {
-          // Silent Guest Auth
-          const newAnonId = await createAnonMutation();
-          setUserId(newAnonId);
-          await safeStorage.setItem("userId", newAnonId);
+          // Attempt silent guest auth with short timeout
+          try {
+            const timeoutPromise = new Promise<never>((_, reject) => setTimeout(() => reject(new Error('TIMEOUT')), 1500));
+            const newAnonId = await Promise.race([createAnonMutation(), timeoutPromise]);
+            setUserId(newAnonId);
+            await safeStorage.setItem("userId", newAnonId);
+          } catch (netErr) {
+            // Offline fallback: generate local anonymous ID so app is 100% usable immediately
+            const localAnonId = (`guest_${Date.now()}_${Math.floor(Math.random() * 10000)}`) as Id<"users">;
+            setUserId(localAnonId);
+            await safeStorage.setItem("userId", localAnonId);
+          }
         }
       } catch (error) {
         console.warn("Auth initialization failed", error);
+        const fallbackId = (`guest_${Date.now()}`) as Id<"users">;
+        setUserId(fallbackId);
       } finally {
         setIsLoading(false);
       }

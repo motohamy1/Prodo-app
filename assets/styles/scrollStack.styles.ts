@@ -218,20 +218,24 @@ export const createScrollStackStyles = (colors: ColorScheme, isArabic: boolean =
     },
     eventInfo: {
       flex: 1,
-      marginHorizontal: 10,
-      alignItems: isArabic ? 'flex-end' : 'flex-start',
+      minWidth: 0,
+      marginHorizontal: 8,
+      justifyContent: 'center',
     },
     eventTitle: {
-      fontSize: 14,
+      fontSize: 13.5,
       fontWeight: '600',
       color: colors.text,
       textAlign: isArabic ? 'right' : 'left',
+      flex: 1,
+      flexShrink: 1,
     },
     eventMeta: {
       flexDirection: isArabic ? 'row-reverse' : 'row',
       alignItems: 'center',
-      gap: 6,
+      gap: 5,
       marginTop: 2,
+      minWidth: 0,
     },
     eventMetaText: {
       fontSize: 11,

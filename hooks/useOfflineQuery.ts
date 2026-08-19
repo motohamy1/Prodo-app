@@ -1,9 +1,8 @@
-import { saveCachedQuery } from '@/utils/offlineStorage';
+import { getCacheKey, memoryCache, saveCachedQuery, subscribeToCache } from '@/utils/offlineStorage';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import NetInfo from '@react-native-community/netinfo';
 import { useQuery } from 'convex/react';
-import { useEffect, useState } from 'react';
-
-const memoryCache: Record<string, any> = {};
+import { useCallback, useEffect, useState } from 'react';
 
 const singleResultQueryKeys = [
   'auth.getUserSettings',
@@ -19,71 +18,89 @@ const isEmptySingleResultCache = (queryKey: string, value: any) =>
 
 export function useOfflineQuery<T = any>(queryKey: string, queryFn: any, args?: any): T | undefined {
   const convexData = useQuery(queryFn, args);
-  const cacheKey = `CACHE_${queryKey}_${JSON.stringify(args || {})}`;
-  
-  const [offlineData, setOfflineData] = useState<any>(
-    isEmptySingleResultCache(queryKey, memoryCache[cacheKey]) ? undefined : memoryCache[cacheKey]
-  );
+  const cacheKey = getCacheKey(queryKey, args);
+
+  // Synchronously initialize with in-memory cache if available
+  const [offlineData, setOfflineData] = useState<any>(() => {
+    const memVal = memoryCache[cacheKey];
+    return isEmptySingleResultCache(queryKey, memVal) ? undefined : memVal;
+  });
+
   const [isOffline, setIsOffline] = useState(false);
 
+  // Network listener
   useEffect(() => {
-    NetInfo.fetch().then(state => setIsOffline(!state.isConnected));
-    const unsub = NetInfo.addEventListener(state => setIsOffline(!state.isConnected));
+    NetInfo.fetch().then((state) => setIsOffline(!state.isConnected));
+    const unsub = NetInfo.addEventListener((state) => setIsOffline(!state.isConnected));
     return unsub;
   }, []);
 
-  useEffect(() => {
-    if (memoryCache[cacheKey] !== undefined) {
-      if (isEmptySingleResultCache(queryKey, memoryCache[cacheKey])) {
-        delete memoryCache[cacheKey];
-      } else {
-        setOfflineData(memoryCache[cacheKey]);
-        return;
-      }
+  // Sync state with in-memory or persisted cache whenever cacheKey changes
+  const refreshFromCache = useCallback(() => {
+    const memVal = memoryCache[cacheKey];
+    if (memVal !== undefined && !isEmptySingleResultCache(queryKey, memVal)) {
+      setOfflineData(memVal);
+      return;
     }
 
-    setOfflineData(undefined);
-
-    import('@react-native-async-storage/async-storage').then(({ default: AsyncStorage }) => {
-      AsyncStorage.getItem(cacheKey).then(value => {
+    AsyncStorage.getItem(cacheKey)
+      .then((value) => {
         if (value) {
           try {
             const parsed = JSON.parse(value);
-            if (isEmptySingleResultCache(queryKey, parsed)) {
-              AsyncStorage.removeItem(cacheKey);
-              delete memoryCache[cacheKey];
-              setOfflineData(undefined);
-              return;
+            if (!isEmptySingleResultCache(queryKey, parsed)) {
+              memoryCache[cacheKey] = parsed;
+              setOfflineData(parsed);
             }
-            memoryCache[cacheKey] = parsed;
-            setOfflineData(parsed);
           } catch (e) {
-            AsyncStorage.removeItem(cacheKey);
-            delete memoryCache[cacheKey];
-            setOfflineData(undefined);
+            // ignore parse error
           }
         }
-      }).catch(() => {
-        delete memoryCache[cacheKey];
-        setOfflineData(undefined);
-      });
-    });
+      })
+      .catch(() => {});
   }, [cacheKey, queryKey]);
 
+  // Initial and cacheKey change refresh
+  useEffect(() => {
+    refreshFromCache();
+  }, [refreshFromCache]);
+
+  // Subscribe to offlineStorage events (fires on any optimistic update or cache change)
+  useEffect(() => {
+    const unsub = subscribeToCache(() => {
+      const memVal = memoryCache[cacheKey];
+      if (memVal !== undefined) {
+        setOfflineData(memVal);
+      }
+    });
+    return unsub;
+  }, [cacheKey]);
+
+  // When live Convex server data arrives, update cache & persistence
   useEffect(() => {
     if (convexData !== undefined) {
       memoryCache[cacheKey] = convexData;
       setOfflineData(convexData);
       saveCachedQuery(queryKey, args, convexData);
     }
-  }, [convexData, cacheKey]);
+  }, [convexData, cacheKey, queryKey, args]);
 
+  // If offline or if live Convex data hasn't arrived yet (e.g. slow connection), serve cached data instantly
   if (isOffline) {
+    if (offlineData !== undefined) return offlineData;
+    if (args !== 'skip' && !singleResultQueryKeys.includes(queryKey)) {
+      return [] as any;
+    }
     return offlineData;
   }
 
   if (convexData === undefined && offlineData !== undefined) {
-     return offlineData;
+    return offlineData;
+  }
+
+  if (convexData === undefined && args !== 'skip' && !singleResultQueryKeys.includes(queryKey) && !isOffline) {
+    // If waiting on slow network and no cache yet, return offlineData if available
+    return offlineData;
   }
 
   return convexData !== undefined ? convexData : offlineData;

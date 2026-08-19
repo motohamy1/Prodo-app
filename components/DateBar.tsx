@@ -12,6 +12,7 @@ interface DateBarProps {
   selectedDate: number;
   todayStart: number;
   onSelectDate: (dayStart: number) => void;
+  onOpenDayPlanner?: (dayTimestamp: number) => void;
   homeStyles: any;
   isArabic?: boolean;
   taskCounts?: Map<number, number>;
@@ -31,6 +32,7 @@ const DateBar: React.FC<DateBarProps> = ({
   selectedDate,
   todayStart,
   onSelectDate,
+  onOpenDayPlanner,
   homeStyles,
   isArabic = false,
   taskCounts,
@@ -123,6 +125,7 @@ const DateBar: React.FC<DateBarProps> = ({
       <LivePress
         key={dayStart}
         onPress={() => {
+          const isAlreadyActive = dayStart === startOfDay(selectedDate);
           clearAutoReturnTimer();
           onSelectDate(dayStart);
           flatListRef.current?.scrollToIndex({
@@ -130,6 +133,14 @@ const DateBar: React.FC<DateBarProps> = ({
             animated: true,
             viewPosition: 0.5,
           });
+          if (isAlreadyActive && onOpenDayPlanner) {
+            onOpenDayPlanner(dayStart);
+          }
+        }}
+        onLongPress={() => {
+          if (onOpenDayPlanner) {
+            onOpenDayPlanner(dayStart);
+          }
         }}
         style={[homeStyles.dateBarDay, isActive && homeStyles.dateBarDayActive]}
       >
@@ -161,7 +172,7 @@ const DateBar: React.FC<DateBarProps> = ({
       entering={FadeInDown.duration(400).easing(Easing.out(Easing.cubic))}
       style={homeStyles.dateBarContainer}
     >
-      {/* Header: Month Year with Dropdown Chevron & Today Reset Button */}
+      {/* Header: Month Year with Dropdown Chevron & Today Reset Button / Planner Detail */}
       <View style={[homeStyles.dateBarHeader, isArabic && { flexDirection: 'row-reverse' }]}>
         <LivePress
           style={[homeStyles.dateBarMonthWrapper, isArabic && { flexDirection: 'row-reverse' }]}
@@ -176,17 +187,31 @@ const DateBar: React.FC<DateBarProps> = ({
           />
         </LivePress>
 
-        {!isSelectedToday && (
-          <LivePress
-            style={homeStyles.dateBarReset}
-            onPress={() => {
-              clearAutoReturnTimer();
-              onSelectDate(todayStart);
-            }}
-          >
-            <Text style={homeStyles.dateBarResetText}>{t.today}</Text>
-          </LivePress>
-        )}
+        <View style={{ flexDirection: isArabic ? 'row-reverse' : 'row', alignItems: 'center', gap: 8 }}>
+          {onOpenDayPlanner && (
+            <LivePress
+              style={homeStyles.dateBarPlannerBtn}
+              onPress={() => onOpenDayPlanner(selectedDate)}
+            >
+              <Ionicons name="calendar-outline" size={13} color={colors.primary} />
+              <Text style={homeStyles.dateBarPlannerBtnText}>
+                {isArabic ? 'تفاصيل اليوم' : 'Day Detail'}
+              </Text>
+            </LivePress>
+          )}
+
+          {!isSelectedToday && (
+            <LivePress
+              style={homeStyles.dateBarReset}
+              onPress={() => {
+                clearAutoReturnTimer();
+                onSelectDate(todayStart);
+              }}
+            >
+              <Text style={homeStyles.dateBarResetText}>{t.today}</Text>
+            </LivePress>
+          )}
+        </View>
       </View>
 
       {/* Horizontally Scrollable Month Days Carousel */}

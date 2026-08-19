@@ -26,7 +26,6 @@ import { useTranslation } from '@/utils/i18n';
 import { createProjectsStyles } from '@/assets/styles/projects.styles';
 import { useOfflineQuery } from '@/hooks/useOfflineQuery';
 import { useOfflineMutation } from '@/hooks/useOfflineMutation';
-import { useMutation } from 'convex/react';
 import { api } from '@/convex/_generated/api';
 import { Id, Doc } from '@/convex/_generated/dataModel';
 import TodoCard from '@/components/TodoCard';
@@ -547,7 +546,7 @@ const CategoriesView = ({ styles, colors, onSelectCategory, onAddCategory, onEdi
 }) => {
   const categories = useOfflineQuery<any[]>('projects.getCategories', api.projects.getCategories, userId ? { userId } : 'skip');
   const allTodos = useOfflineQuery<any[]>('todos', api.todos.get, userId ? { userId } : 'skip');
-  const deleteCategory = useMutation(api.projects.deleteCategory);
+  const deleteCategory = useOfflineMutation(api.projects.deleteCategory, 'projects:deleteCategory');
 
   if (!categories) return <View style={styles.emptyContainer}><Ionicons name="hourglass-outline" size={40} color="#8E9AAB" /></View>;
 
@@ -693,10 +692,10 @@ const CategoryDetailView = ({
   const toggleItems = useOfflineQuery<any[]>('categoryItems_toggle', api.projects.getCategoryItems, { categoryId, listType: 'toggle' }) || [];
   const checklistItems = useOfflineQuery<any[]>('categoryItems_checklist', api.projects.getCategoryItems, { categoryId, listType: 'checklist' }) || [];
 
-  const updateCategoryMutation = useMutation(api.projects.updateCategory);
-  const addCategoryItemMutation = useMutation(api.projects.addCategoryItem);
-  const updateCategoryItemMutation = useMutation(api.projects.updateCategoryItem);
-  const deleteCategoryItemMutation = useMutation(api.projects.deleteCategoryItem);
+  const updateCategoryMutation = useOfflineMutation(api.projects.updateCategory, 'projects:updateCategory');
+  const addCategoryItemMutation = useOfflineMutation(api.projects.addCategoryItem, 'projects:addCategoryItem');
+  const updateCategoryItemMutation = useOfflineMutation(api.projects.updateCategoryItem, 'projects:updateCategoryItem');
+  const deleteCategoryItemMutation = useOfflineMutation(api.projects.deleteCategoryItem, 'projects:deleteCategoryItem');
 
   // Description / Workspace Overview state
   const [editingDesc, setEditingDesc] = useState(false);
@@ -1279,17 +1278,17 @@ const ProjectDetailView = ({ styles, colors, projectId, onDeleteProject, userId,
   const checklists = useOfflineQuery<any[]>('projects.getChecklists', api.projects.getChecklists, { projectId });
   const linkedTodos = useOfflineQuery<any[]>('projects.getTodosByProject', api.projects.getTodosByProject, project ? { projectId: project._id } : 'skip');
   
-  const addResource = useMutation(api.projects.addResource);
-  const deleteResource = useMutation(api.projects.deleteResource);
-  const updateTodoStatus = useMutation(api.todos.updateStatus);
-  const updateProject = useMutation(api.projects.updateProject);
-  const addCheckItem = useMutation(api.projects.addChecklistItem);
-  const toggleCheckItem = useMutation(api.projects.toggleChecklistItem);
-  const deleteCheckItem = useMutation(api.projects.deleteChecklistItem);
-  const deleteTodoMutation = useMutation(api.todos.deleteTodo);
-  const addTodoMutation = useMutation(api.todos.addTodo);
-  const setTimerMutation = useMutation(api.todos.setTimer);
-  const linkTodoProjectMutation = useMutation(api.todos.linkTask);
+  const addResource = useOfflineMutation(api.projects.addResource, 'projects:addResource');
+  const deleteResource = useOfflineMutation(api.projects.deleteResource, 'projects:deleteResource');
+  const updateTodoStatus = useOfflineMutation(api.todos.updateStatus, 'todos:updateStatus');
+  const updateProject = useOfflineMutation(api.projects.updateProject, 'projects:updateProject');
+  const addCheckItem = useOfflineMutation(api.projects.addChecklistItem, 'projects:addChecklistItem');
+  const toggleCheckItem = useOfflineMutation(api.projects.toggleChecklistItem, 'projects:toggleChecklistItem');
+  const deleteCheckItem = useOfflineMutation(api.projects.deleteChecklistItem, 'projects:deleteChecklistItem');
+  const deleteTodoMutation = useOfflineMutation(api.todos.deleteTodo, 'todos:deleteTodo');
+  const addTodoMutation = useOfflineMutation(api.todos.addTodo, 'todos:addTodo');
+  const setTimerMutation = useOfflineMutation(api.todos.setTimer, 'todos:setTimer');
+  const linkTodoProjectMutation = useOfflineMutation(api.todos.linkTask, 'todos:linkTask');
 
   const [tasksOpen, setTasksOpen] = useState(false);
   const [checklistOpen, setChecklistOpen] = useState(false);
@@ -1841,15 +1840,15 @@ const Projects: React.FC = () => {
   const [editingSubCategory, setEditingSubCategory] = useState<{ id: Id<'projectSubCategories'>, name: string, icon: string, color: string } | null>(null);
   const [editingProject, setEditingProject] = useState<{ id: Id<'projects'>, name: string, description?: string, icon: string, color: string } | null>(null);
 
-  const addCategory = useMutation(api.projects.addCategory);
-  const updateCategory = useMutation(api.projects.updateCategory);
-  const deleteCategory = useMutation(api.projects.deleteCategory);
-  const addSubCategory = useMutation(api.projects.addSubCategory);
-  const updateSubCategory = useMutation(api.projects.updateSubCategory);
-  const deleteSubCategory = useMutation(api.projects.deleteSubCategory);
-  const addProject = useMutation(api.projects.addProject);
-  const updateProject = useMutation(api.projects.updateProject);
-  const deleteProject = useMutation(api.projects.deleteProject);
+  const addCategory = useOfflineMutation(api.projects.addCategory, 'projects:addCategory');
+  const updateCategory = useOfflineMutation(api.projects.updateCategory, 'projects:updateCategory');
+  const deleteCategory = useOfflineMutation(api.projects.deleteCategory, 'projects:deleteCategory');
+  const addSubCategory = useOfflineMutation(api.projects.addSubCategory, 'projects:addSubCategory');
+  const updateSubCategory = useOfflineMutation(api.projects.updateSubCategory, 'projects:updateSubCategory');
+  const deleteSubCategory = useOfflineMutation(api.projects.deleteSubCategory, 'projects:deleteSubCategory');
+  const addProject = useOfflineMutation(api.projects.addProject, 'projects:addProject');
+  const updateProject = useOfflineMutation(api.projects.updateProject, 'projects:updateProject');
+  const deleteProject = useOfflineMutation(api.projects.deleteProject, 'projects:deleteProject');
 
   const handleBack = () => {
     if (layer === 'detail') {

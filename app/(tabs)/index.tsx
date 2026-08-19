@@ -168,14 +168,15 @@ const Index = () => {
     let totalCount = 0;
 
     normalizedTodos.forEach(t => {
-      const isScheduledForToday = !t.date || (t.date >= todayStart && t.date < tomorrowStart);
-      if (t.status === 'done') {
-        if (isScheduledForToday || (t.completedAt && t.completedAt >= todayStart && t.completedAt < tomorrowStart)) {
-          doneCount++;
-          totalCount++;
-        }
-      } else {
+      const isScheduledForToday = (t.date !== undefined && t.date >= todayStart && t.date < tomorrowStart) ||
+                                  (t.date === undefined && t._creationTime && t._creationTime >= todayStart && t._creationTime < tomorrowStart);
+      const isCompletedToday = t.status === 'done' && t.completedAt && t.completedAt >= todayStart && t.completedAt < tomorrowStart;
+
+      if (isScheduledForToday || isCompletedToday) {
         totalCount++;
+        if (t.status === 'done') {
+          doneCount++;
+        }
       }
     });
 
@@ -318,6 +319,12 @@ const Index = () => {
     };
   }, [normalizedTodos, selectedDate, sortActive, todayStart, isViewingToday, colors, t]);
 
+  const checklistDoneCount = useMemo(
+    () => todayChecklistTasks.filter(t => t.status === 'done').length,
+    [todayChecklistTasks]
+  );
+  const checklistTotalCount = todayChecklistTasks.length;
+
   const activeBoardTasks = useMemo(
     () => kanbanColumns.filter(c => c.key !== 'done').flatMap(c => c.tasks),
     [kanbanColumns]
@@ -418,10 +425,27 @@ const Index = () => {
     { weekday: 'long', month: 'short', day: 'numeric' }
   );
 
+  const handleOpenDayPlanner = (dayTimestamp: number) => {
+    const d = new Date(dayTimestamp);
+    const year = d.getFullYear();
+    const month = d.getMonth();
+    const day = d.getDate();
+
+    router.push({
+      pathname: '/(tabs)/planner',
+      params: {
+        year: year.toString(),
+        month: month.toString(),
+        day: day.toString(),
+        from: 'home',
+      }
+    });
+  };
+
   return (
     <KeyboardAvoidingView 
       style={homeStyles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       keyboardVerticalOffset={0}
     >
       <StatusBar barStyle={colors.statusBarStyle} backgroundColor={colors.bg} />
@@ -446,6 +470,7 @@ const Index = () => {
               selectedDate={selectedDate}
               todayStart={todayStart}
               onSelectDate={setSelectedDate}
+              onOpenDayPlanner={handleOpenDayPlanner}
               homeStyles={homeStyles}
               isArabic={isArabic}
               taskCounts={dayTaskCounts}
@@ -456,8 +481,8 @@ const Index = () => {
               {/* Card 1: Today's Checklist */}
               <ChecklistCard
                 tasks={todayChecklistTasks}
-                doneCount={todayDoneForProgress}
-                totalCount={todayAllForProgress}
+                doneCount={checklistDoneCount}
+                totalCount={checklistTotalCount}
                 onToggleTask={handleToggleTaskStatus}
                 onOpenTaskDetail={(id) => handleEditTask(id)}
                 onQuickManage={() => setGlobalActionModalVisible(true)}

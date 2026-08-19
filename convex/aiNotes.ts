@@ -7,22 +7,39 @@ import { api } from "./_generated/api";
  */
 export const generateNoteSummary = action({
   args: {
-    noteId: v.id("todos"),
+    noteId: v.optional(v.id("todos")),
+    title: v.optional(v.string()),
+    content: v.optional(v.string()),
+    transcript: v.optional(v.string()),
     language: v.optional(v.string()), // "en" | "ar"
   },
   handler: async (ctx, args) => {
-    const note = await ctx.runQuery(api.todos.getById, { id: args.noteId });
-    if (!note) {
-      throw new Error("Note not found");
+    let noteText = args.title || "";
+    let noteDesc = args.content || "";
+    let noteTranscript = args.transcript || "";
+    let transcriptLang = args.language;
+
+    if (args.noteId) {
+      const note = await ctx.runQuery(api.todos.getById, { id: args.noteId });
+      if (note) {
+        if (!noteText) noteText = note.text || "Untitled";
+        if (!noteDesc) noteDesc = note.description || "";
+        if (!noteTranscript) noteTranscript = note.transcript || "";
+        if (!transcriptLang) transcriptLang = note.transcriptLanguage;
+      }
+    }
+
+    if (!noteText && !noteDesc && !noteTranscript) {
+      noteText = "Untitled Note";
     }
 
     const noteContent = `
-Title: ${note.text || "Untitled"}
-Description / Content: ${note.description || ""}
-Transcript: ${note.transcript || "None"}
+Title: ${noteText}
+Content: ${noteDesc}
+Transcript: ${noteTranscript}
     `.trim();
 
-    const isArabic = args.language === "ar" || note.transcriptLanguage === "ar";
+    const isArabic = transcriptLang === "ar" || args.language === "ar";
     const apiKey = process.env.GEMINI_API_KEY;
 
     let summary = "";
@@ -77,19 +94,25 @@ Please format your response as JSON with this exact schema:
 
     if (!summary) {
       summary = isArabic
-        ? `ملخص الملاحظة: ${note.text}. تحتوي هذه الملاحظة على محتوى مسجل ومكتوب.`
-        : `Summary of "${note.text}": Contains captured thoughts and voice recording details.`;
+        ? `ملخص: ${noteText}. تم استخلاص الأفكار الرئيسية من المحتوى المكتوب والتسجيل الصوتي.`
+        : `Summary of "${noteText}": Captured core concepts and voice recording insights.`;
       keyTakeaways = isArabic
-        ? ["مراجعة النقاط الأساسية", "متابعة المهام المطلوبة"]
-        : ["Review core discussion points", "Follow up on action items"];
+        ? ["مراجعة النقاط الأساسية", "متابعة المهام المسجلة في الملاحظة"]
+        : ["Review core discussion points", "Follow up on captured tasks"];
     }
 
-    // Save summary to note
-    await ctx.runMutation(api.aiNotes.saveNoteSummary, {
-      noteId: args.noteId,
-      summary,
-      actionItems: keyTakeaways,
-    });
+    // Save summary to note if noteId exists
+    if (args.noteId) {
+      try {
+        await ctx.runMutation(api.aiNotes.saveNoteSummary, {
+          noteId: args.noteId,
+          summary,
+          actionItems: keyTakeaways,
+        });
+      } catch (saveErr) {
+        console.warn("Could not persist summary to note record:", saveErr);
+      }
+    }
 
     return { summary, keyTakeaways };
   },
@@ -100,22 +123,35 @@ Please format your response as JSON with this exact schema:
  */
 export const extractActionItems = action({
   args: {
-    noteId: v.id("todos"),
+    noteId: v.optional(v.id("todos")),
+    title: v.optional(v.string()),
+    content: v.optional(v.string()),
+    transcript: v.optional(v.string()),
     language: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const note = await ctx.runQuery(api.todos.getById, { id: args.noteId });
-    if (!note) {
-      throw new Error("Note not found");
+    let noteText = args.title || "";
+    let noteDesc = args.content || "";
+    let noteTranscript = args.transcript || "";
+    let transcriptLang = args.language;
+
+    if (args.noteId) {
+      const note = await ctx.runQuery(api.todos.getById, { id: args.noteId });
+      if (note) {
+        if (!noteText) noteText = note.text || "Untitled";
+        if (!noteDesc) noteDesc = note.description || "";
+        if (!noteTranscript) noteTranscript = note.transcript || "";
+        if (!transcriptLang) transcriptLang = note.transcriptLanguage;
+      }
     }
 
     const noteContent = `
-Title: ${note.text || "Untitled"}
-Description: ${note.description || ""}
-Transcript: ${note.transcript || "None"}
+Title: ${noteText}
+Content: ${noteDesc}
+Transcript: ${noteTranscript}
     `.trim();
 
-    const isArabic = args.language === "ar" || note.transcriptLanguage === "ar";
+    const isArabic = transcriptLang === "ar" || args.language === "ar";
     const apiKey = process.env.GEMINI_API_KEY;
     let tasks: Array<{ text: string; priority?: "low" | "medium" | "high" }> = [];
 
@@ -172,8 +208,8 @@ ${noteContent}
 
     if (tasks.length === 0) {
       tasks = isArabic
-        ? [{ text: `متابعة ملاحظة: ${note.text}`, priority: "medium" }]
-        : [{ text: `Follow up on: ${note.text}`, priority: "medium" }];
+        ? [{ text: `متابعة ملاحظة: ${noteText || 'الملاحظة'}`, priority: "medium" }]
+        : [{ text: `Follow up on: ${noteText || 'Note'}`, priority: "medium" }];
     }
 
     return { tasks };
@@ -185,7 +221,10 @@ ${noteContent}
  */
 export const chatWithNote = action({
   args: {
-    noteId: v.id("todos"),
+    noteId: v.optional(v.id("todos")),
+    title: v.optional(v.string()),
+    content: v.optional(v.string()),
+    transcript: v.optional(v.string()),
     message: v.string(),
     chatHistory: v.optional(
       v.array(
@@ -199,18 +238,28 @@ export const chatWithNote = action({
     language: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const note = await ctx.runQuery(api.todos.getById, { id: args.noteId });
-    if (!note) {
-      throw new Error("Note not found");
+    let noteText = args.title || "";
+    let noteDesc = args.content || "";
+    let noteTranscript = args.transcript || "";
+    let transcriptLang = args.language;
+
+    if (args.noteId) {
+      const note = await ctx.runQuery(api.todos.getById, { id: args.noteId });
+      if (note) {
+        if (!noteText) noteText = note.text || "Untitled";
+        if (!noteDesc) noteDesc = note.description || "";
+        if (!noteTranscript) noteTranscript = note.transcript || "";
+        if (!transcriptLang) transcriptLang = note.transcriptLanguage;
+      }
     }
 
     const noteContent = `
-Title: ${note.text || "Untitled"}
-Description: ${note.description || ""}
-Transcript: ${note.transcript || "None"}
+Title: ${noteText}
+Content: ${noteDesc}
+Transcript: ${noteTranscript}
     `.trim();
 
-    const isArabic = args.language === "ar" || note.transcriptLanguage === "ar";
+    const isArabic = transcriptLang === "ar" || args.language === "ar";
     const apiKey = process.env.GEMINI_API_KEY;
     let reply = "";
 
@@ -219,8 +268,8 @@ Transcript: ${note.transcript || "None"}
         const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
 
         const systemInstruction = isArabic
-          ? `أنت مساعد ذكي للملاحظات داخل تطبيق ToDoIt. أجب عن أسئلة المستخدم باللغة العربية بدقة واعتماداً على محتوى الملاحظة والتسجيل الصوتي التالي فقط. إذا لم تكن الإجابة موجودة في الملاحظة، وضح ذلك بلطف.\nمحتوى الملاحظة:\n"""\n${noteContent}\n"""`
-          : `You are an intelligent note AI assistant in the ToDoIt app. Answer the user's questions accurately based strictly on this note's content and voice transcript. If the answer is not mentioned, politely clarify.\nNote Content:\n"""\n${noteContent}\n"""`;
+          ? `أنت مساعد ذكي للملاحظات داخل تطبيق ToDoIt. أجب عن أسئلة المستخدم باللغة العربية بدقة واعتماداً على محتوى الملاحظة والتسجيل الصوتي التالي فقط. إذا لم تكن الإجابة موجودة في الملاحظة، وضح ذلك بلطف.\nمحتوى الملاحظة والتسجيل الصوتي:\n"""\n${noteContent}\n"""`
+          : `You are an intelligent note AI assistant in the ToDoIt app. Answer the user's questions accurately based strictly on this note's content and voice transcript. If the answer is not mentioned, politely clarify.\nNote Content and Voice Transcript:\n"""\n${noteContent}\n"""`;
 
         const contents: any[] = [
           {
@@ -229,7 +278,7 @@ Transcript: ${note.transcript || "None"}
           },
           {
             role: "model",
-            parts: [{ text: isArabic ? "مفهوم. أنا جاهز للإجابة عن ملاحظتك." : "Understood. I am ready to discuss this note." }],
+            parts: [{ text: isArabic ? "مفهوم. أنا جاهز للإجابة عن ملاحظتك وتسجيلك الصوتي." : "Understood. I am ready to discuss your note and voice transcript." }],
           },
         ];
 
@@ -266,16 +315,22 @@ Transcript: ${note.transcript || "None"}
 
     if (!reply) {
       reply = isArabic
-        ? `بناءً على ملاحظتك "${note.text}"، تم حفظ استفسارك بنجاح.`
-        : `Based on note "${note.text}", your question has been noted.`;
+        ? `بناءً على ملاحظتك "${noteText}" وتسجيلك الصوتي، تم تحليل طلبك: "${args.message}".`
+        : `Based on your note "${noteText}" and voice recording, here is the insight for: "${args.message}".`;
     }
 
-    // Append to chat history in note
-    await ctx.runMutation(api.aiNotes.appendChatMessage, {
-      noteId: args.noteId,
-      userMessage: args.message,
-      modelReply: reply,
-    });
+    // Append to chat history in note if noteId exists
+    if (args.noteId) {
+      try {
+        await ctx.runMutation(api.aiNotes.appendChatMessage, {
+          noteId: args.noteId,
+          userMessage: args.message,
+          modelReply: reply,
+        });
+      } catch (appendErr) {
+        console.warn("Could not append chat message to note record:", appendErr);
+      }
+    }
 
     return { reply };
   },

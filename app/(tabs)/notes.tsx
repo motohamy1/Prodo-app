@@ -410,16 +410,23 @@ export default function AddScreen() {
 
   // Handler for creating a note from typing
   const handleSaveTypedNote = async () => {
-    if (!typingText.trim()) return;
+    const textToSave = typingText.trim();
+    if (!textToSave) return;
     const tagToSave = currentHashtag || '#Notes';
+    const savedType = typingType;
+    const savedDueDate = typingDueDate;
+
+    setTypingText('');
+    setTypingDueDate(undefined);
+    Keyboard.dismiss();
 
     if (userId) {
       try {
         await addTodo({
           userId,
-          text: typingText.trim(),
-          type: typingType, // 'note' | 'reminder'
-          dueDate: typingType === 'reminder' ? (typingDueDate || Date.now() + 3600 * 1000) : undefined,
+          text: textToSave,
+          type: savedType, // 'note' | 'reminder'
+          dueDate: savedType === 'reminder' ? (savedDueDate || Date.now() + 3600 * 1000) : undefined,
           date: Date.now(),
           status: 'not_started',
           hashtags: [tagToSave],
@@ -428,10 +435,6 @@ export default function AddScreen() {
         console.warn('Failed to add note', err);
       }
     }
-
-    setTypingText('');
-    setTypingDueDate(undefined);
-    Keyboard.dismiss();
   };
 
   // Handler for creating a scheduled reminder from the calendar icon

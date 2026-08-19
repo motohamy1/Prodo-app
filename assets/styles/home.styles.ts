@@ -104,6 +104,22 @@ export const createHomeStyles = (colors: ColorScheme, isArabic: boolean = false)
     dateBarChevron: {
       marginTop: 2,
     },
+    dateBarPlannerBtn: {
+      flexDirection: isArabic ? 'row-reverse' : 'row',
+      alignItems: 'center',
+      gap: 4,
+      paddingHorizontal: 10,
+      paddingVertical: 5,
+      borderRadius: 12,
+      backgroundColor: colors.primary + '18',
+      borderWidth: 1,
+      borderColor: colors.primary + '35',
+    },
+    dateBarPlannerBtnText: {
+      fontSize: 11,
+      fontWeight: '700',
+      color: colors.primary,
+    },
     dateBarReset: {
       paddingHorizontal: 12,
       paddingVertical: 5,

@@ -56,34 +56,39 @@ const TodoInput: React.FC<TodoInputProps> = ({ initialDate, projectId, onFocus }
   const addTodo = useOfflineMutation(api.todos.addTodo, "todos:addTodo");
 
   const handleAddTodo = async () => {
+    if (isAdding) return;
     if (!userId) {
       Alert.alert(t.authError, t.authFailed);
       return;
     }
-    if (newTodo.trim()) {
-      try {
-        const todoId = await addTodo({
-          userId,
-          text: newTodo.trim(),
-          date: selectedDate,
+    const todoText = newTodo.trim();
+    if (!todoText) return;
+
+    try {
+      setIsAdding(true);
+      setNewTodo("");
+      const todoIdResult = await addTodo({
+        userId,
+        text: todoText,
+        date: selectedDate,
           status: status,
           ...(timerDuration && { timerDuration }),
           ...(autoStart && timerDuration && status !== 'done' ? { status: 'in_progress', timerStartTime: Date.now() } : {}),
           ...(projectId ? { projectId } : {}),
         });
+        const createdId = typeof todoIdResult === 'string' ? todoIdResult : (todoIdResult as any)?._id;
 
         for (const sub of pendingSubtasks) {
           await addTodo({
             userId,
             text: sub.text,
             status: "not_started",
-            parentId: todoId,
+            parentId: createdId,
             ...(sub.timerDuration && { timerDuration: sub.timerDuration }),
             ...(projectId ? { projectId } : {}),
           });
         }
 
-        const createdId = todoId;
         setNewTodo("");
         setTimerDuration(null);
         setAutoStart(false);
@@ -102,10 +107,9 @@ const TodoInput: React.FC<TodoInputProps> = ({ initialDate, projectId, onFocus }
       } catch (error) {
         console.log("Error adding a todo", error);
         Alert.alert(t.authError, t.authFailed);
+      } finally {
+        setIsAdding(false);
       }
-    } else {
-      setIsAdding(false);
-    }
   };
 
   const handleOpenDetails = () => {

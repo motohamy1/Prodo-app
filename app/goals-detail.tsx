@@ -87,13 +87,15 @@ export default function GoalsDetailScreen() {
   const [addType, setAddType] = useState<'goal' | 'achievement'>('goal');
 
   const handleAdd = () => {
-    if (!newText.trim() || !userId) return;
-    const args: any = { userId, year, text: newText.trim() };
+    const textToAdd = newText.trim();
+    if (!textToAdd || !userId) return;
+    setNewText('');
+
+    const args: any = { userId, year, text: textToAdd };
     if (isMonth) args.month = month;
     if (isDay) { args.month = month; args.day = day; }
     if (addType === 'goal') addGoalMut(args);
     else addAchievementMut(args);
-    setNewText('');
   };
 
   const handleToggle = (item: any) => {

@@ -80,6 +80,7 @@ export const EventManagementModal: React.FC<EventManagementModalProps> = ({
   }, [eventToEdit, initialDate, visible]);
 
   const handleSave = async () => {
+    if (isSaving) return;
     if (!title.trim()) {
       Alert.alert(t.missingFields, t.fillAll);
       return;

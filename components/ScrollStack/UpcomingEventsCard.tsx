@@ -136,30 +136,30 @@ export const UpcomingEventsCard: React.FC<UpcomingEventsCardProps> = ({
                 </View>
 
                 {/* Event Info */}
-                <View style={styles.eventInfo}>
-                  <View style={{ flexDirection: isArabic ? 'row-reverse' : 'row', alignItems: 'center', gap: 6 }}>
-                    <Text style={styles.eventTitle} numberOfLines={1}>
+                <View style={[styles.eventInfo, { flex: 1, minWidth: 0 }]}>
+                  <View style={[{ flexDirection: isArabic ? 'row-reverse' : 'row', alignItems: 'center', gap: 6, width: '100%' }]}>
+                    <Text style={[styles.eventTitle, { flex: 1, flexShrink: 1 }]} numberOfLines={1} ellipsizeMode="tail">
                       {evt.title}
                     </Text>
                     {typeBadgeText ? (
-                      <View style={{ backgroundColor: isDarkMode ? `${chipColor}20` : `${chipColor}25`, paddingHorizontal: 5, paddingVertical: 1, borderRadius: 4 }}>
+                      <View style={{ backgroundColor: isDarkMode ? `${chipColor}20` : `${chipColor}25`, paddingHorizontal: 5, paddingVertical: 1.5, borderRadius: 4, flexShrink: 0 }}>
                         <Text style={{ fontSize: 9, fontWeight: '700', color: chipColor }}>{typeBadgeText}</Text>
                       </View>
                     ) : null}
                   </View>
                   
                   {(evt.location || evt.meetingLink) && (
-                    <View style={styles.eventMeta}>
+                    <View style={[styles.eventMeta, { width: '100%' }]}>
                       {evt.location ? (
                         <>
-                          <Ionicons name="location-outline" size={12} color={colors.textMuted} />
-                          <Text style={styles.eventMetaText} numberOfLines={1}>{evt.location}</Text>
+                          <Ionicons name="location-outline" size={12} color={colors.textMuted} style={{ flexShrink: 0 }} />
+                          <Text style={[styles.eventMetaText, { flex: 1, flexShrink: 1 }]} numberOfLines={1} ellipsizeMode="tail">{evt.location}</Text>
                         </>
                       ) : null}
                       {evt.meetingLink ? (
                         <>
-                          <Ionicons name="videocam-outline" size={12} color="#38BDF8" />
-                          <Text style={[styles.eventMetaText, { color: '#38BDF8' }]}>
+                          <Ionicons name="videocam-outline" size={12} color="#38BDF8" style={{ flexShrink: 0 }} />
+                          <Text style={[styles.eventMetaText, { color: '#38BDF8', flex: 1, flexShrink: 1 }]} numberOfLines={1} ellipsizeMode="tail">
                             {isArabic ? 'رابط الاجتماع' : 'Meeting Link'}
                           </Text>
                         </>
@@ -169,7 +169,7 @@ export const UpcomingEventsCard: React.FC<UpcomingEventsCardProps> = ({
                 </View>
 
                 {/* Edit Icon */}
-                <Ionicons name={isArabic ? "chevron-back" : "chevron-forward"} size={16} color={colors.textMuted} />
+                <Ionicons name={isArabic ? "chevron-back" : "chevron-forward"} size={16} color={colors.textMuted} style={{ flexShrink: 0 }} />
               </TouchableOpacity>
             );
           })}

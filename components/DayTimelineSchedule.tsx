@@ -244,25 +244,102 @@ export const DayTimelineSchedule: React.FC<DayTimelineScheduleProps> = ({
 
   const TOP_OFFSET = 12;
 
-  // Compute collision positions & heights for timeline items
+  // Compute collision positions, cluster widths, and columns for timeline items
   const laidOutItems = useMemo(() => {
+    // 1. Sort by start time, then by longer duration first
     const sorted = [...scheduleItems].sort((a, b) => {
       const aStart = (a.timeHour - START_HOUR) * 60 + a.timeMinute;
       const bStart = (b.timeHour - START_HOUR) * 60 + b.timeMinute;
-      return aStart - bStart;
+      if (aStart !== bStart) return aStart - bStart;
+      return b.durationMinutes - a.durationMinutes;
     });
 
-    return sorted.map((item) => {
+    interface EventNode {
+      item: DayTimelineItem;
+      startMin: number;
+      endMin: number;
+      top: number;
+      height: number;
+      colIndex: number;
+      totalCols: number;
+    }
+
+    const nodes: EventNode[] = sorted.map((item) => {
       const startMin = Math.max(0, (item.timeHour - START_HOUR) * 60 + item.timeMinute);
+      const endMin = startMin + Math.max(15, item.durationMinutes);
       const top = startMin * minuteHeight + TOP_OFFSET;
       const height = Math.max(34, item.durationMinutes * minuteHeight - 3);
 
       return {
-        ...item,
+        item,
+        startMin,
+        endMin,
         top,
         height,
+        colIndex: 0,
+        totalCols: 1,
       };
     });
+
+    // 2. Group into overlapping clusters
+    const clusters: EventNode[][] = [];
+    let currentCluster: EventNode[] = [];
+    let currentClusterEnd = -1;
+
+    nodes.forEach((node) => {
+      if (currentCluster.length === 0) {
+        currentCluster.push(node);
+        currentClusterEnd = node.endMin;
+      } else {
+        if (node.startMin < currentClusterEnd) {
+          // Overlaps with current cluster
+          currentCluster.push(node);
+          currentClusterEnd = Math.max(currentClusterEnd, node.endMin);
+        } else {
+          // New cluster
+          clusters.push(currentCluster);
+          currentCluster = [node];
+          currentClusterEnd = node.endMin;
+        }
+      }
+    });
+    if (currentCluster.length > 0) {
+      clusters.push(currentCluster);
+    }
+
+    // 3. For each cluster, assign columns greedily & compute total columns
+    clusters.forEach((cluster) => {
+      const colEndTimes: number[] = [];
+
+      cluster.forEach((node) => {
+        let assignedCol = -1;
+        for (let c = 0; c < colEndTimes.length; c++) {
+          if (node.startMin >= colEndTimes[c]) {
+            assignedCol = c;
+            colEndTimes[c] = node.endMin;
+            break;
+          }
+        }
+        if (assignedCol === -1) {
+          assignedCol = colEndTimes.length;
+          colEndTimes.push(node.endMin);
+        }
+        node.colIndex = assignedCol;
+      });
+
+      const totalCols = Math.max(1, colEndTimes.length);
+      cluster.forEach((node) => {
+        node.totalCols = totalCols;
+      });
+    });
+
+    return nodes.map((node) => ({
+      ...node.item,
+      top: node.top,
+      height: node.height,
+      colIndex: node.colIndex,
+      totalCols: node.totalCols,
+    }));
   }, [scheduleItems, minuteHeight]);
 
   const openAddAtTime = (hour: number, minute: number = 0) => {
@@ -531,131 +608,168 @@ export const DayTimelineSchedule: React.FC<DayTimelineScheduleProps> = ({
             </View>
           )}
 
-          {/* 4. Proportional Duration Event Cards */}
-          {laidOutItems.map((item, idx) => {
-            const kindConf = KIND_CONFIG[item.kind] || KIND_CONFIG.task;
-            const nodeColor = item.color || kindConf.defaultColor;
-            const isDone = item.isCompleted;
+          {/* 4. Proportional Duration Event Cards with Multi-Column Overlap Resolution */}
+          <View
+            style={[
+              styles.eventsOverlay,
+              isArabic ? { right: 54, left: 6 } : { left: 54, right: 6 },
+            ]}
+            pointerEvents="box-none"
+          >
+            {laidOutItems.map((item, idx) => {
+              const kindConf = KIND_CONFIG[item.kind] || KIND_CONFIG.task;
+              const nodeColor = item.color || kindConf.defaultColor;
+              const isDone = item.isCompleted;
 
-            return (
-              <Reanimated.View
-                key={item.id}
-                entering={FadeInDown.duration(280).delay(Math.min(idx * 25, 250))}
-                style={[
-                  styles.eventCardAbsolute,
-                  {
-                    top: item.top,
-                    height: item.height,
-                    backgroundColor: isDone ? (isDarkMode ? 'rgba(30,41,59,0.7)' : 'rgba(241,245,249,0.9)') : (isDarkMode ? '#1E222D' : '#FFFFFF'),
-                    borderColor: isDone ? colors.border : nodeColor + '50',
-                    borderLeftColor: nodeColor,
-                  },
-                  isArabic ? { right: 56, left: 6, borderRightWidth: 3.5, borderLeftWidth: 1, borderRightColor: nodeColor } : { left: 56, right: 6 },
-                ]}
-              >
-                <LivePress
-                  style={styles.eventCardContent}
-                  onPress={() => {
-                    if (item.source === 'todo' && item.rawItem && onOpenTaskDetails) {
-                      onOpenTaskDetails(item.rawItem._id);
-                    }
-                  }}
-                  onLongPress={() => {
-                    if (item.source === 'todo') {
-                      Alert.alert(
-                        isArabic ? 'خيارات' : 'Options',
-                        item.title,
-                        [
-                          { text: isArabic ? 'إلغاء' : 'Cancel', style: 'cancel' },
-                          { text: isArabic ? 'حذف' : 'Delete', style: 'destructive', onPress: () => onDeleteTodo(item.rawItem._id) },
-                        ]
-                      );
-                    } else if (item.source === 'plannerItem') {
-                      Alert.alert(
-                        isArabic ? 'خيارات' : 'Options',
-                        item.title,
-                        [
-                          { text: isArabic ? 'إلغاء' : 'Cancel', style: 'cancel' },
-                          { text: isArabic ? 'حذف' : 'Delete', style: 'destructive', onPress: () => onDeletePlannerItem(item.rawItem._id) },
-                        ]
-                      );
-                    }
-                  }}
-                  pressScale={0.98}
+              const colWidthPercent = 100 / item.totalCols;
+              const offsetPercent = item.colIndex * colWidthPercent;
+              const gap = item.totalCols > 1 ? 1.5 : 0;
+              const isCompactCol = item.totalCols >= 2;
+
+              return (
+                <Reanimated.View
+                  key={item.id}
+                  entering={FadeInDown.duration(280).delay(Math.min(idx * 25, 250))}
+                  style={[
+                    styles.eventCardAbsolute,
+                    {
+                      top: item.top,
+                      height: item.height,
+                      backgroundColor: isDone
+                        ? (isDarkMode ? '#1E293B' : '#F1F5F9')
+                        : (isDarkMode ? '#1E222D' : '#FFFFFF'),
+                      borderColor: isDone ? colors.border : nodeColor + '50',
+                      borderLeftColor: nodeColor,
+                      borderLeftWidth: isArabic ? 1 : (isCompactCol ? 2.5 : 3.5),
+                      borderRightWidth: isArabic ? (isCompactCol ? 2.5 : 3.5) : 1,
+                      borderRightColor: nodeColor,
+                      paddingHorizontal: isCompactCol ? 5 : 8,
+                      paddingVertical: isCompactCol ? 2 : 4,
+                    },
+                    isArabic
+                      ? {
+                          right: `${offsetPercent}%`,
+                          width: `${colWidthPercent - gap}%`,
+                        }
+                      : {
+                          left: `${offsetPercent}%`,
+                          width: `${colWidthPercent - gap}%`,
+                        },
+                  ]}
                 >
-                  <View style={[styles.eventHeaderRow, isArabic && { flexDirection: 'row-reverse' }]}>
-                    <View style={{ flexDirection: isArabic ? 'row-reverse' : 'row', alignItems: 'center', gap: 5, flex: 1 }}>
-                      <View style={[styles.kindDot, { backgroundColor: nodeColor }]} />
-                      <Text
-                        style={[
-                          styles.eventTitleText,
-                          { color: isDone ? colors.textMuted : colors.text },
-                          isDone && styles.strikeText,
-                          isArabic && { textAlign: 'right' },
-                        ]}
-                        numberOfLines={1}
-                      >
-                        {item.title}
-                      </Text>
-                    </View>
-
-                    {/* Time & Check Circle */}
-                    <View style={{ flexDirection: isArabic ? 'row-reverse' : 'row', alignItems: 'center', gap: 6 }}>
-                      <Text style={[styles.eventTimeBadgeText, { color: colors.textMuted }]}>
-                        {formatTime12(item.timeHour, item.timeMinute)} ({item.durationMinutes}m)
-                      </Text>
-                      <TouchableOpacity
-                        style={[
-                          styles.eventCheckCircle,
-                          {
-                            borderColor: isDone ? '#10B981' : colors.border,
-                            backgroundColor: isDone ? '#10B981' : 'transparent',
-                          },
-                        ]}
-                        onPress={() => {
-                          if (item.source === 'todo' && item.rawItem) {
-                            onToggleTodo(item.rawItem._id, item.rawItem.status);
-                          } else if (item.source === 'plannerItem' && item.rawItem) {
-                            onTogglePlannerItem(item.rawItem._id, item.rawItem.isCompleted);
-                          }
-                        }}
-                        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                      >
-                        {isDone && <Ionicons name="checkmark" size={10} color="#FFFFFF" />}
-                      </TouchableOpacity>
-                    </View>
-                  </View>
-
-                  {/* Subtitle / Links if height allows */}
-                  {item.height >= 48 && (item.subtitle || item.location || item.meetingLink) ? (
-                    <View style={[styles.eventMetaRow, isArabic && { flexDirection: 'row-reverse' }]}>
-                      {item.meetingLink ? (
-                        <View style={[styles.miniBadge, { backgroundColor: '#38BDF820' }]}>
-                          <Ionicons name="videocam-outline" size={10} color="#38BDF8" />
-                          <Text style={{ fontSize: 9, fontWeight: '700', color: '#38BDF8' }} numberOfLines={1}>
-                            {isArabic ? 'رابط' : 'Link'}
-                          </Text>
-                        </View>
-                      ) : null}
-                      {item.location ? (
-                        <View style={[styles.miniBadge, { backgroundColor: '#F59E0B20' }]}>
-                          <Ionicons name="location-outline" size={10} color="#F59E0B" />
-                          <Text style={{ fontSize: 9, fontWeight: '700', color: '#F59E0B' }} numberOfLines={1}>
-                            {item.location}
-                          </Text>
-                        </View>
-                      ) : null}
-                      {item.subtitle && !item.location && !item.meetingLink ? (
-                        <Text style={[styles.eventSubtitleText, { color: colors.textMuted }]} numberOfLines={1}>
-                          {item.subtitle}
+                  <LivePress
+                    style={styles.eventCardContent}
+                    onPress={() => {
+                      if (item.source === 'todo' && item.rawItem && onOpenTaskDetails) {
+                        onOpenTaskDetails(item.rawItem._id);
+                      }
+                    }}
+                    onLongPress={() => {
+                      if (item.source === 'todo') {
+                        Alert.alert(
+                          isArabic ? 'خيارات' : 'Options',
+                          item.title,
+                          [
+                            { text: isArabic ? 'إلغاء' : 'Cancel', style: 'cancel' },
+                            { text: isArabic ? 'حذف' : 'Delete', style: 'destructive', onPress: () => onDeleteTodo(item.rawItem._id) },
+                          ]
+                        );
+                      } else if (item.source === 'plannerItem') {
+                        Alert.alert(
+                          isArabic ? 'خيارات' : 'Options',
+                          item.title,
+                          [
+                            { text: isArabic ? 'إلغاء' : 'Cancel', style: 'cancel' },
+                            { text: isArabic ? 'حذف' : 'Delete', style: 'destructive', onPress: () => onDeletePlannerItem(item.rawItem._id) },
+                          ]
+                        );
+                      }
+                    }}
+                    pressScale={0.98}
+                  >
+                    <View style={[styles.eventHeaderRow, isArabic && { flexDirection: 'row-reverse' }]}>
+                      <View style={{ flexDirection: isArabic ? 'row-reverse' : 'row', alignItems: 'center', gap: isCompactCol ? 3 : 5, flex: 1 }}>
+                        <View style={[styles.kindDot, { backgroundColor: nodeColor, width: isCompactCol ? 5 : 6, height: isCompactCol ? 5 : 6 }]} />
+                        <Text
+                          style={[
+                            styles.eventTitleText,
+                            {
+                              color: isDone ? colors.textMuted : colors.text,
+                              fontSize: isCompactCol ? (item.totalCols >= 3 ? 10 : 11) : 12,
+                            },
+                            isDone && styles.strikeText,
+                            isArabic && { textAlign: 'right' },
+                          ]}
+                          numberOfLines={item.height < 44 ? 1 : 2}
+                        >
+                          {item.title}
                         </Text>
-                      ) : null}
+                      </View>
+
+                      {/* Time & Check Circle */}
+                      <View style={{ flexDirection: isArabic ? 'row-reverse' : 'row', alignItems: 'center', gap: isCompactCol ? 3 : 6 }}>
+                        {!isCompactCol || item.totalCols <= 2 ? (
+                          <Text style={[styles.eventTimeBadgeText, { color: colors.textMuted, fontSize: isCompactCol ? 8.5 : 9.5 }]}>
+                            {formatTime12(item.timeHour, item.timeMinute)}
+                            {item.totalCols === 1 ? ` (${item.durationMinutes}m)` : ''}
+                          </Text>
+                        ) : null}
+                        <TouchableOpacity
+                          style={[
+                            styles.eventCheckCircle,
+                            {
+                              borderColor: isDone ? '#10B981' : colors.border,
+                              backgroundColor: isDone ? '#10B981' : 'transparent',
+                              width: isCompactCol ? 14 : 16,
+                              height: isCompactCol ? 14 : 16,
+                              borderRadius: isCompactCol ? 7 : 8,
+                            },
+                          ]}
+                          onPress={() => {
+                            if (item.source === 'todo' && item.rawItem) {
+                              onToggleTodo(item.rawItem._id, item.rawItem.status);
+                            } else if (item.source === 'plannerItem' && item.rawItem) {
+                              onTogglePlannerItem(item.rawItem._id, item.rawItem.isCompleted);
+                            }
+                          }}
+                          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                        >
+                          {isDone && <Ionicons name="checkmark" size={isCompactCol ? 8 : 10} color="#FFFFFF" />}
+                        </TouchableOpacity>
+                      </View>
                     </View>
-                  ) : null}
-                </LivePress>
-              </Reanimated.View>
-            );
-          })}
+
+                    {/* Subtitle / Links if height allows */}
+                    {!isCompactCol && item.height >= 48 && (item.subtitle || item.location || item.meetingLink) ? (
+                      <View style={[styles.eventMetaRow, isArabic && { flexDirection: 'row-reverse' }]}>
+                        {item.meetingLink ? (
+                          <View style={[styles.miniBadge, { backgroundColor: '#38BDF820' }]}>
+                            <Ionicons name="videocam-outline" size={10} color="#38BDF8" />
+                            <Text style={{ fontSize: 9, fontWeight: '700', color: '#38BDF8' }} numberOfLines={1}>
+                              {isArabic ? 'رابط' : 'Link'}
+                            </Text>
+                          </View>
+                        ) : null}
+                        {item.location ? (
+                          <View style={[styles.miniBadge, { backgroundColor: '#F59E0B20' }]}>
+                            <Ionicons name="location-outline" size={10} color="#F59E0B" />
+                            <Text style={{ fontSize: 9, fontWeight: '700', color: '#F59E0B' }} numberOfLines={1}>
+                              {item.location}
+                            </Text>
+                          </View>
+                        ) : null}
+                        {item.subtitle && !item.location && !item.meetingLink ? (
+                          <Text style={[styles.eventSubtitleText, { color: colors.textMuted }]} numberOfLines={1}>
+                            {item.subtitle}
+                          </Text>
+                        ) : null}
+                      </View>
+                    ) : null}
+                  </LivePress>
+                </Reanimated.View>
+              );
+            })}
+          </View>
         </View>
       </ScrollView>
 
@@ -1068,6 +1182,12 @@ const styles = StyleSheet.create({
     fontSize: 8,
     fontWeight: '900',
   },
+  eventsOverlay: {
+    position: 'absolute',
+    top: 0,
+    bottom: 0,
+    zIndex: 3,
+  },
   eventCardAbsolute: {
     position: 'absolute',
     borderRadius: 10,
@@ -1075,7 +1195,7 @@ const styles = StyleSheet.create({
     borderLeftWidth: 3.5,
     paddingHorizontal: 8,
     paddingVertical: 4,
-    zIndex: 2,
+    zIndex: 3,
     overflow: 'hidden',
   },
   eventCardContent: {

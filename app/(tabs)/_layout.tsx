@@ -21,8 +21,8 @@ import ScreenBackground from '@/components/ScreenBackground';
 const AnimatedPath = Animated.createAnimatedComponent(Path);
 
 // Colors & Dimensions matching reference
-const CREAM = '#fbe3c2';
-const CREAM_INK = '#1B1917';
+const ACTIVE_ACCENT = '#d4ff00';
+const ACTIVE_INK = '#101116';
 const DOCK_HEIGHT = 60;
 const DOCK_CORNER = 26;
 const FAB_SIZE = 48;
@@ -193,47 +193,70 @@ const InsightsIcon = ({ color, knockout, filled }: IconProps) => (
 function getDockPath(width: number, height: number, cx: number): string {
   'worklet';
   if (width <= 0) return '';
-  const topCorner = DOCK_CORNER;
+  const topCorner = 20;
 
   // If uninitialized, draw full rounded rectangle on top, flat on bottom
   if (cx <= 0) {
     return `M 0 ${height} L 0 ${topCorner} Q 0 0 ${topCorner} 0 L ${width - topCorner} 0 Q ${width} 0 ${width} ${topCorner} L ${width} ${height} L 0 ${height} Z`;
   }
 
-  // Symmetrical cradle parameters matching the reference image exactly
-  const notchHalfWidth = 42;
+  const notchHalfWidth = 38;
   const leftStart = cx - notchHalfWidth;
   const rightEnd = cx + notchHalfWidth;
 
-  const depth = 30;
-  const inflectionX = 23;
-  const inflectionY = 14;
-  const shoulderCpX = 33;
-  const shoulderCpY = 6;
-  const cradleCpX = 18;
-  const cradleCpY = 22;
-  const bottomCpX = 11.5;
+  const depth = 26;
+  const shoulderCpX = 27;
+  const shoulderCpY = 8;
+  const inflectionX = 16;
+  const inflectionY = 13.5;
+  const cradleCpX = 10.5;
+  const cradleCpY = 21;
+  const bottomCpX = 5.2;
 
-  const safeLeft = Math.max(topCorner, leftStart);
-  const safeRight = Math.min(width - topCorner, rightEnd);
+  const pathParts: string[] = [`M 0 ${height}`];
 
-  return [
-    `M 0 ${height}`,
-    `L 0 ${topCorner}`,
-    `Q 0 0 ${topCorner} 0`,
-    `L ${safeLeft} 0`,
-    `L ${leftStart} 0`,
-    `C ${cx - shoulderCpX} 0, ${cx - (inflectionX + 5)} ${shoulderCpY}, ${cx - inflectionX} ${inflectionY}`,
-    `C ${cx - cradleCpX} ${cradleCpY}, ${cx - bottomCpX} ${depth}, ${cx} ${depth}`,
-    `C ${cx + bottomCpX} ${depth}, ${cx + cradleCpX} ${cradleCpY}, ${cx + inflectionX} ${inflectionY}`,
-    `C ${cx + (inflectionX + 5)} ${shoulderCpY}, ${cx + shoulderCpX} 0, ${rightEnd} 0`,
-    `L ${safeRight} 0`,
-    `L ${width - topCorner} 0`,
-    `Q ${width} 0 ${width} ${topCorner}`,
-    `L ${width} ${height}`,
-    `L 0 ${height}`,
-    `Z`,
-  ].join(' ');
+  // 1. Left Vertical Edge & Top-Left Corner
+  if (leftStart <= 0) {
+    pathParts.push(`L 0 ${inflectionY}`);
+  } else if (leftStart < topCorner) {
+    pathParts.push(`L 0 ${topCorner}`);
+    pathParts.push(`Q 0 0 ${leftStart} 0`);
+  } else {
+    pathParts.push(`L 0 ${topCorner}`);
+    pathParts.push(`Q 0 0 ${topCorner} 0`);
+    pathParts.push(`L ${leftStart} 0`);
+  }
+
+  // 2. Smooth Cradle Scoop
+  pathParts.push(
+    `C ${cx - shoulderCpX} 0, ${cx - (inflectionX + 4)} ${shoulderCpY}, ${cx - inflectionX} ${inflectionY}`
+  );
+  pathParts.push(
+    `C ${cx - cradleCpX} ${cradleCpY}, ${cx - bottomCpX} ${depth}, ${cx} ${depth}`
+  );
+  pathParts.push(
+    `C ${cx + bottomCpX} ${depth}, ${cx + cradleCpX} ${cradleCpY}, ${cx + inflectionX} ${inflectionY}`
+  );
+  pathParts.push(
+    `C ${cx + (inflectionX + 4)} ${shoulderCpY}, ${cx + shoulderCpX} 0, ${rightEnd} 0`
+  );
+
+  // 3. Right Flat Edge & Top-Right Corner
+  if (rightEnd >= width) {
+    pathParts.push(`L ${width} ${inflectionY}`);
+  } else if (rightEnd > width - topCorner) {
+    pathParts.push(`Q ${width} 0 ${width} ${topCorner}`);
+  } else {
+    pathParts.push(`L ${width - topCorner} 0`);
+    pathParts.push(`Q ${width} 0 ${width} ${topCorner}`);
+  }
+
+  // 4. Right Vertical Edge & Bottom Line
+  pathParts.push(`L ${width} ${height}`);
+  pathParts.push(`L 0 ${height}`);
+  pathParts.push(`Z`);
+
+  return pathParts.join(' ');
 }
 
 // ─── Floating Dock Background with Animated Sliding Cut Notch ───
@@ -470,8 +493,8 @@ const TabLayout = () => {
               >
                 {(isElevated) => (
                   <HomeIcon
-                    color={isElevated ? CREAM_INK : inactiveColor}
-                    knockout={CREAM}
+                    color={isElevated ? ACTIVE_INK : inactiveColor}
+                    knockout={ACTIVE_ACCENT}
                     filled={isElevated}
                   />
                 )}
@@ -491,8 +514,8 @@ const TabLayout = () => {
               >
                 {(isElevated) => (
                   <PlannerIcon
-                    color={isElevated ? CREAM_INK : inactiveColor}
-                    knockout={CREAM}
+                    color={isElevated ? ACTIVE_INK : inactiveColor}
+                    knockout={ACTIVE_ACCENT}
                     filled={isElevated}
                   />
                 )}
@@ -512,8 +535,8 @@ const TabLayout = () => {
               >
                 {(isElevated) => (
                   <AddIcon
-                    color={isElevated ? CREAM_INK : inactiveColor}
-                    knockout={CREAM}
+                    color={isElevated ? ACTIVE_INK : inactiveColor}
+                    knockout={ACTIVE_ACCENT}
                     filled={isElevated}
                   />
                 )}
@@ -533,8 +556,8 @@ const TabLayout = () => {
               >
                 {(isElevated) => (
                   <ProjectsIcon
-                    color={isElevated ? CREAM_INK : inactiveColor}
-                    knockout={CREAM}
+                    color={isElevated ? ACTIVE_INK : inactiveColor}
+                    knockout={ACTIVE_ACCENT}
                     filled={isElevated}
                   />
                 )}
@@ -554,8 +577,8 @@ const TabLayout = () => {
               >
                 {(isElevated) => (
                   <ProfileIcon
-                    color={isElevated ? CREAM_INK : inactiveColor}
-                    knockout={CREAM}
+                    color={isElevated ? ACTIVE_INK : inactiveColor}
+                    knockout={ACTIVE_ACCENT}
                     filled={isElevated}
                   />
                 )}
@@ -605,7 +628,7 @@ const styles = StyleSheet.create({
     width: FAB_SIZE,
     height: FAB_SIZE,
     borderRadius: FAB_SIZE / 2,
-    backgroundColor: CREAM,
+    backgroundColor: ACTIVE_ACCENT,
     alignItems: 'center',
     justifyContent: 'center',
     shadowColor: '#000000',

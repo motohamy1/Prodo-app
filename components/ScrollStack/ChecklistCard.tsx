@@ -27,6 +27,16 @@ interface ChecklistCardProps {
   onAddNewTask?: () => void;
 }
 
+const PURPLE_THEME = {
+  primary: '#A855F7',
+  light: '#C084FC',
+  badgeBgDark: 'rgba(168, 85, 247, 0.22)',
+  badgeBgLight: 'rgba(168, 85, 247, 0.15)',
+  pillBgDark: 'rgba(168, 85, 247, 0.15)',
+  pillBgLight: 'rgba(168, 85, 247, 0.1)',
+  checkboxBg: '#9333EA',
+};
+
 export const ChecklistCard: React.FC<ChecklistCardProps> = ({
   tasks,
   doneCount,
@@ -51,7 +61,7 @@ export const ChecklistCard: React.FC<ChecklistCardProps> = ({
       case 'Medium':
         return { bg: 'rgba(222, 254, 249, 0.2)', text: '#defef9' };
       default:
-        return { bg: 'rgba(219, 212, 253, 0.2)', text: '#dbd4fd' };
+        return { bg: 'rgba(168, 85, 247, 0.18)', text: '#C084FC' };
     }
   };
 
@@ -64,21 +74,23 @@ export const ChecklistCard: React.FC<ChecklistCardProps> = ({
         activeOpacity={0.8}
       >
         <View style={styles.cardHeaderLeft}>
-          <View style={[styles.iconBadge, { backgroundColor: isDarkMode ? 'rgba(222, 254, 249, 0.18)' : 'rgba(222, 254, 249, 0.35)' }]}>
-            <Ionicons name="checkmark-done" size={20} color="#defef9" />
+          <View style={[styles.iconBadge, { backgroundColor: isDarkMode ? PURPLE_THEME.badgeBgDark : PURPLE_THEME.badgeBgLight }]}>
+            <Ionicons name="checkmark-done" size={20} color={PURPLE_THEME.primary} />
           </View>
           <View style={isArabic ? { alignItems: 'flex-end' } : { alignItems: 'flex-start' }}>
             <Text style={styles.cardTitle}>{t.todaysChecklist}</Text>
             <Text style={styles.cardSubtitle}>
-              {doneCount}/{totalCount} {t.tasksCompleted}
+              {totalCount === 0
+                ? (isArabic ? 'لا توجد مهام مجدولة' : '0 tasks scheduled')
+                : `${doneCount}/${totalCount} ${t.tasksCompleted}`}
             </Text>
           </View>
         </View>
 
         <View style={styles.cardHeaderRight}>
-          <View style={styles.headerPill}>
-            <Ionicons name="arrow-down-circle-outline" size={14} color={colors.primary} />
-            <Text style={styles.headerPillText}>{t.tabTodo}</Text>
+          <View style={[styles.headerPill, { backgroundColor: isDarkMode ? PURPLE_THEME.pillBgDark : PURPLE_THEME.pillBgLight }]}>
+            <Ionicons name="arrow-down-circle-outline" size={14} color={PURPLE_THEME.primary} />
+            <Text style={[styles.headerPillText, { color: PURPLE_THEME.primary }]}>{t.tabTodo}</Text>
           </View>
         </View>
       </TouchableOpacity>
@@ -86,12 +98,12 @@ export const ChecklistCard: React.FC<ChecklistCardProps> = ({
       {/* Body: Checklist Tasks with Internal Nested Scroll to Prevent Overflow */}
       {tasks.length === 0 ? (
         <View style={styles.emptyCardContent}>
-          <Ionicons name="sparkles-outline" size={28} color={colors.primary} />
+          <Ionicons name="sparkles-outline" size={28} color={PURPLE_THEME.primary} />
           <Text style={styles.emptyCardTitle}>{t.noTasksTodayChecklist}</Text>
           {onAddNewTask && (
             <TouchableOpacity style={styles.emptyCardBtn} onPress={onAddNewTask} activeOpacity={0.8}>
-              <Ionicons name="add" size={16} color={colors.primary} />
-              <Text style={styles.emptyCardBtnText}>{t.startTask}</Text>
+              <Ionicons name="add" size={16} color={PURPLE_THEME.primary} />
+              <Text style={[styles.emptyCardBtnText, { color: PURPLE_THEME.primary }]}>{t.startTask}</Text>
             </TouchableOpacity>
           )}
         </View>
@@ -121,9 +133,12 @@ export const ChecklistCard: React.FC<ChecklistCardProps> = ({
                       onToggleTask(task._id, task.status || 'not_started');
                     }}
                     hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                    style={[styles.checkbox, isDone && styles.checkboxChecked]}
+                    style={[
+                      styles.checkbox, 
+                      isDone && { backgroundColor: PURPLE_THEME.checkboxBg, borderColor: PURPLE_THEME.checkboxBg }
+                    ]}
                   >
-                    {isDone && <Ionicons name="checkmark" size={14} color="#16270E" />}
+                    {isDone && <Ionicons name="checkmark" size={14} color="#FFFFFF" />}
                   </TouchableOpacity>
 
                   {/* Task Text: Tapping opens TaskDetailModal */}
@@ -170,7 +185,7 @@ export const ChecklistCard: React.FC<ChecklistCardProps> = ({
           onPress={onScrollToTasksSection}
           hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
         >
-          <Text style={styles.footerHintText}>{t.tapToScrollTasks} ↓</Text>
+          <Text style={[styles.footerHintText, { color: PURPLE_THEME.primary }]}>{t.tapToScrollTasks} ↓</Text>
         </TouchableOpacity>
       </View>
     </View>

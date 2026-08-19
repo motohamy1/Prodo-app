@@ -7,6 +7,7 @@ import useTheme from '@/hooks/useTheme';
 import { useTranslation } from '@/utils/i18n';
 import { scheduleReminderNotification } from '@/utils/notifications';
 import { Ionicons } from '@expo/vector-icons';
+import * as Haptics from 'expo-haptics';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -74,6 +75,7 @@ NoteHeader.displayName = 'NoteHeader';
 export default function NoteDetailScreen() {
   const router = useRouter();
   const { id, isReminder, tag } = useLocalSearchParams<{ id: string; isReminder: string; tag?: string }>();
+  const [currentNoteId, setCurrentNoteId] = useState<string | undefined>(id);
   const { colors, isDarkMode } = useTheme();
   const isDark = isDarkMode;
   const { userId, language } = useAuth();
@@ -85,6 +87,9 @@ export default function NoteDetailScreen() {
   const [title, setTitle] = useState('');
   const [body, setBody] = useState('');
   const [selection, setSelection] = useState<{ start: number; end: number }>({ start: 0, end: 0 });
+  const cursorPosRef = useRef<number>(0);
+  const [currentTranscript, setCurrentTranscript] = useState<string>('');
+  const [localChatHistory, setLocalChatHistory] = useState<AIChatMessage[]>([]);
   const [noteTag, setNoteTag] = useState<string>(tag || '#work');
   const [dueDate, setDueDate] = useState<number>(0);
   const [isScheduleVisible, setScheduleVisible] = useState(isReminder === 'true');
@@ -176,6 +181,12 @@ export default function NoteDetailScreen() {
       if (existingNote.hashtags && existingNote.hashtags.length > 0) {
         setNoteTag(existingNote.hashtags[0]);
       }
+      if (existingNote.aiChatHistory) {
+        setLocalChatHistory(existingNote.aiChatHistory);
+      }
+      if (existingNote.transcript) {
+        setCurrentTranscript(existingNote.transcript);
+      }
       if (existingNote.dueDate) {
         setDueDate(existingNote.dueDate);
         const d = new Date(existingNote.dueDate);
@@ -188,7 +199,12 @@ export default function NoteDetailScreen() {
     }
   }, [existingNote]);
 
+  const isSavingRef = useRef(false);
+
   const handleSaveNote = async () => {
+    if (isSavingRef.current) return;
+    isSavingRef.current = true;
+
     const bodyStr = body.trim();
     if (!title.trim() && !bodyStr) {
       router.back();
@@ -266,12 +282,22 @@ export default function NoteDetailScreen() {
   };
 
   const handleVoiceRecordingFinished = async (result: { uri: string; duration: number }) => {
-    if (!id || !userId) {
-      Alert.alert(
-        t.noteNotSavedYet || 'Please save the note first',
-        t.saveNoteBeforeAudio || 'Save the note title once before recording audio to it.'
-      );
-      return;
+    let targetId = currentNoteId || id;
+    if (!targetId && userId) {
+      try {
+        const newId = await addNote({
+          userId,
+          text: title.trim() || (isArabic ? 'ملاحظة صوتية جديدة' : 'New Voice Note'),
+          type: 'note',
+          description: body,
+        });
+        if (newId) {
+          targetId = newId;
+          setCurrentNoteId(newId);
+        }
+      } catch (createErr) {
+        console.warn('Could not auto-create note for audio recording:', createErr);
+      }
     }
 
     try {
@@ -295,19 +321,43 @@ export default function NoteDetailScreen() {
 
       const { storageId } = JSON.parse(uploadResult.body);
 
-      // 3. Attach audio metadata to Note record in Convex
-      await attachAudioToNote({
-        noteId: id as any,
-        storageId,
-        duration: Math.round(result.duration),
-      });
+      // 3. Attach audio metadata to Note record in Convex if ID exists
+      if (targetId) {
+        try {
+          await attachAudioToNote({
+            noteId: targetId as any,
+            storageId,
+            duration: Math.round(result.duration),
+          });
+        } catch (attachErr) {
+          console.warn('Could not attach audio metadata:', attachErr);
+        }
+      }
 
       // 4. Trigger AI transcription asynchronously via action
-      await transcribeAudioAction({
-        noteId: id as any,
+      const transcribeRes = await transcribeAudioAction({
+        noteId: targetId ? (targetId as any) : undefined,
         storageId,
         languageHint: isArabic ? 'ar' : 'en',
       });
+
+      if (transcribeRes?.transcript) {
+        const transText = transcribeRes.transcript.trim();
+        setCurrentTranscript(transText);
+
+        // Put transcription AT CURSOR POSITION!
+        const insertPos = cursorPosRef.current ?? body.length;
+        const before = body.slice(0, insertPos);
+        const after = body.slice(insertPos);
+        const needsSpace = before.length > 0 && !before.endsWith('\n') && !before.endsWith(' ');
+        const inserted = (needsSpace ? ' ' : '') + transText;
+        const newBody = before + inserted + after;
+        setBody(newBody);
+
+        const newPos = insertPos + inserted.length;
+        cursorPosRef.current = newPos;
+        setSelection({ start: newPos, end: newPos });
+      }
     } catch (err) {
       console.warn('Failed to upload/transcribe audio:', err);
       Alert.alert(t.audioUploadError || 'Audio Error', t.audioUploadErrorDesc || 'Failed to upload or transcribe audio.');
@@ -320,20 +370,32 @@ export default function NoteDetailScreen() {
     if (!id) return;
     try {
       await removeAudioFromNote({ noteId: id as any });
+      setCurrentTranscript('');
     } catch (err) {
       console.warn('Failed to remove audio from note:', err);
     }
   };
 
   const handleRetryTranscribe = async () => {
-    if (!id || !existingNote?.audioStorageId) return;
+    if (!existingNote?.audioStorageId) return;
     try {
       setIsTranscribing(true);
-      await transcribeAudioAction({
-        noteId: id as any,
+      const transcribeRes = await transcribeAudioAction({
+        noteId: id ? (id as any) : undefined,
         storageId: existingNote.audioStorageId,
         languageHint: isArabic ? 'ar' : 'en',
       });
+      if (transcribeRes?.transcript) {
+        const transText = transcribeRes.transcript.trim();
+        setCurrentTranscript(transText);
+        
+        const insertPos = cursorPosRef.current ?? body.length;
+        const before = body.slice(0, insertPos);
+        const after = body.slice(insertPos);
+        const needsSpace = before.length > 0 && !before.endsWith('\n') && !before.endsWith(' ');
+        const inserted = (needsSpace ? ' ' : '') + transText;
+        setBody(before + inserted + after);
+      }
     } catch (err) {
       console.warn('Error retrying transcription:', err);
     } finally {
@@ -343,14 +405,16 @@ export default function NoteDetailScreen() {
 
   // AI Quick Actions
   const handleSummarizeNote = async () => {
-    if (!id) return;
     try {
       setIsAILoading(true);
       const res = await generateNoteSummaryAction({
-        noteId: id as any,
+        noteId: id ? (id as any) : undefined,
+        title: title.trim() || 'Untitled Note',
+        content: body,
+        transcript: currentTranscript || existingNote?.transcript || '',
         language: isArabic ? 'ar' : 'en',
       });
-      if (res.summary) {
+      if (res?.summary) {
         Alert.alert(
           t.aiSummary || 'AI Summary',
           res.summary,
@@ -360,7 +424,11 @@ export default function NoteDetailScreen() {
               text: t.insertToNote || 'Insert into Note',
               onPress: () => {
                 const header = isArabic ? '\n\n📝 **الملخص:**\n' : '\n\n📝 **Summary:**\n';
-                setBody(prev => (prev ? prev + header + res.summary : header.trim() + '\n' + res.summary));
+                const summaryText = header + res.summary;
+                const insertPos = cursorPosRef.current ?? body.length;
+                const before = body.slice(0, insertPos);
+                const after = body.slice(insertPos);
+                setBody(before + summaryText + after);
                 scrollToBottom();
               },
             },
@@ -369,36 +437,53 @@ export default function NoteDetailScreen() {
       }
     } catch (err) {
       console.warn('Error generating AI summary:', err);
+      Alert.alert('AI Error', 'Could not generate note summary. Please try again.');
     } finally {
       setIsAILoading(false);
     }
   };
 
   const handleExtractTasks = async () => {
-    if (!id) return;
     try {
       setIsAILoading(true);
       const res = await extractActionItemsAction({
-        noteId: id as any,
+        noteId: id ? (id as any) : undefined,
+        title: title.trim() || 'Untitled Note',
+        content: body,
+        transcript: currentTranscript || existingNote?.transcript || '',
         language: isArabic ? 'ar' : 'en',
       });
 
-      if (res.tasks && res.tasks.length > 0) {
+      if (res?.tasks && res.tasks.length > 0) {
         Alert.alert(
           t.aiTasksExtracted || 'Tasks Extracted',
-          `${res.tasks.length} task(s) found:\n` +
+          `${res.tasks.length} ${isArabic ? 'مهمة مستخرجة' : 'task(s) found'}:\n` +
             res.tasks.map((t) => `• ${t.text}`).join('\n') +
-            '\n\nAdd them to your To-Do task list?',
+            '\n\n' + (isArabic ? 'هل تريد إضافتها إلى لوحة المهام الخاصة بك؟' : 'Add them to your To-Do task list?'),
           [
             { text: t.cancel, style: 'cancel' },
             {
               text: t.addToTodoList || 'Add to Tasks',
               onPress: async () => {
-                await convertActionItemsToTasks({
-                  noteId: id as any,
-                  tasks: res.tasks,
-                });
-                Alert.alert(t.actionSuccess || 'Success', 'Tasks added to your To-Do board.');
+                if (id) {
+                  await convertActionItemsToTasks({
+                    noteId: id as any,
+                    tasks: res.tasks,
+                  });
+                } else if (userId) {
+                  for (const item of res.tasks) {
+                    await addNote({
+                      userId,
+                      text: item.text,
+                      type: 'task',
+                      priority: item.priority || 'medium',
+                      isCompleted: false,
+                      status: 'not_started',
+                      date: Date.now(),
+                    });
+                  }
+                }
+                Alert.alert(t.actionSuccess || 'Success', isArabic ? 'تمت إضافة المهام إلى قائمة المهام بنجاح.' : 'Tasks added to your To-Do board.');
               },
             },
           ]
@@ -406,24 +491,44 @@ export default function NoteDetailScreen() {
       }
     } catch (err) {
       console.warn('Error extracting action items:', err);
+      Alert.alert('AI Error', 'Could not extract action items. Please try again.');
     } finally {
       setIsAILoading(false);
     }
   };
 
   const handleExplainNote = async () => {
-    if (!id) return;
     try {
       setIsAILoading(true);
       setAIChatVisible(true);
-      await chatWithNoteAction({
-        noteId: id as any,
-        message: isArabic
-          ? 'يرجى تقديم شرح وافٍ ومبسط للنقاط والمفاهيم الرئيسية في هذه الملاحظة.'
-          : 'Please explain the main concepts and key points in this note in a clear, easy-to-understand way.',
-        chatHistory: existingNote?.aiChatHistory || [],
+      const userPrompt = isArabic
+        ? 'يرجى تقديم شرح وافٍ ومبسط للنقاط والمفاهيم الرئيسية في هذه الملاحظة والتسجيل الصوتي.'
+        : 'Please explain the main concepts and key points in this note and voice recording in a clear, easy-to-understand way.';
+
+      const userMsg: AIChatMessage = {
+        id: `${Date.now()}-user`,
+        role: 'user',
+        content: userPrompt,
+        timestamp: Date.now(),
+      };
+      setLocalChatHistory(prev => [...prev, userMsg]);
+
+      const res = await chatWithNoteAction({
+        noteId: currentNoteId ? (currentNoteId as any) : (id ? (id as any) : undefined),
+        title: title.trim() || 'Untitled Note',
+        content: body,
+        transcript: currentTranscript || existingNote?.transcript || '',
+        message: userPrompt,
+        chatHistory: localChatHistory,
         language: isArabic ? 'ar' : 'en',
       });
+
+      if (res?.reply) {
+        setLocalChatHistory(prev => [
+          ...prev,
+          { id: `${Date.now()}-model`, role: 'model', content: res.reply, timestamp: Date.now() },
+        ]);
+      }
     } catch (err) {
       console.warn('Error in AI explain:', err);
     } finally {
@@ -432,118 +537,158 @@ export default function NoteDetailScreen() {
   };
 
   const handleSendAIChat = async (msg: string) => {
-    if (!id) return;
     try {
       setIsAILoading(true);
-      await chatWithNoteAction({
-        noteId: id as any,
+      const userMsg: AIChatMessage = {
+        id: `${Date.now()}-user`,
+        role: 'user',
+        content: msg,
+        timestamp: Date.now(),
+      };
+      const updatedHistory = [...localChatHistory, userMsg];
+      setLocalChatHistory(updatedHistory);
+
+      const res = await chatWithNoteAction({
+        noteId: currentNoteId ? (currentNoteId as any) : (id ? (id as any) : undefined),
+        title: title.trim() || 'Untitled Note',
+        content: body,
+        transcript: currentTranscript || existingNote?.transcript || '',
         message: msg,
-        chatHistory: existingNote?.aiChatHistory || [],
+        chatHistory: updatedHistory,
         language: isArabic ? 'ar' : 'en',
       });
+
+      if (res?.reply) {
+        setLocalChatHistory(prev => [
+          ...prev,
+          { id: `${Date.now()}-model`, role: 'model', content: res.reply, timestamp: Date.now() },
+        ]);
+      }
     } catch (err) {
       console.warn('Error in AI chat:', err);
+      Alert.alert('AI Error', 'Could not send AI message. Please try again.');
     } finally {
       setIsAILoading(false);
     }
   };
 
   const handleInsertToNote = (content: string) => {
-    setBody(prev => (prev ? prev + '\n\n' + content : content));
+    const insertPos = cursorPosRef.current ?? body.length;
+    const before = body.slice(0, insertPos);
+    const after = body.slice(insertPos);
+    const needsSpace = before.length > 0 && !before.endsWith('\n') && !before.endsWith(' ');
+    const inserted = (needsSpace ? '\n\n' : '') + content;
+    setBody(before + inserted + after);
     setAIChatVisible(false);
     scrollToBottom();
   };
 
   const handleInsertTranscript = () => {
-    if (!existingNote?.transcript) return;
-    setBody(prev => (prev ? prev + '\n\n' + existingNote.transcript : existingNote.transcript));
+    const trans = currentTranscript || existingNote?.transcript;
+    if (!trans) return;
+    const insertPos = cursorPosRef.current ?? body.length;
+    const before = body.slice(0, insertPos);
+    const after = body.slice(insertPos);
+    const needsSpace = before.length > 0 && !before.endsWith('\n') && !before.endsWith(' ');
+    const inserted = (needsSpace ? '\n\n' : '') + trans;
+    setBody(before + inserted + after);
     scrollToBottom();
   };
 
+  const keepFocus = useCallback(() => {
+    setTimeout(() => {
+      bodyInputRef.current?.focus();
+    }, 40);
+  }, []);
+
   // --- Smart Body Change & List Auto-Continuation ---
   const handleBodyChange = useCallback((newText: string) => {
-    // Detect single Enter key press to auto-continue lists or clear empty prefixes
-    if (newText.length === body.length + 1) {
-      const cursorPos = selection.start;
-      if (newText[cursorPos] === '\n' || newText[cursorPos - 1] === '\n') {
-        const beforeText = newText.slice(0, cursorPos);
-        const lines = beforeText.split('\n');
-        const lastLine = lines[lines.length - 2];
+    // Only intercept when text grows and contains a newline (i.e. Enter was tapped)
+    if (newText.length > body.length && newText.includes('\n')) {
+      const cursorPos = selection.start || newText.length;
+      const isNewlineAtCursor = newText[cursorPos - 1] === '\n' || newText[cursorPos] === '\n';
 
-        if (lastLine !== undefined) {
-          // 1. Checklist
-          const checklistMatch = lastLine.match(/^(\s*)([☐☑]|- \[[ x]\])\s*(.*)$/);
-          if (checklistMatch) {
-            const [_, indent, marker, content] = checklistMatch;
-            if (!content.trim()) {
-              // Pressed Enter on empty checklist -> revert line to clean empty
-              const linesAll = newText.split('\n');
-              const finishedLineIdx = lines.length - 2;
-              linesAll[finishedLineIdx] = indent;
-              setBody(linesAll.join('\n'));
-              return;
-            } else {
-              // Continue checklist item
-              const afterText = newText.slice(cursorPos);
-              setBody(beforeText + '☐ ' + afterText);
-              return;
-            }
+      if (isNewlineAtCursor) {
+        const textBefore = newText.slice(0, cursorPos);
+        const linesBefore = textBefore.split('\n');
+        // The line that was just ended by pressing Enter:
+        const prevLine = linesBefore[linesBefore.length - 2];
+
+        if (prevLine !== undefined) {
+          // 1. Empty Checklist -> Exit checklist mode cleanly
+          const emptyCheckMatch = prevLine.match(/^(\s*)([☐☑]|- \[[ x]\])\s*$/);
+          if (emptyCheckMatch) {
+            linesBefore[linesBefore.length - 2] = emptyCheckMatch[1]; // clear prefix
+            const textAfter = newText.slice(cursorPos);
+            const reconstructed = linesBefore.join('\n') + textAfter;
+            setBody(reconstructed);
+            return;
           }
 
-          // 2. Bullet list
-          const bulletMatch = lastLine.match(/^(\s*)([•\-\*])\s*(.*)$/);
+          // 2. Checklist with content -> Auto-continue with next checkbox
+          const checkMatch = prevLine.match(/^(\s*)([☐☑]|- \[[ x]\])\s+(.+)$/);
+          if (checkMatch) {
+            const indent = checkMatch[1];
+            const textAfter = newText.slice(cursorPos);
+            const reconstructed = linesBefore.join('\n') + `${indent}☐ ` + textAfter;
+            setBody(reconstructed);
+            return;
+          }
+
+          // 3. Empty Bullet -> Exit bullet mode
+          const emptyBulletMatch = prevLine.match(/^(\s*)([•\-\*])\s*$/);
+          if (emptyBulletMatch) {
+            linesBefore[linesBefore.length - 2] = emptyBulletMatch[1];
+            const textAfter = newText.slice(cursorPos);
+            const reconstructed = linesBefore.join('\n') + textAfter;
+            setBody(reconstructed);
+            return;
+          }
+
+          // 4. Bullet with content -> Auto-continue bullet
+          const bulletMatch = prevLine.match(/^(\s*)([•\-\*])\s+(.+)$/);
           if (bulletMatch) {
-            const [_, indent, marker, content] = bulletMatch;
-            if (!content.trim()) {
-              const linesAll = newText.split('\n');
-              const finishedLineIdx = lines.length - 2;
-              linesAll[finishedLineIdx] = indent;
-              setBody(linesAll.join('\n'));
-              return;
-            } else {
-              const afterText = newText.slice(cursorPos);
-              setBody(beforeText + '• ' + afterText);
-              return;
-            }
+            const indent = bulletMatch[1];
+            const textAfter = newText.slice(cursorPos);
+            const reconstructed = linesBefore.join('\n') + `${indent}• ` + textAfter;
+            setBody(reconstructed);
+            return;
           }
 
-          // 3. Numbered list
-          const numberMatch = lastLine.match(/^(\s*)(\d+)\.\s*(.*)$/);
-          if (numberMatch) {
-            const [_, indent, numStr, content] = numberMatch;
-            if (!content.trim()) {
-              const linesAll = newText.split('\n');
-              const finishedLineIdx = lines.length - 2;
-              linesAll[finishedLineIdx] = indent;
-              setBody(linesAll.join('\n'));
-              return;
-            } else {
-              const nextNum = parseInt(numStr, 10) + 1;
-              const afterText = newText.slice(cursorPos);
-              setBody(beforeText + `${nextNum}. ` + afterText);
-              return;
-            }
+          // 5. Empty Numbered list -> Exit numbered list
+          const emptyNumMatch = prevLine.match(/^(\s*)(\d+)\.\s*$/);
+          if (emptyNumMatch) {
+            linesBefore[linesBefore.length - 2] = emptyNumMatch[1];
+            const textAfter = newText.slice(cursorPos);
+            const reconstructed = linesBefore.join('\n') + textAfter;
+            setBody(reconstructed);
+            return;
           }
 
-          // 4. Quote block
-          const quoteMatch = lastLine.match(/^(\s*)>\s*(.*)$/);
-          if (quoteMatch) {
-            const [_, indent, content] = quoteMatch;
-            if (!content.trim()) {
-              const linesAll = newText.split('\n');
-              const finishedLineIdx = lines.length - 2;
-              linesAll[finishedLineIdx] = indent;
-              setBody(linesAll.join('\n'));
-              return;
-            } else {
-              const afterText = newText.slice(cursorPos);
-              setBody(beforeText + '> ' + afterText);
-              return;
-            }
+          // 6. Numbered list with content -> Auto-continue next number
+          const numMatch = prevLine.match(/^(\s*)(\d+)\.\s+(.+)$/);
+          if (numMatch) {
+            const indent = numMatch[1];
+            const nextNum = parseInt(numMatch[2], 10) + 1;
+            const textAfter = newText.slice(cursorPos);
+            const reconstructed = linesBefore.join('\n') + `${indent}${nextNum}. ` + textAfter;
+            setBody(reconstructed);
+            return;
+          }
+
+          // 7. Empty Quote -> Exit quote mode
+          const emptyQuoteMatch = prevLine.match(/^(\s*)>\s*$/);
+          if (emptyQuoteMatch) {
+            linesBefore[linesBefore.length - 2] = emptyQuoteMatch[1];
+            const textAfter = newText.slice(cursorPos);
+            const reconstructed = linesBefore.join('\n') + textAfter;
+            setBody(reconstructed);
+            return;
           }
         }
       }
     }
+
     setBody(newText);
   }, [body, selection]);
 
@@ -580,11 +725,12 @@ export default function NoteDetailScreen() {
   const isNumberActive = /^\d+\.\s/.test(currentLine);
   const isQuoteActive = currentLine.startsWith('> ');
 
-  // --- Toolbar Formatting Commands ---
+  // --- Toolbar Formatting Commands with Haptics & Focus Keep ---
   const toggleHeading = useCallback((level: 1 | 2 | 3) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     const { lineStart, lineEnd, lineText } = getCurrentLineInfo();
     const prefix = '#'.repeat(level) + ' ';
-    const cleanText = lineText.replace(/^#{1,6}\s*/, '');
+    const cleanText = lineText.replace(/^(#{1,6}|[☐☑•\-*]|\d+\.|>)\s*/, '');
     let newLineText = '';
     if (lineText.startsWith(prefix)) {
       newLineText = cleanText;
@@ -593,61 +739,71 @@ export default function NoteDetailScreen() {
     }
     const newBody = body.slice(0, lineStart) + newLineText + body.slice(lineEnd);
     setBody(newBody);
-  }, [body, getCurrentLineInfo]);
+    keepFocus();
+  }, [body, getCurrentLineInfo, keepFocus]);
 
   const toggleChecklist = useCallback(() => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     const { lineStart, lineEnd, lineText } = getCurrentLineInfo();
     let newLineText = '';
     if (lineText.startsWith('☐ ') || lineText.startsWith('☑ ')) {
-      newLineText = lineText.slice(2);
-    } else if (lineText.startsWith('• ')) {
-      newLineText = '☐ ' + lineText.slice(2);
+      newLineText = lineText.replace(/^[☐☑]\s*/, '');
     } else {
-      newLineText = '☐ ' + lineText;
+      const cleanText = lineText.replace(/^(#{1,6}|[•\-*]|\d+\.|>)\s*/, '');
+      newLineText = '☐ ' + cleanText;
     }
     const newBody = body.slice(0, lineStart) + newLineText + body.slice(lineEnd);
     setBody(newBody);
-  }, [body, getCurrentLineInfo]);
+    keepFocus();
+  }, [body, getCurrentLineInfo, keepFocus]);
 
   const toggleBulletList = useCallback(() => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     const { lineStart, lineEnd, lineText } = getCurrentLineInfo();
     let newLineText = '';
-    if (lineText.startsWith('• ')) {
-      newLineText = lineText.slice(2);
-    } else if (lineText.startsWith('☐ ') || lineText.startsWith('☑ ')) {
-      newLineText = '• ' + lineText.slice(2);
+    if (lineText.startsWith('• ') || lineText.startsWith('- ')) {
+      newLineText = lineText.replace(/^[•\-*]\s*/, '');
     } else {
-      newLineText = '• ' + lineText;
+      const cleanText = lineText.replace(/^(#{1,6}|[☐☑]|\d+\.|>)\s*/, '');
+      newLineText = '• ' + cleanText;
     }
     const newBody = body.slice(0, lineStart) + newLineText + body.slice(lineEnd);
     setBody(newBody);
-  }, [body, getCurrentLineInfo]);
+    keepFocus();
+  }, [body, getCurrentLineInfo, keepFocus]);
 
   const toggleNumberedList = useCallback(() => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     const { lineStart, lineEnd, lineText } = getCurrentLineInfo();
     let newLineText = '';
     if (/^\d+\.\s/.test(lineText)) {
       newLineText = lineText.replace(/^\d+\.\s*/, '');
     } else {
-      newLineText = '1. ' + lineText.replace(/^[•☐☑]\s*/, '');
+      const cleanText = lineText.replace(/^(#{1,6}|[•☐☑\-*]|>)\s*/, '');
+      newLineText = '1. ' + cleanText;
     }
     const newBody = body.slice(0, lineStart) + newLineText + body.slice(lineEnd);
     setBody(newBody);
-  }, [body, getCurrentLineInfo]);
+    keepFocus();
+  }, [body, getCurrentLineInfo, keepFocus]);
 
   const toggleQuote = useCallback(() => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     const { lineStart, lineEnd, lineText } = getCurrentLineInfo();
     let newLineText = '';
     if (lineText.startsWith('> ')) {
       newLineText = lineText.slice(2);
     } else {
-      newLineText = '> ' + lineText;
+      const cleanText = lineText.replace(/^(#{1,6}|[•☐☑\-*]|\d+\.)\s*/, '');
+      newLineText = '> ' + cleanText;
     }
     const newBody = body.slice(0, lineStart) + newLineText + body.slice(lineEnd);
     setBody(newBody);
-  }, [body, getCurrentLineInfo]);
+    keepFocus();
+  }, [body, getCurrentLineInfo, keepFocus]);
 
   const insertInlineFormat = useCallback((wrapper: string) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     const start = selection.start || 0;
     const end = selection.end || 0;
     if (start !== end) {
@@ -659,13 +815,16 @@ export default function NoteDetailScreen() {
       const newBody = body.slice(0, start) + `${wrapper}${wrapper}` + body.slice(start);
       setBody(newBody);
     }
-  }, [body, selection]);
+    keepFocus();
+  }, [body, selection, keepFocus]);
 
   const insertDivider = useCallback(() => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     const start = selection.start || 0;
     const newBody = body.slice(0, start) + '\n---\n' + body.slice(start);
     setBody(newBody);
-  }, [body, selection]);
+    keepFocus();
+  }, [body, selection, keepFocus]);
 
   // Interactive Checklist toggle for any line index in body
   const checklistItems = useMemo(() => {
@@ -682,6 +841,7 @@ export default function NoteDetailScreen() {
   }, [body]);
 
   const toggleCheckmarkAtLine = useCallback((targetLineIdx: number) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     const lines = body.split('\n');
     if (lines[targetLineIdx] !== undefined) {
       const line = lines[targetLineIdx];
@@ -727,15 +887,15 @@ export default function NoteDetailScreen() {
     <SafeAreaView style={[styles.detailSafeArea, { flex: 1 }]} edges={['top', 'left', 'right']}>
       <KeyboardAvoidingView 
         style={{ flex: 1 }}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        keyboardVerticalOffset={0}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
       >
         <View style={{ flex: 1 }}>
           {/* Top Header Bar */}
           <AnimatedWavyHeader backgroundColor={colors.bg} waveHeight={10} contentStyle={{ paddingBottom: 2 }}>
             <View style={[styles.detailHeader, { paddingBottom: 6 }, isArabic && { flexDirection: 'row-reverse' }]}>
               <TouchableOpacity style={styles.detailHeaderBtn} onPress={handleSaveNote}>
-                <Ionicons name="chevron-back" size={24} style={styles.detailHeaderBtnIcon} />
+                <Ionicons name={isArabic ? "chevron-forward" : "chevron-back"} size={24} color={colors.text} style={styles.detailHeaderBtnIcon} />
               </TouchableOpacity>
               
               <View style={styles.detailHeaderRight}>
@@ -808,17 +968,11 @@ export default function NoteDetailScreen() {
             {isRecording && (
               <View
                 style={{
-                  marginHorizontal: 24,
-                  marginBottom: 16,
-                  padding: 16,
-                  borderRadius: 20,
-                  backgroundColor: isDark ? 'rgba(30, 41, 59, 0.7)' : 'rgba(241, 245, 249, 0.95)',
-                  borderWidth: 1.5,
-                  borderColor: isDark ? 'rgba(99, 102, 241, 0.4)' : 'rgba(99, 102, 241, 0.3)',
-                  shadowColor: '#6366F1',
-                  shadowOpacity: 0.15,
-                  shadowRadius: 10,
-                  elevation: 4,
+                  marginHorizontal: 16,
+                  marginBottom: 12,
+                  paddingVertical: 10,
+                  paddingHorizontal: 8,
+                  backgroundColor: 'transparent',
                 }}
               >
                 <View
@@ -1230,6 +1384,7 @@ export default function NoteDetailScreen() {
             <ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
+              keyboardShouldPersistTaps="always"
               contentContainerStyle={{
                 gap: 8,
                 flexDirection: isArabic ? 'row-reverse' : 'row',
@@ -1366,6 +1521,7 @@ export default function NoteDetailScreen() {
             <ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
+              keyboardShouldPersistTaps="always"
               contentContainerStyle={[
                 { flexDirection: isArabic ? 'row-reverse' : 'row', alignItems: 'center', gap: 6, paddingHorizontal: 4 },
               ]}
@@ -1508,7 +1664,7 @@ export default function NoteDetailScreen() {
         visible={isAIChatVisible}
         onClose={() => setAIChatVisible(false)}
         noteTitle={title || 'Untitled Note'}
-        chatHistory={existingNote?.aiChatHistory || []}
+        chatHistory={localChatHistory}
         onSendMessage={handleSendAIChat}
         onInsertToNote={handleInsertToNote}
         isArabic={isArabic}
