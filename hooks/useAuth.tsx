@@ -80,24 +80,25 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   
   const createAnonMutation = useMutation(api.auth.createAnonymousUser);
   const updateSettingsMutation = useMutation(api.auth.updateSettings);
-  const user = useQuery(api.auth.getUserSettings, userId ? { userId } : "skip");
+  const isLocalGuest = typeof userId === 'string' && userId.startsWith('guest_');
+  const user = useQuery(api.auth.getUserSettings, (userId && !isLocalGuest) ? { userId } : "skip");
 
   useEffect(() => {
     const initAuth = async () => {
       try {
         const id = await safeStorage.getItem("userId");
-        if (id) {
+        if (id && !id.startsWith("guest_")) {
           setUserId(id as Id<"users">);
         } else {
-          // Attempt silent guest auth with short timeout
+          // If no ID or if ID is a temporary local guest ID, attempt silent guest auth on Convex
           try {
-            const timeoutPromise = new Promise<never>((_, reject) => setTimeout(() => reject(new Error('TIMEOUT')), 1500));
+            const timeoutPromise = new Promise<never>((_, reject) => setTimeout(() => reject(new Error('TIMEOUT')), 3000));
             const newAnonId = await Promise.race([createAnonMutation(), timeoutPromise]);
             setUserId(newAnonId);
             await safeStorage.setItem("userId", newAnonId);
           } catch (netErr) {
-            // Offline fallback: generate local anonymous ID so app is 100% usable immediately
-            const localAnonId = (`guest_${Date.now()}_${Math.floor(Math.random() * 10000)}`) as Id<"users">;
+            // Offline fallback: keep existing guest ID or generate a new local anonymous ID
+            const localAnonId = (id && id.startsWith("guest_") ? id : `guest_${Date.now()}_${Math.floor(Math.random() * 10000)}`) as Id<"users">;
             setUserId(localAnonId);
             await safeStorage.setItem("userId", localAnonId);
           }
@@ -113,6 +114,22 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     
     initAuth();
   }, []);
+
+  // Background auto-upgrade: whenever connected and userId is a temporary guest ID, upgrade to real Convex user
+  useEffect(() => {
+    if (userId && typeof userId === 'string' && userId.startsWith('guest_')) {
+      createAnonMutation()
+        .then(async (newAnonId) => {
+          console.log('Successfully upgraded guest session to Convex user:', newAnonId);
+          setUserId(newAnonId);
+          await safeStorage.setItem("userId", newAnonId);
+        })
+        .catch((err) => {
+          // Will retry next launch or when network is available
+          console.log('Guest upgrade deferred (offline / waiting):', err?.message || err);
+        });
+    }
+  }, [userId]);
 
   const signIn = async (id: Id<"users">) => {
     setUserId(id);

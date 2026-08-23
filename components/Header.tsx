@@ -13,7 +13,8 @@ const Header = () => {
     const { colors } = useTheme();
     const { userId, language, isAnonymous } = useAuth();
     const { t, isArabic } = useTranslation(language);
-    const userSettings = useOfflineQuery<any>('auth.getUserSettings', api.auth.getUserSettings, userId ? { userId } : "skip");
+    const isLocalGuest = typeof userId === 'string' && userId.startsWith('guest_');
+    const userSettings = useOfflineQuery<any>('auth.getUserSettings', api.auth.getUserSettings, (userId && !isLocalGuest) ? { userId } : "skip");
     const homeStyles = createHomeStyles(colors, isArabic);
 
     const now = new Date();

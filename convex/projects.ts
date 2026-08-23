@@ -4,7 +4,7 @@ import { mutation, query } from "./_generated/server";
 // ─── Project Categories ───────────────────────────────────────────────────────
 
 export const getCategories = query({
-  args: { userId: v.id("users") },
+  args: { userId: v.union(v.id("users"), v.string()) },
   handler: async (ctx, args) => {
     return await ctx.db
         .query("projectCategories")
@@ -29,7 +29,7 @@ export const getSubCategory = query({
 
 export const addCategory = mutation({
   args: {
-    userId: v.id("users"),
+    userId: v.union(v.id("users"), v.string()),
     name: v.string(),
     icon: v.string(),
     color: v.string(),
@@ -121,7 +121,7 @@ export const getSubCategories = query({
 
 export const addSubCategory = mutation({
   args: {
-    userId: v.id("users"),
+    userId: v.union(v.id("users"), v.string()),
     categoryId: v.id("projectCategories"),
     name: v.string(),
     icon: v.string(),
@@ -216,7 +216,7 @@ export const getProjectMetadata = query({
 
 export const addProject = mutation({
   args: {
-    userId: v.id("users"),
+    userId: v.union(v.id("users"), v.string()),
     categoryId: v.optional(v.id("projectCategories")),
     subCategoryId: v.optional(v.id("projectSubCategories")),
     name: v.string(),
@@ -309,7 +309,7 @@ export const getProjectResources = query({
 
 export const addResource = mutation({
   args: {
-    userId: v.id("users"),
+    userId: v.union(v.id("users"), v.string()),
     projectId: v.id("projects"),
     type: v.string(),
     title: v.string(),
@@ -349,7 +349,7 @@ export const getChecklists = query({
 
 export const addChecklistItem = mutation({
   args: { 
-    userId: v.id("users"),
+    userId: v.union(v.id("users"), v.string()),
     projectId: v.id("projects"), 
     text: v.string() 
   },
@@ -422,7 +422,7 @@ export const getCategoryItems = query({
 
 export const addCategoryItem = mutation({
   args: {
-    userId: v.id("users"),
+    userId: v.union(v.id("users"), v.string()),
     categoryId: v.optional(v.id("projectCategories")),
     subCategoryId: v.optional(v.id("projectSubCategories")),
     listType: v.string(),
@@ -474,7 +474,7 @@ export const deleteCategoryItem = mutation({
 
 export const getPlannerItems = query({
   args: {
-    userId: v.id("users"),
+    userId: v.union(v.id("users"), v.string()),
     date: v.number(),
     listType: v.string(),
   },
@@ -491,7 +491,7 @@ export const getPlannerItems = query({
 
 export const addPlannerItem = mutation({
   args: {
-    userId: v.id("users"),
+    userId: v.union(v.id("users"), v.string()),
     date: v.number(),
     listType: v.string(),
     text: v.string(),

@@ -38,7 +38,8 @@ const Settings = () => {
     { icon: 'language-outline', title: 'Switch Language', description: 'Switch between Arabic and English from the Preferences section.', accentColor: colors.success },
   ];
   
-  const userSettings = useOfflineQuery<any>('auth.getUserSettings', api.auth.getUserSettings, userId ? { userId } : "skip");
+  const isLocalGuest = typeof userId === 'string' && userId.startsWith('guest_');
+  const userSettings = useOfflineQuery<any>('auth.getUserSettings', api.auth.getUserSettings, (userId && !isLocalGuest) ? { userId } : "skip");
   const updateSettings = useOfflineMutation(api.auth.updateSettings, "auth:updateSettings");
   const generateUploadUrl = useMutation(api.auth.generateUploadUrl);
   const updateProfilePicture = useMutation(api.auth.updateProfilePicture);

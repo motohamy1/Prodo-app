@@ -36,9 +36,6 @@ class PeriodicSyncManager {
     if (this.isInitialized) return;
 
     try {
-      // Register background sync task
-      await TaskManager.defineTask(BACKGROUND_SYNC_TASK, this.handleBackgroundSync.bind(this));
-      
       // Configure background fetch
       await BackgroundFetch.setMinimumIntervalAsync(this.syncConfig.interval);
       await BackgroundFetch.registerTaskAsync(BACKGROUND_SYNC_TASK, {
@@ -55,7 +52,7 @@ class PeriodicSyncManager {
   }
 
   // Background sync task handler
-  private async handleBackgroundSync(): Promise<BackgroundFetch.BackgroundFetchResult> {
+  public async handleBackgroundSync(): Promise<BackgroundFetch.BackgroundFetchResult> {
     if (this.isSyncing) {
       console.log('Sync already in progress, skipping');
       return BackgroundFetch.BackgroundFetchResult.NoData;
@@ -345,4 +342,11 @@ class PeriodicSyncManager {
   }
 }
 
-export default PeriodicSyncManager.getInstance();
+const syncManager = PeriodicSyncManager.getInstance();
+
+// Background tasks must be defined in the global scope
+TaskManager.defineTask(BACKGROUND_SYNC_TASK, async () => {
+  return await syncManager.handleBackgroundSync();
+});
+
+export default syncManager;

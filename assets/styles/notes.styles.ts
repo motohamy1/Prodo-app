@@ -1,7 +1,7 @@
-import { ColorScheme } from "@/hooks/useTheme";
+import useTheme, { ColorScheme } from "@/hooks/useTheme";
 import { Platform, StyleSheet } from "react-native";
 
-export const createNotesStyles = (colors: ColorScheme, isArabic: boolean = false) => {
+export const createNotesStyles = (colors: ColorScheme, isArabic: boolean = false, isDarkMode: boolean = true) => {
   const styles = StyleSheet.create({
     container: {
       flex: 1,
@@ -305,11 +305,11 @@ export const createNotesStyles = (colors: ColorScheme, isArabic: boolean = false
       width: 44,
       height: 44,
       borderRadius: 12,
-      backgroundColor: colors.surface,
+      backgroundColor: isDarkMode ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.04)',
       justifyContent: 'center',
       alignItems: 'center',
       borderWidth: 1,
-      borderColor: colors.border,
+      borderColor: isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)',
     },
     detailHeaderBtnIcon: {
       color: colors.text,
@@ -331,16 +331,18 @@ export const createNotesStyles = (colors: ColorScheme, isArabic: boolean = false
       marginBottom: 12,
     },
     titleInput: {
-      fontSize: 28,
-      fontWeight: '700',
+      fontSize: 34,
+      fontWeight: '800',
       color: colors.text,
       paddingVertical: 8,
+      letterSpacing: -0.8,
     },
     dateSubtitle: {
-      fontSize: 13,
+      fontSize: 14,
+      fontWeight: '600',
       color: colors.textMuted,
-      marginTop: 4,
-      marginBottom: 8,
+      marginTop: 2,
+      marginBottom: 16,
     },
     bodyInput: {
       flex: 1,
@@ -459,7 +461,7 @@ export const createNotesStyles = (colors: ColorScheme, isArabic: boolean = false
     },
     timePresetMain: {},
     toolbarWrapper: {
-      backgroundColor: colors.surface,
+      backgroundColor: colors.bg,
       borderTopWidth: 1,
       borderTopColor: colors.border,
       paddingVertical: 8,

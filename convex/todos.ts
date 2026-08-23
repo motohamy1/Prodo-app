@@ -4,7 +4,7 @@ import { api, internal } from "./_generated/api";
 
 
 export const get = query({
-  args: { userId: v.id("users") },
+  args: { userId: v.union(v.id("users"), v.string()) },
   handler: async (ctx, args) => {
     const todos = await ctx.db
       .query("todos")
@@ -35,7 +35,7 @@ export const getById = query({
 
 export const checkDuplicate = query({
   args: { 
-    userId: v.id("users"), 
+    userId: v.union(v.id("users"), v.string()), 
     text: v.string(), 
     dueDate: v.number() 
   },
@@ -58,7 +58,7 @@ export const checkDuplicate = query({
 
 export const addTodo = mutation({
   args: { 
-    userId: v.id("users"),
+    userId: v.union(v.id("users"), v.string()),
     text: v.string(),
     timerDuration: v.optional(v.number()),
     timerDirection: v.optional(v.string()),
@@ -466,7 +466,7 @@ export const updateTodo = mutation({
     type: v.optional(v.string()),
     dueDate: v.optional(v.number()),
     date: v.optional(v.number()),
-    userId: v.optional(v.id("users")),
+    userId: v.optional(v.union(v.id("users"), v.string())),
     isCompleted: v.optional(v.boolean()),
     status: v.optional(v.string()),
     timerDuration: v.optional(v.number()),
@@ -561,7 +561,7 @@ export const updateDate = mutation({
 });
 
 export const clearAllTodos = mutation({
-  args: { userId: v.id("users") },
+  args: { userId: v.union(v.id("users"), v.string()) },
   handler: async (ctx, args) => {
     const todos = await ctx.db
       .query('todos')
@@ -590,7 +590,7 @@ export const getTaskChecklists = query({
 
 export const addTaskChecklistItem = mutation({
   args: {
-    userId: v.id("users"),
+    userId: v.union(v.id("users"), v.string()),
     todoId: v.id("todos"),
     text: v.string(),
   },

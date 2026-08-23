@@ -32,10 +32,11 @@ import VoiceWaveform from '@/components/VoiceWaveform';
 import * as FileSystem from 'expo-file-system/legacy';
 import { FileSystemUploadType } from 'expo-file-system/legacy';
 import NoteAIChatSheet from '@/components/NoteAIChatSheet';
+import NoteBodyEditor, { NoteBodyEditorHandle } from '@/components/NoteBodyEditor';
 import { useVoiceRecorder } from '@/hooks/useVoiceRecorder';
 import { AIChatMessage } from '@/types/voiceNote';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import AnimatedWavyHeader from '@/components/AnimatedWavyHeader';
+import { BlurView } from 'expo-blur';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const NoteHeader = React.memo(({ 
   title, 
@@ -80,7 +81,7 @@ export default function NoteDetailScreen() {
   const isDark = isDarkMode;
   const { userId, language } = useAuth();
   const { t, isArabic } = useTranslation(language);
-  const styles = useMemo(() => createNotesStyles(colors, isArabic), [colors, isArabic]);
+  const styles = useMemo(() => createNotesStyles(colors, isArabic, isDark), [colors, isArabic, isDark]);
   const insets = useSafeAreaInsets();
 
   // Note State
@@ -96,6 +97,7 @@ export default function NoteDetailScreen() {
   const [dateTimeConfirmed, setDateTimeConfirmed] = useState(false);
 
   const bodyInputRef = useRef<TextInput | null>(null);
+  const bodyEditorRef = useRef<NoteBodyEditorHandle>(null);
   const scrollViewRef = useRef<ScrollView | null>(null);
 
   const scrollToBottom = () => {
@@ -116,9 +118,14 @@ export default function NoteDetailScreen() {
   const [keyboardHeight, setKeyboardHeight] = useState(0);
 
   useEffect(() => {
-    const show = Keyboard.addListener('keyboardDidShow', (e: KeyboardEvent) => setKeyboardHeight(e.endCoordinates.height));
-    const hide = Keyboard.addListener('keyboardDidHide', () => setKeyboardHeight(0));
-    return () => { show.remove(); hide.remove(); };
+    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+    // Fallback to Did events if Will not fired (some Android devices)
+    const showSub = Keyboard.addListener(showEvent as any, (e: KeyboardEvent) => setKeyboardHeight(e.endCoordinates.height));
+    const hideSub = Keyboard.addListener(hideEvent as any, () => setKeyboardHeight(0));
+    const showFallback = Platform.OS === 'ios' ? Keyboard.addListener('keyboardDidShow' as any, (e: any) => setKeyboardHeight(e.endCoordinates.height)) : { remove: () => {} } as any;
+    const hideFallback = Platform.OS === 'ios' ? Keyboard.addListener('keyboardDidHide' as any, () => setKeyboardHeight(0)) : { remove: () => {} } as any;
+    return () => { showSub.remove(); hideSub.remove(); showFallback.remove(); hideFallback.remove(); }
   }, []);
 
   // Custom Calendar State
@@ -595,133 +602,9 @@ export default function NoteDetailScreen() {
     scrollToBottom();
   };
 
-  const keepFocus = useCallback(() => {
-    setTimeout(() => {
-      bodyInputRef.current?.focus();
-    }, 40);
-  }, []);
-
-  // --- Smart Body Change & List Auto-Continuation ---
-  const handleBodyChange = useCallback((newText: string) => {
-    // Only intercept when text grows and contains a newline (i.e. Enter was tapped)
-    if (newText.length > body.length && newText.includes('\n')) {
-      const cursorPos = selection.start || newText.length;
-      
-      // Look for the newline that was just typed
-      const textBefore = newText.slice(0, cursorPos);
-      const linesBefore = textBefore.split('\n');
-      
-      // If a newline was just inserted, linesBefore has at least 2 elements
-      if (linesBefore.length >= 2) {
-        const prevLine = linesBefore[linesBefore.length - 2];
-        const currentLineAfterEnter = linesBefore[linesBefore.length - 1];
-
-        // 1. Empty Checklist -> Exit checklist mode cleanly
-        const emptyCheckMatch = prevLine.match(/^(\s*)([☐☑]|- \[[ x]\])\s*$/);
-        if (emptyCheckMatch) {
-          linesBefore[linesBefore.length - 2] = emptyCheckMatch[1]; // clear prefix
-          const textAfter = newText.slice(cursorPos);
-          const reconstructed = linesBefore.join('\n') + textAfter;
-          setBody(reconstructed);
-          return;
-        }
-
-        // 2. Checklist with content -> Auto-continue with next checkbox
-        const checkMatch = prevLine.match(/^(\s*)([☐☑]|- \[[ x]\])\s+(.*)$/);
-        if (checkMatch && checkMatch[3].trim().length > 0) {
-          const indent = checkMatch[1];
-          const textAfter = newText.slice(cursorPos);
-          linesBefore[linesBefore.length - 1] = `${indent}☐ ` + currentLineAfterEnter;
-          const reconstructed = linesBefore.join('\n') + textAfter;
-          setBody(reconstructed);
-          return;
-        }
-
-        // 3. Empty Numbered list -> Exit numbered list
-        const emptyNumMatch = prevLine.match(/^(\s*)(\d+)\.\s*$/);
-        if (emptyNumMatch) {
-          linesBefore[linesBefore.length - 2] = emptyNumMatch[1];
-          const textAfter = newText.slice(cursorPos);
-          const reconstructed = linesBefore.join('\n') + textAfter;
-          setBody(reconstructed);
-          return;
-        }
-
-        // 4. Numbered list with content -> Auto-continue with NEXT sequential number
-        const numMatch = prevLine.match(/^(\s*)(\d+)\.\s+(.*)$/);
-        if (numMatch && numMatch[3].trim().length > 0) {
-          const indent = numMatch[1];
-          const nextNum = parseInt(numMatch[2], 10) + 1;
-          const textAfter = newText.slice(cursorPos);
-          linesBefore[linesBefore.length - 1] = `${indent}${nextNum}. ` + currentLineAfterEnter;
-          const reconstructed = linesBefore.join('\n') + textAfter;
-          setBody(reconstructed);
-          return;
-        }
-
-        // 5. Empty Bullet -> Exit bullet mode
-        const emptyBulletMatch = prevLine.match(/^(\s*)([•\-\*])\s*$/);
-        if (emptyBulletMatch) {
-          linesBefore[linesBefore.length - 2] = emptyBulletMatch[1];
-          const textAfter = newText.slice(cursorPos);
-          const reconstructed = linesBefore.join('\n') + textAfter;
-          setBody(reconstructed);
-          return;
-        }
-
-        // 6. Bullet with content -> Auto-continue bullet
-        const bulletMatch = prevLine.match(/^(\s*)([•\-\*])\s+(.*)$/);
-        if (bulletMatch && bulletMatch[3].trim().length > 0) {
-          const indent = bulletMatch[1];
-          const textAfter = newText.slice(cursorPos);
-          linesBefore[linesBefore.length - 1] = `${indent}• ` + currentLineAfterEnter;
-          const reconstructed = linesBefore.join('\n') + textAfter;
-          setBody(reconstructed);
-          return;
-        }
-
-        // 7. Empty Quote -> Exit quote mode
-        const emptyQuoteMatch = prevLine.match(/^(\s*)>\s*$/);
-        if (emptyQuoteMatch) {
-          linesBefore[linesBefore.length - 2] = emptyQuoteMatch[1];
-          const textAfter = newText.slice(cursorPos);
-          const reconstructed = linesBefore.join('\n') + textAfter;
-          setBody(reconstructed);
-          return;
-        }
-
-        // 8. Quote with content -> Auto-continue quote
-        const quoteMatch = prevLine.match(/^(\s*)>\s+(.*)$/);
-        if (quoteMatch && quoteMatch[2].trim().length > 0) {
-          const indent = quoteMatch[1];
-          const textAfter = newText.slice(cursorPos);
-          linesBefore[linesBefore.length - 1] = `${indent}> ` + currentLineAfterEnter;
-          const reconstructed = linesBefore.join('\n') + textAfter;
-          setBody(reconstructed);
-          return;
-        }
-      }
-    }
-
-    setBody(newText);
-  }, [body, selection]);
-
-  // --- Line Info Helper for Cursor ---
-  const getCurrentLineInfo = useCallback(() => {
-    const pos = selection.start || 0;
-    const before = body.slice(0, pos);
-    const after = body.slice(pos);
-    const lastNewlineBefore = before.lastIndexOf('\n');
-    const lineStart = lastNewlineBefore === -1 ? 0 : lastNewlineBefore + 1;
-    const nextNewlineAfter = after.indexOf('\n');
-    const lineEnd = nextNewlineAfter === -1 ? body.length : pos + nextNewlineAfter;
-    const lineText = body.slice(lineStart, lineEnd);
-    return { lineStart, lineEnd, lineText, before, after };
-  }, [body, selection]);
-
   // Current line analysis for active toolbar highlight states
   const currentLine = useMemo(() => {
-    const pos = selection.start || 0;
+    const pos = cursorPosRef.current || selection.start || 0;
     const before = body.slice(0, pos);
     const after = body.slice(pos);
     const lastNewlineBefore = before.lastIndexOf('\n');
@@ -739,166 +622,6 @@ export default function NoteDetailScreen() {
   const isNumberActive = /^\d+\.\s/.test(currentLine);
   const isQuoteActive = currentLine.startsWith('> ');
 
-  // --- Toolbar Formatting Commands with Haptics & Focus Keep ---
-  const toggleHeading = useCallback((level: 1 | 2 | 3) => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    const { lineStart, lineEnd, lineText } = getCurrentLineInfo();
-    const prefix = '#'.repeat(level) + ' ';
-    const cleanText = lineText.replace(/^(#{1,6}|[☐☑•\-*]|\d+\.|>)\s*/, '');
-    let newLineText = '';
-    if (lineText.startsWith(prefix)) {
-      newLineText = cleanText;
-      setActiveFontSize(17);
-    } else {
-      newLineText = prefix + cleanText;
-      setActiveFontSize(level === 1 ? 24 : level === 2 ? 20 : 18);
-    }
-    const newBody = body.slice(0, lineStart) + newLineText + body.slice(lineEnd);
-    setBody(newBody);
-    keepFocus();
-  }, [body, getCurrentLineInfo, keepFocus]);
-
-  const toggleChecklist = useCallback(() => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    const { lineStart, lineEnd, lineText } = getCurrentLineInfo();
-    let newLineText = '';
-    if (lineText.startsWith('☐ ')) {
-      // Toggle to checked
-      newLineText = '☑ ' + lineText.slice(2);
-    } else if (lineText.startsWith('☑ ')) {
-      // Toggle off
-      newLineText = lineText.slice(2);
-    } else {
-      const cleanText = lineText.replace(/^(#{1,6}|[•\-*]|\d+\.|>)\s*/, '');
-      newLineText = '☐ ' + cleanText;
-    }
-    const newBody = body.slice(0, lineStart) + newLineText + body.slice(lineEnd);
-    setBody(newBody);
-    keepFocus();
-  }, [body, getCurrentLineInfo, keepFocus]);
-
-  const toggleBulletList = useCallback(() => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    const { lineStart, lineEnd, lineText } = getCurrentLineInfo();
-    let newLineText = '';
-    if (lineText.startsWith('• ') || lineText.startsWith('- ')) {
-      newLineText = lineText.replace(/^[•\-*]\s*/, '');
-    } else {
-      const cleanText = lineText.replace(/^(#{1,6}|[☐☑]|\d+\.|>)\s*/, '');
-      newLineText = '• ' + cleanText;
-    }
-    const newBody = body.slice(0, lineStart) + newLineText + body.slice(lineEnd);
-    setBody(newBody);
-    keepFocus();
-  }, [body, getCurrentLineInfo, keepFocus]);
-
-  const toggleNumberedList = useCallback(() => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    const { lineStart, lineEnd, lineText } = getCurrentLineInfo();
-    let newLineText = '';
-    if (/^\d+\.\s/.test(lineText)) {
-      newLineText = lineText.replace(/^\d+\.\s*/, '');
-    } else {
-      // Check the line before this one to find next sequence number
-      const textBefore = body.slice(0, lineStart);
-      const prevLines = textBefore.trimEnd().split('\n');
-      const lastLine = prevLines[prevLines.length - 1] || '';
-      const prevNumMatch = lastLine.match(/^(\s*)(\d+)\.\s+/);
-      const nextNum = prevNumMatch ? parseInt(prevNumMatch[2], 10) + 1 : 1;
-
-      const cleanText = lineText.replace(/^(#{1,6}|[•☐☑\-*]|>)\s*/, '');
-      newLineText = `${nextNum}. ` + cleanText;
-    }
-    const newBody = body.slice(0, lineStart) + newLineText + body.slice(lineEnd);
-    setBody(newBody);
-    keepFocus();
-  }, [body, getCurrentLineInfo, keepFocus]);
-
-  const toggleQuote = useCallback(() => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    const { lineStart, lineEnd, lineText } = getCurrentLineInfo();
-    let newLineText = '';
-    if (lineText.startsWith('> ')) {
-      newLineText = lineText.slice(2);
-    } else {
-      const cleanText = lineText.replace(/^(#{1,6}|[•☐☑\-*]|\d+\.)\s*/, '');
-      newLineText = '> ' + cleanText;
-    }
-    const newBody = body.slice(0, lineStart) + newLineText + body.slice(lineEnd);
-    setBody(newBody);
-    keepFocus();
-  }, [body, getCurrentLineInfo, keepFocus]);
-
-  const insertHashtag = useCallback((tagText?: string) => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    const pos = selection.start || 0;
-    const tagToInsert = tagText ? (tagText.startsWith('#') ? tagText + ' ' : '#' + tagText + ' ') : '#';
-    const before = body.slice(0, pos);
-    const after = body.slice(pos);
-    const needsSpace = before.length > 0 && !before.endsWith(' ') && !before.endsWith('\n');
-    const inserted = (needsSpace ? ' ' : '') + tagToInsert;
-    const newBody = before + inserted + after;
-    setBody(newBody);
-    const newPos = pos + inserted.length;
-    cursorPosRef.current = newPos;
-    setSelection({ start: newPos, end: newPos });
-    keepFocus();
-  }, [body, selection, keepFocus]);
-
-  const insertInlineFormat = useCallback((wrapper: string) => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    const start = selection.start || 0;
-    const end = selection.end || 0;
-    if (start !== end) {
-      const selectedText = body.slice(start, end);
-      const wrapped = `${wrapper}${selectedText}${wrapper}`;
-      const newBody = body.slice(0, start) + wrapped + body.slice(end);
-      setBody(newBody);
-    } else {
-      const newBody = body.slice(0, start) + `${wrapper}${wrapper}` + body.slice(start);
-      setBody(newBody);
-      const newPos = start + wrapper.length;
-      cursorPosRef.current = newPos;
-      setSelection({ start: newPos, end: newPos });
-    }
-    keepFocus();
-  }, [body, selection, keepFocus]);
-
-  const insertDivider = useCallback(() => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    const start = selection.start || 0;
-    const newBody = body.slice(0, start) + '\n---\n' + body.slice(start);
-    setBody(newBody);
-    keepFocus();
-  }, [body, selection, keepFocus]);
-
-  // Interactive Checklist toggle for any line index in body
-  const checklistItems = useMemo(() => {
-    const lines = body.split('\n');
-    const items: { lineIndex: number; text: string; checked: boolean }[] = [];
-    lines.forEach((l, idx) => {
-      if (l.startsWith('☐ ')) {
-        items.push({ lineIndex: idx, text: l.slice(2), checked: false });
-      } else if (l.startsWith('☑ ')) {
-        items.push({ lineIndex: idx, text: l.slice(2), checked: true });
-      }
-    });
-    return items;
-  }, [body]);
-
-  const toggleCheckmarkAtLine = useCallback((targetLineIdx: number) => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    const lines = body.split('\n');
-    if (lines[targetLineIdx] !== undefined) {
-      const line = lines[targetLineIdx];
-      if (line.startsWith('☐ ')) {
-        lines[targetLineIdx] = '☑ ' + line.slice(2);
-      } else if (line.startsWith('☑ ')) {
-        lines[targetLineIdx] = '☐ ' + line.slice(2);
-      }
-      setBody(lines.join('\n'));
-    }
-  }, [body]);
 
   // Calendar Helpers
   const daysInMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0).getDate();
@@ -930,72 +653,20 @@ export default function NoteDetailScreen() {
   };
 
   return (
-    <SafeAreaView style={[styles.detailSafeArea, { flex: 1 }]} edges={['top', 'left', 'right']}>
+    <View style={[styles.container, { flex: 1, backgroundColor: isDark ? '#0e0f14' : colors.bg }]}>
       <KeyboardAvoidingView 
         style={{ flex: 1 }}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
       >
         <View style={{ flex: 1 }}>
-          {/* Top Header Bar */}
-          <AnimatedWavyHeader backgroundColor={colors.bg} waveHeight={10} contentStyle={{ paddingBottom: 2 }}>
-            <View style={[styles.detailHeader, { paddingBottom: 6 }, isArabic && { flexDirection: 'row-reverse' }]}>
-              <TouchableOpacity style={styles.detailHeaderBtn} onPress={handleSaveNote}>
-                <Ionicons name={isArabic ? "chevron-forward" : "chevron-back"} size={24} color={colors.text} style={styles.detailHeaderBtnIcon} />
-              </TouchableOpacity>
-              
-              <View style={styles.detailHeaderRight}>
-                <TouchableOpacity 
-                  style={[styles.detailHeaderBtn, isScheduleVisible && { backgroundColor: colors.warning + '20' }]} 
-                  onPress={() => {
-                    if (isScheduleVisible && dateTimeConfirmed) {
-                      setDateTimeConfirmed(false);
-                    } else {
-                      setScheduleVisible(!isScheduleVisible);
-                      setDateTimeConfirmed(false);
-                    }
-                  }}
-                >
-                   <Ionicons 
-                     name={isScheduleVisible ? "alarm" : "alarm-outline"} 
-                     size={22} 
-                     color={isScheduleVisible ? colors.warning : colors.text} 
-                   />
-                </TouchableOpacity>
-
-                {/* Voice Record Button in Header */}
-                <TouchableOpacity 
-                  style={[
-                    styles.detailHeaderBtn,
-                    isRecording && { backgroundColor: 'rgba(239, 68, 68, 0.18)' },
-                    !isRecording && { backgroundColor: isDark ? 'rgba(99, 102, 241, 0.15)' : 'rgba(99, 102, 241, 0.1)' }
-                  ]} 
-                  onPress={handleToggleRecording}
-                >
-                   <Ionicons
-                     name={isRecording ? "stop-circle" : "mic"}
-                     size={20}
-                     color={isRecording ? "#EF4444" : "#6366F1"}
-                   />
-                </TouchableOpacity>
-
-                <TouchableOpacity style={styles.detailHeaderBtn} onPress={handleSaveNote}>
-                   <Ionicons name="checkmark" size={24} color={colors.success} />
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.detailHeaderBtn} onPress={() => {
-                   if (id) handleDeleteNote();
-                   else router.back();
-                }}>
-                   <Ionicons name="trash-outline" size={20} color={colors.danger} />
-                </TouchableOpacity>
-              </View>
-            </View>
-          </AnimatedWavyHeader>
-
           <ScrollView 
             ref={scrollViewRef}
             style={{ flex: 1 }}
-            contentContainerStyle={{ paddingBottom: 24 }}
+            contentContainerStyle={{ 
+              paddingTop: insets.top + 70,
+              paddingBottom: keyboardHeight > 0 ? keyboardHeight + 160 : 160
+            }}
             keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}
             keyboardDismissMode="interactive"
@@ -1336,54 +1007,112 @@ export default function NoteDetailScreen() {
               </View>
             )}
 
-            {/* Unified Note Body Editor Container */}
-            <TouchableOpacity 
-              activeOpacity={1} 
-              style={styles.editorContainer}
-              onPress={() => {
-                bodyInputRef.current?.focus();
+            {/* Rendered Markdown Body Editor */}
+            <NoteBodyEditor
+              ref={bodyEditorRef}
+              value={body}
+              onChange={setBody}
+              onCursorChange={(pos) => { cursorPosRef.current = pos; setSelection({ start: pos, end: pos }); }}
+              colors={colors}
+              isArabic={isArabic}
+              isDark={isDark}
+              baseStyle={{
+                fontSize: activeFontSize,
+                fontFamily: activeFontFamily === 'System' ? undefined : activeFontFamily,
+                color: activeFontColor,
+                fontWeight: activeFontWeight,
+                fontStyle: activeFontStyle,
               }}
-            >
-              <TextInput
-                ref={bodyInputRef}
-                style={[
-                  styles.mainBodyInput,
-                  {
-                    fontSize: activeFontSize,
-                    lineHeight: Math.round(activeFontSize * 1.55),
-                    fontFamily: activeFontFamily === 'System' ? undefined : activeFontFamily,
-                    color: activeFontColor,
-                    fontWeight: activeFontWeight,
-                    fontStyle: activeFontStyle,
-                    textAlign: isArabic ? 'right' : 'left',
-                  }
-                ]}
-                placeholder={isArabic ? 'ابدأ في كتابة ملاحظتك هنا...\n• استخدم الشريط أدناه لإضافة العناوين، القوائم، أو المهام.' : 'Start typing your note here...\n• Use the toolbar below to add Headings, Checklists, Bullets, or Formats.'}
-                placeholderTextColor={colors.textMuted + '60'}
-                value={body}
-                onChangeText={handleBodyChange}
-                onSelectionChange={(e) => {
-                  setSelection(e.nativeEvent.selection);
-                  cursorPosRef.current = e.nativeEvent.selection.start;
-                }}
-                multiline={true}
-                scrollEnabled={false}
-                textAlignVertical="top"
-                blurOnSubmit={false}
-              />
-            </TouchableOpacity>
+              placeholder={isArabic ? 'ابدأ في كتابة ملاحظتك هنا...\n• استخدم الشريط أدناه لإضافة العناوين، القوائم، أو المهام.' : 'Start typing your note here...\n• Use the toolbar below to add Headings, Checklists, Bullets, or Formats.'}
+            />
+
           </ScrollView>
 
-          {/* AI Quick Actions Bar */}
+          {/* Floating Header */}
+          <BlurView
+            tint={isDark ? "dark" : "light"}
+            intensity={80}
+            style={[
+              {
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                paddingTop: insets.top,
+                backgroundColor: isDark ? '#0e0f14' : colors.bg,
+                borderBottomWidth: StyleSheet.hairlineWidth,
+                borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.08)',
+                zIndex: 10,
+              }
+            ]}
+          >
+            <View style={[styles.detailHeader, { paddingBottom: 10, paddingTop: 10 }, isArabic && { flexDirection: 'row-reverse' }]}>
+              <TouchableOpacity style={styles.detailHeaderBtn} onPress={handleSaveNote}>
+                <Ionicons name={isArabic ? "chevron-forward" : "chevron-back"} size={24} color={colors.text} style={styles.detailHeaderBtnIcon} />
+              </TouchableOpacity>
+              
+              <View style={styles.detailHeaderRight}>
+                <TouchableOpacity 
+                  style={[styles.detailHeaderBtn, isScheduleVisible && { backgroundColor: colors.warning + '20' }]} 
+                  onPress={() => {
+                    if (isScheduleVisible && dateTimeConfirmed) {
+                      setDateTimeConfirmed(false);
+                    } else {
+                      setScheduleVisible(!isScheduleVisible);
+                      setDateTimeConfirmed(false);
+                    }
+                  }}
+                >
+                   <Ionicons 
+                     name={isScheduleVisible ? "alarm" : "alarm-outline"} 
+                     size={22} 
+                     color={isScheduleVisible ? colors.warning : colors.text} 
+                   />
+                </TouchableOpacity>
+
+                {/* Voice Record Button in Header */}
+                <TouchableOpacity 
+                  style={[
+                    styles.detailHeaderBtn,
+                    isRecording && { backgroundColor: 'rgba(239, 68, 68, 0.18)' },
+                    !isRecording && { backgroundColor: isDark ? 'rgba(99, 102, 241, 0.15)' : 'rgba(99, 102, 241, 0.1)' }
+                  ]} 
+                  onPress={handleToggleRecording}
+                >
+                   <Ionicons
+                     name={isRecording ? "stop-circle" : "mic"}
+                     size={20}
+                     color={isRecording ? "#EF4444" : "#6366F1"}
+                   />
+                </TouchableOpacity>
+
+                <TouchableOpacity style={styles.detailHeaderBtn} onPress={handleSaveNote}>
+                   <Ionicons name="checkmark" size={24} color={colors.success} />
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.detailHeaderBtn} onPress={() => {
+                   if (id) handleDeleteNote();
+                   else router.back();
+                }}>
+                   <Ionicons name="trash-outline" size={20} color={colors.danger} />
+                </TouchableOpacity>
+              </View>
+            </View>
+          </BlurView>
+
+          {/* AI Quick Actions Bar + Rich Toolbar - anchored above keyboard */}
           <View
             style={{
-              paddingVertical: 8,
-              paddingHorizontal: 14,
-              backgroundColor: isDark ? 'rgba(15, 23, 42, 0.95)' : 'rgba(248, 250, 252, 0.98)',
+              position: 'absolute',
+              bottom: Platform.OS === 'ios' ? keyboardHeight : 0,
+              left: 0,
+              right: 0,
+              backgroundColor: isDark ? '#0e0f14' : colors.bg,
               borderTopWidth: StyleSheet.hairlineWidth,
-              borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.06)',
+              borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.08)',
+              zIndex: 9,
             }}
           >
+            <View style={{ paddingVertical: 8, paddingHorizontal: 14 }}>
             <ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
@@ -1509,18 +1238,16 @@ export default function NoteDetailScreen() {
                 </Text>
               </TouchableOpacity>
             </ScrollView>
-          </View>
+            </View>
 
-          {/* Rich Formatting Toolbar */}
-          <View style={[
-            styles.toolbarWrapper,
-            {
-              backgroundColor: colors.bg,
-              paddingBottom: keyboardHeight > 0 ? 8 : insets.bottom + 8,
-              borderTopWidth: 1,
-              borderColor: colors.border,
-            }
-          ]}>
+            {/* Rich Formatting Toolbar */}
+            <View style={[
+              styles.toolbarWrapper,
+              {
+                paddingBottom: keyboardHeight > 0 ? 8 : insets.bottom + 8,
+                backgroundColor: 'transparent',
+              }
+            ]}>
             <ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
@@ -1532,21 +1259,21 @@ export default function NoteDetailScreen() {
               {/* Headings */}
               <TouchableOpacity 
                 style={[styles.toolbarIconBtn, isH1Active && styles.toolbarIconBtnActive]} 
-                onPress={() => toggleHeading(1)}
+                onPress={() => bodyEditorRef.current?.toggleHeading(1)}
               >
                 <Text style={{ fontSize: 15, fontWeight: '800', color: isH1Active ? colors.primary : colors.surfaceText }}>H1</Text>
               </TouchableOpacity>
 
               <TouchableOpacity 
                 style={[styles.toolbarIconBtn, isH2Active && styles.toolbarIconBtnActive]} 
-                onPress={() => toggleHeading(2)}
+                onPress={() => bodyEditorRef.current?.toggleHeading(2)}
               >
                 <Text style={{ fontSize: 14, fontWeight: '700', color: isH2Active ? colors.primary : colors.surfaceText }}>H2</Text>
               </TouchableOpacity>
 
               <TouchableOpacity 
                 style={[styles.toolbarIconBtn, isH3Active && styles.toolbarIconBtnActive]} 
-                onPress={() => toggleHeading(3)}
+                onPress={() => bodyEditorRef.current?.toggleHeading(3)}
               >
                 <Text style={{ fontSize: 13, fontWeight: '700', color: isH3Active ? colors.primary : colors.surfaceText }}>H3</Text>
               </TouchableOpacity>
@@ -1556,7 +1283,7 @@ export default function NoteDetailScreen() {
               {/* Checklist */}
               <TouchableOpacity 
                 style={[styles.toolbarIconBtn, isChecklistActive && styles.toolbarIconBtnActive]} 
-                onPress={toggleChecklist}
+                onPress={() => bodyEditorRef.current?.toggleChecklist()}
               >
                 <Ionicons 
                   name={isChecklistActive ? "checkbox" : "checkbox-outline"} 
@@ -1568,7 +1295,7 @@ export default function NoteDetailScreen() {
               {/* Bullet List */}
               <TouchableOpacity 
                 style={[styles.toolbarIconBtn, isBulletActive && styles.toolbarIconBtnActive]} 
-                onPress={toggleBulletList}
+                onPress={() => bodyEditorRef.current?.toggleBullet()}
               >
                 <Ionicons 
                   name="list-outline" 
@@ -1580,7 +1307,7 @@ export default function NoteDetailScreen() {
               {/* Numbered List */}
               <TouchableOpacity 
                 style={[styles.toolbarIconBtn, isNumberActive && styles.toolbarIconBtnActive]} 
-                onPress={toggleNumberedList}
+                onPress={() => bodyEditorRef.current?.toggleNumber()}
               >
                 <Ionicons 
                   name="reorder-four-outline" 
@@ -1592,7 +1319,7 @@ export default function NoteDetailScreen() {
               {/* Quote */}
               <TouchableOpacity 
                 style={[styles.toolbarIconBtn, isQuoteActive && styles.toolbarIconBtnActive]} 
-                onPress={toggleQuote}
+                onPress={() => bodyEditorRef.current?.toggleQuote()}
               >
                 <Ionicons 
                   name="chatbox-ellipses-outline" 
@@ -1604,7 +1331,7 @@ export default function NoteDetailScreen() {
               {/* Hashtag */}
               <TouchableOpacity 
                 style={styles.toolbarIconBtn} 
-                onPress={() => insertHashtag()}
+                onPress={() => bodyEditorRef.current?.insertHashtag()}
               >
                 <Ionicons 
                   name="pricetag-outline" 
@@ -1618,7 +1345,7 @@ export default function NoteDetailScreen() {
               {/* Bold */}
               <TouchableOpacity 
                 style={styles.toolbarIconBtn} 
-                onPress={() => insertInlineFormat('**')}
+                onPress={() => bodyEditorRef.current?.applyInlineFormat('**')}
               >
                 <Text style={{ fontSize: 16, fontWeight: '900', color: colors.surfaceText }}>B</Text>
               </TouchableOpacity>
@@ -1626,7 +1353,7 @@ export default function NoteDetailScreen() {
               {/* Italic */}
               <TouchableOpacity 
                 style={styles.toolbarIconBtn} 
-                onPress={() => insertInlineFormat('*')}
+                onPress={() => bodyEditorRef.current?.applyInlineFormat('__')}
               >
                 <Text style={{ fontSize: 16, fontWeight: '700', fontStyle: 'italic', color: colors.surfaceText }}>I</Text>
               </TouchableOpacity>
@@ -1634,7 +1361,7 @@ export default function NoteDetailScreen() {
               {/* Strikethrough */}
               <TouchableOpacity 
                 style={styles.toolbarIconBtn} 
-                onPress={() => insertInlineFormat('~~')}
+                onPress={() => bodyEditorRef.current?.applyInlineFormat('~~')}
               >
                 <Text style={{ fontSize: 15, fontWeight: '700', textDecorationLine: 'line-through', color: colors.surfaceText }}>S</Text>
               </TouchableOpacity>
@@ -1642,7 +1369,7 @@ export default function NoteDetailScreen() {
               {/* Divider */}
               <TouchableOpacity 
                 style={styles.toolbarIconBtn} 
-                onPress={insertDivider}
+                onPress={() => bodyEditorRef.current?.insertDivider()}
               >
                 <Ionicons name="remove-outline" size={22} color={colors.surfaceText} />
               </TouchableOpacity>
@@ -1652,7 +1379,7 @@ export default function NoteDetailScreen() {
               {/* Font Size */}
               <TouchableOpacity 
                 onPress={() => setActiveMenu('fontSize')} 
-                style={{ paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8, backgroundColor: colors.surface }}
+                style={{ paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8, backgroundColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.05)' }}
               >
                 <Text style={{ color: colors.surfaceText, fontSize: 13, fontWeight: '700' }}>{activeFontSize}pt</Text>
               </TouchableOpacity>
@@ -1670,6 +1397,7 @@ export default function NoteDetailScreen() {
                 <Ionicons name="text" size={18} color={colors.surfaceText} />
               </TouchableOpacity>
             </ScrollView>
+          </View>
           </View>
         </View>
       </KeyboardAvoidingView>
@@ -1793,6 +1521,6 @@ export default function NoteDetailScreen() {
           </View>
         </TouchableOpacity>
       </Modal>
-    </SafeAreaView>
+    </View>
   );
 }

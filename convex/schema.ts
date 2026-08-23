@@ -27,7 +27,7 @@ export default defineSchema({
   }).index("by_email", ["email"]),
 
   todos: defineTable({
-    userId: v.optional(v.id("users")),
+    userId: v.optional(v.union(v.id("users"), v.string())),
     text: v.string(),
     isCompleted: v.optional(v.boolean()), 
     status: v.optional(taskStatusValidator), 
@@ -83,7 +83,7 @@ export default defineSchema({
     .index("by_parent", ["parentId"]),
 
   projectCategories: defineTable({
-    userId: v.optional(v.id("users")),
+    userId: v.optional(v.union(v.id("users"), v.string())),
     name: v.string(),       
     icon: v.string(),       
     color: v.string(),      
@@ -92,7 +92,7 @@ export default defineSchema({
   }).index("by_user", ["userId"]),
 
   projectSubCategories: defineTable({
-    userId: v.optional(v.id("users")),
+    userId: v.optional(v.union(v.id("users"), v.string())),
     categoryId: v.id("projectCategories"),
     name: v.string(),
     icon: v.string(),
@@ -101,7 +101,7 @@ export default defineSchema({
     .index("by_category", ["categoryId"]),
 
   projects: defineTable({
-    userId: v.optional(v.id("users")),
+    userId: v.optional(v.union(v.id("users"), v.string())),
     categoryId: v.optional(v.id("projectCategories")),      
     subCategoryId: v.optional(v.id("projectSubCategories")), 
     name: v.string(),
@@ -114,7 +114,7 @@ export default defineSchema({
     .index("by_subCategory", ["subCategoryId"]),
 
   projectResources: defineTable({
-    userId: v.optional(v.id("users")),
+    userId: v.optional(v.union(v.id("users"), v.string())),
     projectId: v.id("projects"),
     type: v.string(),       
     title: v.string(),
@@ -124,21 +124,21 @@ export default defineSchema({
     .index("by_project", ["projectId"]),
 
   projectChecklists: defineTable({
-    userId: v.optional(v.id("users")),
+    userId: v.optional(v.union(v.id("users"), v.string())),
     projectId: v.id("projects"),
     text: v.string(),
     isCompleted: v.boolean(),
   }).index("by_user", ["userId"]),
 
   taskChecklists: defineTable({
-    userId: v.optional(v.id("users")),
+    userId: v.optional(v.union(v.id("users"), v.string())),
     todoId: v.id("todos"),
     text: v.string(),
     isCompleted: v.boolean(),
   }).index("by_todo", ["todoId"]),
 
   yearlyGoals: defineTable({
-    userId: v.id("users"),
+    userId: v.union(v.id("users"), v.string()),
     year: v.number(),
     month: v.optional(v.number()),
     day: v.optional(v.number()),
@@ -152,7 +152,7 @@ export default defineSchema({
     .index("by_user_year_month_day", ["userId", "year", "month", "day"]),
 
   yearlyAchievements: defineTable({
-    userId: v.id("users"),
+    userId: v.union(v.id("users"), v.string()),
     year: v.number(),
     month: v.optional(v.number()),
     day: v.optional(v.number()),
@@ -166,7 +166,7 @@ export default defineSchema({
     .index("by_user_year_month_day", ["userId", "year", "month", "day"]),
 
   categoryItems: defineTable({
-    userId: v.optional(v.id("users")),
+    userId: v.optional(v.union(v.id("users"), v.string())),
     categoryId: v.optional(v.id("projectCategories")),
     subCategoryId: v.optional(v.id("projectSubCategories")),
     date: v.optional(v.number()), // For planner day-specific items
@@ -183,7 +183,7 @@ export default defineSchema({
       // ─── Topic Intelligence ─────────────────────────────────────────────────────
   
       topicNodes: defineTable({
-        userId: v.id("users"),
+        userId: v.union(v.id("users"), v.string()),
         name: v.string(),
         displayName: v.string(),
         type: v.union(
@@ -213,7 +213,7 @@ export default defineSchema({
         .index("by_user_last_activity", ["userId", "lastActivityAt"]),
 
       topicEdges: defineTable({
-        userId: v.id("users"),
+        userId: v.union(v.id("users"), v.string()),
         fromTopicId: v.id("topicNodes"),
         toTopicId: v.id("topicNodes"),
         edgeType: v.union(
@@ -230,7 +230,7 @@ export default defineSchema({
         .index("by_to", ["toTopicId"]),
 
       userInsights: defineTable({
-        userId: v.id("users"),
+        userId: v.union(v.id("users"), v.string()),
         period: v.union(v.literal("day"), v.literal("week"), v.literal("month")),
         periodStart: v.number(),
         periodEnd: v.number(),

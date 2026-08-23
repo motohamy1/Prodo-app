@@ -456,7 +456,7 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ visible, onClose, tod
         </TouchableWithoutFeedback>
         <View style={[styles.container, { backgroundColor: colors.bg }]}>
               <KeyboardAvoidingView 
-                behavior={Platform.OS === 'ios' ? 'padding' : undefined} 
+                behavior="padding" 
                 style={{ flex: 1 }}
               >
             {/* Header */}
@@ -502,7 +502,13 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ visible, onClose, tod
               <ActivityIndicator size="large" color={projectColor} />
             </View>
           ) : (
-            <ScrollView ref={scrollViewRef} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+            <ScrollView 
+              ref={scrollViewRef} 
+              style={{ flex: 1 }}
+              contentContainerStyle={styles.scrollContent} 
+              showsVerticalScrollIndicator={false} 
+              keyboardShouldPersistTaps="handled"
+            >
               
               {/* Linked Item Badge */}
               {linkedItem && (
@@ -1150,14 +1156,14 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ visible, onClose, tod
             </ScrollView>
           )}
 
-          </KeyboardAvoidingView>
-
           {/* Bottom Action */}
           <View style={[styles.footer, { borderTopColor: colors.border + '40', backgroundColor: colors.bg }]}>
             <TouchableOpacity style={[styles.doneButton, { backgroundColor: projectColor }]} onPress={handleClose}>
               <Text style={[styles.doneButtonText, { color: isDarkMode ? '#000' : '#FFF' }]}>{isArabic ? "تم" : "Done"}</Text>
             </TouchableOpacity>
           </View>
+
+          </KeyboardAvoidingView>
 
           <ProjectPickerModal
             visible={isProjectModalVisible}

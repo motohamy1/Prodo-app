@@ -75,7 +75,7 @@ function calculateTrend(topic: any, relatedTodos: any[]): "up" | "down" | "stabl
 
 // ─── Internal Mutation: Generate Daily Insights ──────────────────────────────
 export const generateDailyInsights = internalMutation({
-  args: { userId: v.optional(v.id("users")) },
+  args: { userId: v.optional(v.union(v.id("users"), v.string())) },
   handler: async (ctx, args) => {
     const userIds = args.userId 
       ? [args.userId] 
@@ -147,7 +147,7 @@ export const generateDailyInsights = internalMutation({
 
 // ─── Internal Mutation: Generate Weekly Insights ─────────────────────────────
 export const generateWeeklyInsights = internalMutation({
-  args: { userId: v.optional(v.id("users")) },
+  args: { userId: v.optional(v.union(v.id("users"), v.string())) },
   handler: async (ctx, args) => {
     const userIds = args.userId 
       ? [args.userId] 
@@ -178,7 +178,7 @@ export const generateWeeklyInsights = internalMutation({
 
 // ─── Internal Mutation: Generate Monthly Insights ────────────────────────────
 export const generateMonthlyInsights = internalMutation({
-  args: { userId: v.optional(v.id("users")) },
+  args: { userId: v.optional(v.union(v.id("users"), v.string())) },
   handler: async (ctx, args) => {
     const userIds = args.userId 
       ? [args.userId] 
@@ -213,7 +213,7 @@ export const generateMonthlyInsights = internalMutation({
 // ─── Query: Get Latest Insights ──────────────────────────────────────────────
 export const getLatestInsights = query({
   args: { 
-    userId: v.id("users"),
+    userId: v.union(v.id("users"), v.string()),
     period: v.union(v.literal("day"), v.literal("week"), v.literal("month")),
   },
   handler: async (ctx, args) => {

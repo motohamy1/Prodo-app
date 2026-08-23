@@ -2,7 +2,7 @@ import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 
 export const getGoals = query({
-  args: { userId: v.id("users"), year: v.number() },
+  args: { userId: v.union(v.id("users"), v.string()), year: v.number() },
   handler: async (ctx, args) => {
     return await ctx.db
       .query("yearlyGoals")
@@ -15,7 +15,7 @@ export const getGoals = query({
 });
 
 export const getAllGoals = query({
-  args: { userId: v.id("users") },
+  args: { userId: v.union(v.id("users"), v.string()) },
   handler: async (ctx, args) => {
     return await ctx.db
       .query("yearlyGoals")
@@ -27,7 +27,7 @@ export const getAllGoals = query({
 
 export const addGoal = mutation({
   args: {
-    userId: v.id("users"),
+    userId: v.union(v.id("users"), v.string()),
     year: v.number(),
     text: v.string(),
     description: v.optional(v.string()),
@@ -65,7 +65,7 @@ export const deleteGoal = mutation({
 });
 
 export const getAchievements = query({
-  args: { userId: v.id("users"), year: v.number() },
+  args: { userId: v.union(v.id("users"), v.string()), year: v.number() },
   handler: async (ctx, args) => {
     return await ctx.db
       .query("yearlyAchievements")
@@ -78,7 +78,7 @@ export const getAchievements = query({
 });
 
 export const getAllAchievements = query({
-  args: { userId: v.id("users") },
+  args: { userId: v.union(v.id("users"), v.string()) },
   handler: async (ctx, args) => {
     return await ctx.db
       .query("yearlyAchievements")
@@ -90,7 +90,7 @@ export const getAllAchievements = query({
 
 export const addAchievement = mutation({
   args: {
-    userId: v.id("users"),
+    userId: v.union(v.id("users"), v.string()),
     year: v.number(),
     text: v.string(),
     description: v.optional(v.string()),
@@ -129,7 +129,7 @@ export const deleteAchievement = mutation({
 // ─── Month / Day Goals & Achievements ───────────────────────────────────────
 
 export const getMonthGoals = query({
-  args: { userId: v.id("users"), year: v.number(), month: v.number() },
+  args: { userId: v.union(v.id("users"), v.string()), year: v.number(), month: v.number() },
   handler: async (ctx, args) => {
     return await ctx.db
       .query("yearlyGoals")
@@ -142,7 +142,7 @@ export const getMonthGoals = query({
 });
 
 export const getDayGoals = query({
-  args: { userId: v.id("users"), year: v.number(), month: v.number(), day: v.number() },
+  args: { userId: v.union(v.id("users"), v.string()), year: v.number(), month: v.number(), day: v.number() },
   handler: async (ctx, args) => {
     return await ctx.db
       .query("yearlyGoals")
@@ -156,7 +156,7 @@ export const getDayGoals = query({
 
 export const addMonthGoal = mutation({
   args: {
-    userId: v.id("users"),
+    userId: v.union(v.id("users"), v.string()),
     year: v.number(),
     month: v.number(),
     text: v.string(),
@@ -177,7 +177,7 @@ export const addMonthGoal = mutation({
 
 export const addDayGoal = mutation({
   args: {
-    userId: v.id("users"),
+    userId: v.union(v.id("users"), v.string()),
     year: v.number(),
     month: v.number(),
     day: v.number(),
@@ -199,7 +199,7 @@ export const addDayGoal = mutation({
 });
 
 export const getMonthAchievements = query({
-  args: { userId: v.id("users"), year: v.number(), month: v.number() },
+  args: { userId: v.union(v.id("users"), v.string()), year: v.number(), month: v.number() },
   handler: async (ctx, args) => {
     return await ctx.db
       .query("yearlyAchievements")
@@ -212,7 +212,7 @@ export const getMonthAchievements = query({
 });
 
 export const getDayAchievements = query({
-  args: { userId: v.id("users"), year: v.number(), month: v.number(), day: v.number() },
+  args: { userId: v.union(v.id("users"), v.string()), year: v.number(), month: v.number(), day: v.number() },
   handler: async (ctx, args) => {
     return await ctx.db
       .query("yearlyAchievements")
@@ -226,7 +226,7 @@ export const getDayAchievements = query({
 
 export const addMonthAchievement = mutation({
   args: {
-    userId: v.id("users"),
+    userId: v.union(v.id("users"), v.string()),
     year: v.number(),
     month: v.number(),
     text: v.string(),
@@ -246,7 +246,7 @@ export const addMonthAchievement = mutation({
 
 export const addDayAchievement = mutation({
   args: {
-    userId: v.id("users"),
+    userId: v.union(v.id("users"), v.string()),
     year: v.number(),
     month: v.number(),
     day: v.number(),

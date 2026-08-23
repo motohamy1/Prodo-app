@@ -16,8 +16,27 @@ const singleResultQueryKeys = [
 const isEmptySingleResultCache = (queryKey: string, value: any) =>
   singleResultQueryKeys.includes(queryKey) && Array.isArray(value) && value.length === 0;
 
+function hasOfflineId(args: any): boolean {
+  if (!args || typeof args !== 'object' || args === 'skip') return false;
+  for (const key of Object.keys(args)) {
+    const val = args[key];
+    if (typeof val === 'string') {
+      if (val.includes('_')) {
+        const lowerKey = key.toLowerCase();
+        if (lowerKey.endsWith('id') || lowerKey === 'id' || lowerKey === '_id' || lowerKey === 'parentid') {
+           return true;
+        }
+      }
+    } else if (typeof val === 'object' && val !== null) {
+      if (hasOfflineId(val)) return true;
+    }
+  }
+  return false;
+}
+
 export function useOfflineQuery<T = any>(queryKey: string, queryFn: any, args?: any): T | undefined {
-  const convexData = useQuery(queryFn, args);
+  const convexArgs = (args === 'skip' || hasOfflineId(args)) ? 'skip' : args;
+  const convexData = useQuery(queryFn, convexArgs);
   const cacheKey = getCacheKey(queryKey, args);
 
   // Synchronously initialize with in-memory cache if available
@@ -98,9 +117,20 @@ export function useOfflineQuery<T = any>(queryKey: string, queryFn: any, args?: 
     return offlineData;
   }
 
-  if (convexData === undefined && args !== 'skip' && !singleResultQueryKeys.includes(queryKey) && !isOffline) {
+  if (convexData === undefined && args !== 'skip' && !isOffline) {
+    // If we have an offline ID, the Convex query is skipped, so we will never get remote data.
+    // We must return empty defaults if there is no offline cache.
+    if (hasOfflineId(args)) {
+      if (!singleResultQueryKeys.includes(queryKey)) {
+        return [] as any;
+      }
+      return offlineData; // which might be undefined, that's fine for objects
+    }
+
     // If waiting on slow network and no cache yet, return offlineData if available
-    return offlineData;
+    if (!singleResultQueryKeys.includes(queryKey)) {
+      return offlineData;
+    }
   }
 
   return convexData !== undefined ? convexData : offlineData;

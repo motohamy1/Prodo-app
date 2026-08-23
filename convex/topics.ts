@@ -99,7 +99,7 @@ async function upsertTopicEdge(
 // ─── Mutation: Process hashtags for a todo (called from addTodo/updateTodo) ───
 export const processTodoHashtags = internalMutation({
   args: {
-    userId: v.id("users"),
+    userId: v.union(v.id("users"), v.string()),
     todoId: v.id("todos"),
     hashtags: v.optional(v.array(v.string())),
     projectId: v.optional(v.string()),
@@ -185,7 +185,7 @@ export const processTodoHashtags = internalMutation({
 // ─── Query: Get topic nodes for user ─────────────────────────────────────────
 export const getTopicNodes = query({
   args: { 
-    userId: v.id("users"),
+    userId: v.union(v.id("users"), v.string()),
     type: v.optional(v.union(
       v.literal("hashtag"),
       v.literal("project"),
@@ -214,7 +214,7 @@ export const getTopicNodes = query({
 
 // ─── Query: Get topic edges for user ─────────────────────────────────────────
 export const getTopicEdges = query({
-  args: { userId: v.id("users") },
+  args: { userId: v.union(v.id("users"), v.string()) },
   handler: async (ctx, args) => {
     return await ctx.db
       .query("topicEdges")
@@ -226,7 +226,7 @@ export const getTopicEdges = query({
 // ─── Query: Get related topics for a given topic ─────────────────────────────
 export const getRelatedTopics = query({
   args: { 
-    userId: v.id("users"),
+    userId: v.union(v.id("users"), v.string()),
     topicId: v.id("topicNodes"),
     limit: v.optional(v.number()),
   },
@@ -257,7 +257,7 @@ export const getRelatedTopics = query({
 // ─── Mutation: Update topic metrics on todo completion ───────────────────────
 export const updateTopicOnCompletion = internalMutation({
   args: {
-    userId: v.id("users"),
+    userId: v.union(v.id("users"), v.string()),
     todoId: v.id("todos"),
     hashtags: v.optional(v.array(v.string())),
     completed: v.boolean(),
@@ -289,7 +289,7 @@ export const updateTopicOnCompletion = internalMutation({
 // ─── Mutation: Create inferred topic from AI analysis ────────────────────────
 export const createInferredTopic = internalMutation({
   args: {
-    userId: v.id("users"),
+    userId: v.union(v.id("users"), v.string()),
     name: v.string(),
     displayName: v.string(),
     sourceTodos: v.array(v.id("todos")),
