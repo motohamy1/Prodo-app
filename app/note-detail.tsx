@@ -12,8 +12,8 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
+  Dimensions,
   Keyboard,
-  KeyboardAvoidingView,
   KeyboardEvent,
   Modal,
   Platform,
@@ -98,6 +98,10 @@ export default function NoteDetailScreen() {
 
   const bodyEditorRef = useRef<NoteBodyEditorHandle>(null);
   const scrollViewRef = useRef<ScrollView | null>(null);
+  // Latest measured position of the active body line (from NoteBodyEditor).
+  const activeLineYRef = useRef<{ y: number; h: number } | null>(null);
+  // Y of the editor inside the scroll content (for caret-visibility math).
+  const editorTopRef = useRef(0);
 
   const scrollToBottom = () => {
     setTimeout(() => {
@@ -115,17 +119,89 @@ export default function NoteDetailScreen() {
   type ActiveMenuType = 'none' | 'fontFamily' | 'fontSize' | 'color';
   const [activeMenu, setActiveMenu] = useState<ActiveMenuType>('none');
   const [keyboardHeight, setKeyboardHeight] = useState(0);
+  // True when the OS window itself shrinks for the keyboard (Android adjustResize
+  // without edge-to-edge). In that case bottom-anchored bars ride up automatically;
+  // compensating again (manual offsets) double-shifts the layout and is what
+  // previously squeezed/cut off the body input.
+  const baselineWindowH = useRef(Dimensions.get('window').height);
+  // How far to raise the bottom toolbars when the OS does NOT resize the window.
+  const [toolbarLift, setToolbarLift] = useState(0);
+  const toolbarDockRef = useRef<View | null>(null);
 
   useEffect(() => {
     const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
     const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
     // Fallback to Did events if Will not fired (some Android devices)
-    const showSub = Keyboard.addListener(showEvent as any, (e: KeyboardEvent) => setKeyboardHeight(e.endCoordinates.height));
-    const hideSub = Keyboard.addListener(hideEvent as any, () => setKeyboardHeight(0));
-    const showFallback = Platform.OS === 'ios' ? Keyboard.addListener('keyboardDidShow' as any, (e: any) => setKeyboardHeight(e.endCoordinates.height)) : { remove: () => {} } as any;
-    const hideFallback = Platform.OS === 'ios' ? Keyboard.addListener('keyboardDidHide' as any, () => setKeyboardHeight(0)) : { remove: () => {} } as any;
+    const handleShow = (e: KeyboardEvent) => {
+      setKeyboardHeight(e.endCoordinates.height);
+    };
+    const handleHide = () => {
+      setKeyboardHeight(0);
+    };
+    const showSub = Keyboard.addListener(showEvent as any, handleShow);
+    const hideSub = Keyboard.addListener(hideEvent as any, handleHide);
+    const showFallback = Platform.OS === 'ios'
+      ? Keyboard.addListener('keyboardDidShow' as any, handleShow)
+      : { remove: () => {} } as any;
+    const hideFallback = Platform.OS === 'ios'
+      ? Keyboard.addListener('keyboardDidHide' as any, handleHide)
+      : { remove: () => {} } as any;
+
     return () => { showSub.remove(); hideSub.remove(); showFallback.remove(); hideFallback.remove(); }
   }, []);
+
+  // Dock the bottom toolbars above the keyboard. measureInWindow gives the toolbar's
+  // ABSOLUTE window position, compared against the PRE-KEYBOARD baseline height —
+  // this is correct under resize AND non-resize modes:
+  //   resize mode:    toolbar already rides up with the window -> covered = 0.
+  //   non-resize:     toolbar stays pinned to the old bottom -> covered = overlap.
+  useEffect(() => {
+    if (keyboardHeight <= 0) {
+      setToolbarLift(0);
+      return;
+    }
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const measure = () => {
+      toolbarDockRef.current?.measureInWindow((x, y, w, h) => {
+        const bottomEdge = y + h;
+        const visibleBottom = baselineWindowH.current - keyboardHeight;
+        const covered = Math.max(0, Math.min(keyboardHeight, bottomEdge - visibleBottom));
+        setToolbarLift(covered > 2 ? covered : 0);
+      });
+    };
+    const id = requestAnimationFrame(() => {
+      measure();
+      // Self-correct once the resize animation settles (Android animates the window).
+      timer = setTimeout(measure, 380);
+    });
+    return () => {
+      cancelAnimationFrame(id);
+      if (timer) clearTimeout(timer);
+    };
+  }, [keyboardHeight]);
+
+  // Keeps the caret line visible above the toolbars whenever it activates/moves,
+  // or the keyboard opens. Pure math on measured content coordinates.
+  const keepCaretVisible = useCallback((y: number | null) => {
+    if (y === null && activeLineYRef.current) y = activeLineYRef.current.y;
+    if (y === null || y === undefined) return;
+    const editorTop = editorTopRef.current;
+    const target = Math.max(0, editorTop + y - 130);
+    requestAnimationFrame(() =>
+      scrollViewRef.current?.scrollTo({ y: target, animated: true })
+    );
+  }, []);
+
+  // Called by NoteBodyEditor whenever the active line moves/resizes.
+  const handleActiveLineMove = useCallback((y: number, h: number) => {
+    activeLineYRef.current = { y, h };
+    keepCaretVisible(y);
+  }, [keepCaretVisible]);
+
+  // Keyboard opening/closing also needs one visibility pass.
+  useEffect(() => {
+    if (activeLineYRef.current) keepCaretVisible(activeLineYRef.current.y);
+  }, [keyboardHeight, keepCaretVisible]);
 
   // Custom Calendar State
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
@@ -613,13 +689,15 @@ export default function NoteDetailScreen() {
     return body.slice(lineStart, lineEnd);
   }, [body, selection]);
 
-  const isH1Active = currentLine.startsWith('# ');
-  const isH2Active = currentLine.startsWith('## ');
-  const isH3Active = currentLine.startsWith('### ');
-  const isChecklistActive = currentLine.startsWith('☐ ') || currentLine.startsWith('☑ ');
-  const isBulletActive = currentLine.startsWith('• ') || currentLine.startsWith('- ');
-  const isNumberActive = /^\d+\.\s/.test(currentLine);
-  const isQuoteActive = currentLine.startsWith('> ');
+  // Toolbar highlight detection — MUST match the canonical storage markers used by
+  // NoteBodyEditor ('# ', '- [ ] ', '- ' …), not the old display glyphs (☐ / •).
+  const isH1Active = /^#{1}\s/.test(currentLine) && !/^#{2,3}\s/.test(currentLine);
+  const isH2Active = /^#{2}\s/.test(currentLine) && !/^#{3}\s/.test(currentLine);
+  const isH3Active = /^#{3}\s/.test(currentLine);
+  const isChecklistActive = /^\s*[-*]\s*\[[xX ]\]\s?/.test(currentLine);
+  const isBulletActive = /^\s*[-*]\s+/.test(currentLine) && !isChecklistActive;
+  const isNumberActive = /^\s*\d+\.\s/.test(currentLine);
+  const isQuoteActive = /^\s*>\s?/.test(currentLine);
 
 
   // Calendar Helpers
@@ -653,18 +731,18 @@ export default function NoteDetailScreen() {
 
   return (
     <View style={[styles.container, { flex: 1, backgroundColor: isDark ? '#0e0f14' : colors.bg }]}>
-      <KeyboardAvoidingView 
-        style={{ flex: 1 }}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
-      >
-        <View style={{ flex: 1 }}>
+      {/* No KeyboardAvoidingView: Android 'resize' mode already shrinks the window, and
+          adding KAV padding on top double-compensates (the reported "input cut off" bug).
+          The toolbar container below measures its own distance to the window bottom and
+          offsets itself by exactly what the keyboard covers. */}
+      <View style={{ flex: 1 }}>
           <ScrollView 
             ref={scrollViewRef}
             style={{ flex: 1 }}
             contentContainerStyle={{ 
               paddingTop: insets.top + 70,
-              paddingBottom: keyboardHeight > 0 ? keyboardHeight + 160 : 160
+              paddingBottom: 24,
+              flexGrow: 1,
             }}
             keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}
@@ -1007,23 +1085,31 @@ export default function NoteDetailScreen() {
             )}
 
             {/* Rendered Markdown Body Editor */}
-            <NoteBodyEditor
-              ref={bodyEditorRef}
-              value={body}
-              onChange={setBody}
-              onCursorChange={(pos) => { cursorPosRef.current = pos; setSelection({ start: pos, end: pos }); }}
-              colors={colors}
-              isArabic={isArabic}
-              isDark={isDark}
-              baseStyle={{
-                fontSize: activeFontSize,
-                fontFamily: activeFontFamily === 'System' ? undefined : activeFontFamily,
-                color: activeFontColor,
-                fontWeight: activeFontWeight,
-                fontStyle: activeFontStyle,
+            <View
+              onLayout={(e) => {
+                editorTopRef.current = e.nativeEvent.layout.y;
               }}
-              placeholder={isArabic ? 'ابدأ في كتابة ملاحظتك هنا...\n• استخدم الشريط أدناه لإضافة العناوين، القوائم، أو المهام.' : 'Start typing your note here...\n• Use the toolbar below to add Headings, Checklists, Bullets, or Formats.'}
-            />
+              style={{ flexGrow: 1 }}
+            >
+              <NoteBodyEditor
+                ref={bodyEditorRef}
+                value={body}
+                onChange={setBody}
+                onCursorChange={(pos) => { cursorPosRef.current = pos; setSelection({ start: pos, end: pos }); }}
+                onActivateLine={handleActiveLineMove}
+                colors={colors}
+                isArabic={isArabic}
+                isDark={isDark}
+                baseStyle={{
+                  fontSize: activeFontSize,
+                  fontFamily: activeFontFamily === 'System' ? undefined : activeFontFamily,
+                  color: activeFontColor,
+                  fontWeight: activeFontWeight,
+                  fontStyle: activeFontStyle,
+                }}
+                placeholder={isArabic ? 'ابدأ في كتابة ملاحظتك هنا...\n• استخدم الشريط أدناه لإضافة العناوين، القوائم، أو المهام.' : 'Start typing your note here...\n• Use the toolbar below to add Headings, Checklists, Bullets, or Formats.'}
+              />
+            </View>
 
           </ScrollView>
 
@@ -1098,17 +1184,15 @@ export default function NoteDetailScreen() {
             </View>
           </BlurView>
 
-          {/* AI Quick Actions Bar + Rich Toolbar - anchored above keyboard */}
+          {/* AI Quick Actions Bar + Rich Toolbar - docked above keyboard / screen bottom */}
           <View
+            ref={toolbarDockRef}
             style={{
-              position: 'absolute',
-              bottom: Platform.OS === 'ios' ? keyboardHeight : 0,
-              left: 0,
-              right: 0,
               backgroundColor: isDark ? '#0e0f14' : colors.bg,
               borderTopWidth: StyleSheet.hairlineWidth,
               borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.08)',
               zIndex: 9,
+              marginBottom: toolbarLift,
             }}
           >
             <View style={{ paddingVertical: 8, paddingHorizontal: 14 }}>
@@ -1243,7 +1327,7 @@ export default function NoteDetailScreen() {
             <View style={[
               styles.toolbarWrapper,
               {
-                paddingBottom: keyboardHeight > 0 ? 8 : insets.bottom + 8,
+                paddingBottom: Math.max(insets.bottom, 8),
                 backgroundColor: 'transparent',
               }
             ]}>
@@ -1399,7 +1483,6 @@ export default function NoteDetailScreen() {
           </View>
           </View>
         </View>
-      </KeyboardAvoidingView>
 
       {/* AI Assistant Interactive Chat Bottom Sheet */}
       <NoteAIChatSheet

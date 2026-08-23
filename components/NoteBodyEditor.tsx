@@ -1,18 +1,16 @@
-'use client';
-
 import React, {
   forwardRef,
   useCallback,
   useEffect,
   useImperativeHandle,
-  useMemo,
   useRef,
   useState,
 } from 'react';
 import {
-  ScrollView,
+  StyleSheet,
   Text,
   TextInput,
+  TouchableOpacity,
   TouchableWithoutFeedback,
   View,
 } from 'react-native';
@@ -34,540 +32,755 @@ interface NoteBodyEditorProps {
   value: string;
   onChange: (text: string) => void;
   onCursorChange?: (pos: number) => void;
+  onActivateLine?: (y: number, height: number) => void;
   colors: any;
   isArabic: boolean;
-  isDark: boolean;
+  isDark?: boolean;
   baseStyle?: any;
   placeholder?: string;
 }
 
-type LineType =
+export type BlockType =
   | 'normal'
   | 'h1'
   | 'h2'
   | 'h3'
+  | 'checkbox'
   | 'bullet'
   | 'number'
   | 'quote'
-  | 'checkbox';
+  | 'divider';
 
-interface ParsedLine {
-  type: LineType;
-  indent: string;
-  marker: string;
+export interface BlockItem {
+  id: string;
+  type: BlockType;
+  text: string;
+  isChecked?: boolean;
+  num?: number;
 }
 
-const mdLine = (raw: string): ParsedLine => {
-  const line = raw || '';
-  if (/^\s*#{3}\s?/.test(line)) return { type: 'h3', indent: '', marker: '### ' };
-  if (/^\s*#{2}\s?/.test(line)) return { type: 'h2', indent: '', marker: '## ' };
-  if (/^\s*#{1}\s?/.test(line)) return { type: 'h1', indent: '', marker: '# ' };
-  if (/^\s*>\s?/.test(line)) return { type: 'quote', indent: '', marker: '> ' };
-  if (/^\s*[-*]\s+\[[ xX]\]\s?/.test(line))
-    return { type: 'checkbox', indent: (line.match(/^(\s*)/) || ['', ''])[1], marker: '[ ] ' };
-  if (/^\s*[-*]\s+/.test(line)) return { type: 'bullet', indent: (line.match(/^(\s*)/) || ['', ''])[1], marker: '• ' };
-  if (/^\s*\d+\.\s+/.test(line)) return { type: 'number', indent: (line.match(/^(\s*)/) || ['', ''])[1], marker: 'N. ' };
-  return { type: 'normal', indent: '', marker: '' };
+let nextId = 1;
+const generateId = () => `b_${Date.now()}_${nextId++}`;
+
+/**
+ * Parses raw Markdown text into block items for WYSIWYG rendering.
+ * Preserves existing block IDs whenever possible so React never unmounts active TextInputs.
+ */
+const parseMarkdownToBlocks = (markdown: string, existingBlocks: BlockItem[] = []): BlockItem[] => {
+  if (!markdown || markdown.length === 0) {
+    const id = existingBlocks[0]?.id || generateId();
+    return [{ id, type: 'normal', text: '' }];
+  }
+
+  const rawLines = markdown.split('\n');
+  const blocks: BlockItem[] = [];
+
+  for (let i = 0; i < rawLines.length; i++) {
+    const raw = rawLines[i];
+    const trimmed = raw.trim();
+    const id = existingBlocks[i]?.id || generateId();
+
+    if (/^-{3,}$/.test(trimmed)) {
+      blocks.push({ id, type: 'divider', text: '' });
+      continue;
+    }
+
+    if (/^###\s+/.test(raw) || /^###$/.test(raw)) {
+      blocks.push({ id, type: 'h3', text: raw.replace(/^###\s?/, '') });
+      continue;
+    }
+    if (/^##\s+/.test(raw) || /^##$/.test(raw)) {
+      blocks.push({ id, type: 'h2', text: raw.replace(/^##\s?/, '') });
+      continue;
+    }
+    if (/^#\s+/.test(raw) || /^#$/.test(raw)) {
+      blocks.push({ id, type: 'h1', text: raw.replace(/^#\s?/, '') });
+      continue;
+    }
+
+    const checkMatch = raw.match(/^(\s*)[-*•]\s*\[([ xX])\]\s?(.*)$/);
+    if (checkMatch) {
+      const isChecked = checkMatch[2].toLowerCase() === 'x';
+      blocks.push({
+        id,
+        type: 'checkbox',
+        isChecked,
+        text: checkMatch[3] || '',
+      });
+      continue;
+    }
+
+    const bulletMatch = raw.match(/^(\s*)[-*•]\s+(.*)$/);
+    if (bulletMatch) {
+      blocks.push({
+        id,
+        type: 'bullet',
+        text: bulletMatch[2] || '',
+      });
+      continue;
+    }
+
+    const numMatch = raw.match(/^(\s*)(\d+)\.\s+(.*)$/);
+    if (numMatch) {
+      blocks.push({
+        id,
+        type: 'number',
+        num: parseInt(numMatch[2], 10),
+        text: numMatch[3] || '',
+      });
+      continue;
+    }
+
+    const quoteMatch = raw.match(/^(\s*)>\s?(.*)$/);
+    if (quoteMatch) {
+      blocks.push({
+        id,
+        type: 'quote',
+        text: quoteMatch[2] || '',
+      });
+      continue;
+    }
+
+    blocks.push({ id, type: 'normal', text: raw });
+  }
+
+  return blocks.length > 0 ? blocks : [{ id: generateId(), type: 'normal', text: '' }];
 };
 
-const markerFor = (type: LineType, indent: string): string => {
-  switch (type) {
-    case 'h1': return '# ';
-    case 'h2': return '## ';
-    case 'h3': return '### ';
-    case 'quote': return '> ';
-    case 'bullet': return indent + '• ';
-    case 'number': return indent + '1. ';
-    case 'checkbox': return indent + '[ ] ';
-    default: return '';
-  }
-};
-
-const INLINE_RE = /(\*\*([^*]+)\*\*)|(__([^_]+)__)|(~~([^~]+)~~)|(#\w+)|(\[[ xX]\]\s)/g;
-
-const parseInline = (text: string, base: any) => {
-  const nodes: React.ReactNode[] = [];
-  let last = 0;
-  let m: RegExpExecArray | null;
-  INLINE_RE.lastIndex = 0;
-  let key = 0;
-  while ((m = INLINE_RE.exec(text)) !== null) {
-    if (m.index > last) nodes.push(text.slice(last, m.index));
-    if (m[2] !== undefined) nodes.push(<Text key={key++} style={{ fontWeight: '800' }}>{m[2]}</Text>);
-    else if (m[4] !== undefined) nodes.push(<Text key={key++} style={{ fontStyle: 'italic' }}>{m[4]}</Text>);
-    else if (m[6] !== undefined) nodes.push(<Text key={key++} style={{ textDecorationLine: 'line-through', opacity: 0.6 }}>{m[6]}</Text>);
-    else if (m[7] !== undefined) nodes.push(<Text key={key++} style={{ color: base.tagColor || '#4a9eff', fontWeight: '700' }}>{m[7]}</Text>);
-    else if (m[8] !== undefined) nodes.push(<Text key={key++}>{m[8]}</Text>);
-    last = INLINE_RE.lastIndex;
-  }
-  if (last < text.length) nodes.push(text.slice(last));
-  return nodes;
-};
-
-const RenderLine = ({ line, base, isArabic }: { line: string; base: any; isArabic: boolean }) => {
-  const { type, indent } = mdLine(line);
-  const content = line.replace(/^(\s*)(#{1,3}|>|[-*]\s+\[[ xX]\]\s|[-*]\s+|\d+\.\s+)/, '');
-
-  if (type === 'h1' || type === 'h2' || type === 'h3') {
-    const size = type === 'h1' ? 26 : type === 'h2' ? 21 : 18;
-    return (
-      <Text style={[{ fontSize: size, fontWeight: '800', color: base.headingColor, marginVertical: 4, textAlign: isArabic ? 'right' : 'left' }, base.baseFont]}>
-        {parseInline(content, base)}
-      </Text>
-    );
-  }
-  if (type === 'quote') {
-    return (
-      <View style={{ flexDirection: 'row', marginVertical: 4, borderLeftWidth: 3, borderLeftColor: base.accent, paddingLeft: 10 }}>
-        <Text style={[{ fontSize: 16, fontStyle: 'italic', color: base.quoteColor, flex: 1, textAlign: isArabic ? 'right' : 'left' }, base.baseFont]}>
-          {parseInline(content, base)}
-        </Text>
-      </View>
-    );
-  }
-  if (type === 'bullet' || type === 'number') {
-    const isNum = type === 'number';
-    const bullet = isNum ? (line.match(/^\s*(\d+)\./) || ['', '1'])[1] + '.' : '•';
-    return (
-      <View style={{ flexDirection: 'row', marginVertical: 2, paddingLeft: indent.length * 12 }}>
-        <Text style={[{ fontSize: 16, color: base.bulletColor, width: 24, textAlign: 'center' }, base.baseFont]}>{bullet}</Text>
-        <Text style={[{ fontSize: 16, color: base.text, flex: 1, textAlign: isArabic ? 'right' : 'left' }, base.baseFont]}>
-          {parseInline(content, base)}
-        </Text>
-      </View>
-    );
-  }
-  if (type === 'checkbox') {
-    const checked = /^\s*[-*]\s+\[[xX]\]\s?/.test(line);
-    const text = content;
-    return (
-      <View style={{ flexDirection: 'row', marginVertical: 3, alignItems: 'center' }}>
-        <View style={{
-          width: 20, height: 20, borderRadius: 6, marginRight: 10,
-          borderWidth: 2, borderColor: checked ? base.accent : base.muted,
-          backgroundColor: checked ? base.accent : 'transparent',
-          alignItems: 'center', justifyContent: 'center',
-        }}>
-          {checked && <Text style={{ color: '#fff', fontSize: 13, fontWeight: '800' }}>✓</Text>}
-        </View>
-        <Text style={[{ fontSize: 16, flex: 1, color: checked ? base.muted : base.text, textDecorationLine: checked ? 'line-through' : 'none', textAlign: isArabic ? 'right' : 'left' }, base.baseFont]}>
-          {parseInline(text, base)}
-        </Text>
-      </View>
-    );
-  }
-  return (
-    <Text style={[{ fontSize: 16, color: base.text, marginVertical: 2, lineHeight: 24, textAlign: isArabic ? 'right' : 'left' }, base.baseFont]}>
-      {parseInline(content, base)}
-    </Text>
-  );
+/**
+ * Serializes block items into standard Markdown for saving to database.
+ */
+const serializeBlocksToMarkdown = (blocks: BlockItem[]): string => {
+  return blocks
+    .map((b) => {
+      switch (b.type) {
+        case 'h1':
+          return `# ${b.text}`;
+        case 'h2':
+          return `## ${b.text}`;
+        case 'h3':
+          return `### ${b.text}`;
+        case 'checkbox':
+          return `- [${b.isChecked ? 'x' : ' '}] ${b.text}`;
+        case 'bullet':
+          return `- ${b.text}`;
+        case 'number':
+          return `${b.num ?? 1}. ${b.text}`;
+        case 'quote':
+          return `> ${b.text}`;
+        case 'divider':
+          return '---';
+        case 'normal':
+        default:
+          return b.text;
+      }
+    })
+    .join('\n');
 };
 
 const NoteBodyEditor = forwardRef<NoteBodyEditorHandle, NoteBodyEditorProps>((props, ref) => {
-  const { value, onChange, onCursorChange, colors, isArabic, isDark, baseStyle, placeholder } = props;
+  const {
+    value,
+    onChange,
+    onCursorChange,
+    colors,
+    isArabic,
+    baseStyle,
+    placeholder,
+  } = props;
+
+  const [blocks, setBlocks] = useState<BlockItem[]>(() => parseMarkdownToBlocks(value));
+  const [activeId, setActiveId] = useState<string | null>(null);
+  const activeIdRef = useRef<string | null>(null);
+  const blocksRef = useRef<BlockItem[]>(blocks);
+  const inputRefs = useRef<Record<string, TextInput | null>>({});
+  const lastSerializedRef = useRef<string>(value || '');
+
+  // Keep blocksRef in sync
+  blocksRef.current = blocks;
+
+  // Sync external changes (e.g. AI summary insertions, initial load) while ignoring local keystrokes
+  useEffect(() => {
+    if (value === undefined) return;
+    if (value === lastSerializedRef.current) return;
+    const currentSerialized = serializeBlocksToMarkdown(blocksRef.current);
+    if (value === currentSerialized) return;
+
+    lastSerializedRef.current = value;
+    const parsed = parseMarkdownToBlocks(value, blocksRef.current);
+    setBlocks(parsed);
+    blocksRef.current = parsed;
+  }, [value]);
+
+  const commitBlocks = useCallback(
+    (newBlocks: BlockItem[]) => {
+      blocksRef.current = newBlocks;
+      setBlocks(newBlocks);
+      const markdown = serializeBlocksToMarkdown(newBlocks);
+      lastSerializedRef.current = markdown;
+      onChange(markdown);
+    },
+    [onChange]
+  );
+
+  const getActiveIndex = useCallback((): number => {
+    const id = activeIdRef.current || activeId;
+    if (!id) return blocksRef.current.length - 1;
+    const idx = blocksRef.current.findIndex((b) => b.id === id);
+    return idx >= 0 ? idx : blocksRef.current.length - 1;
+  }, [activeId]);
+
+  const focusBlock = useCallback((id: string) => {
+    activeIdRef.current = id;
+    setActiveId(id);
+    setTimeout(() => {
+      inputRefs.current[id]?.focus();
+    }, 30);
+  }, []);
+
+  /**
+   * Handles text changes and Enter keypresses within a specific line block.
+   */
+  const handleBlockTextChange = useCallback(
+    (index: number, newText: string) => {
+      const currentBlock = blocksRef.current[index];
+      if (!currentBlock) return;
+
+      // Detect if user pressed Enter inside this line
+      const nlIndex = newText.indexOf('\n');
+      if (nlIndex >= 0) {
+        const textBeforeNl = newText.slice(0, nlIndex);
+        const textAfterNl = newText.slice(nlIndex + 1);
+
+        const currentType = currentBlock.type;
+        const currentTextTrimmed = textBeforeNl.trim();
+
+        // 1. Enter on an empty formatted line -> revert to normal paragraph
+        if (
+          (currentType === 'checkbox' ||
+            currentType === 'bullet' ||
+            currentType === 'number' ||
+            currentType === 'quote') &&
+          currentTextTrimmed === ''
+        ) {
+          const updatedBlocks = [...blocksRef.current];
+          updatedBlocks[index] = {
+            ...currentBlock,
+            type: 'normal',
+            text: '',
+          };
+          commitBlocks(updatedBlocks);
+          focusBlock(currentBlock.id);
+          return;
+        }
+
+        // 2. Enter on a filled line -> determine the next line's type
+        let nextType: BlockType = 'normal';
+        let nextNum: number | undefined = undefined;
+
+        if (currentType === 'checkbox') {
+          nextType = 'checkbox';
+        } else if (currentType === 'bullet') {
+          nextType = 'bullet';
+        } else if (currentType === 'number') {
+          nextType = 'number';
+          nextNum = (currentBlock.num ?? 1) + 1;
+        } else {
+          // Headings and quotes cleanly exit to normal body text on Enter
+          nextType = 'normal';
+        }
+
+        const newBlock: BlockItem = {
+          id: generateId(),
+          type: nextType,
+          text: textAfterNl,
+          isChecked: false,
+          num: nextNum,
+        };
+
+        const updatedBlocks = [...blocksRef.current];
+        updatedBlocks[index] = {
+          ...currentBlock,
+          text: textBeforeNl,
+        };
+        updatedBlocks.splice(index + 1, 0, newBlock);
+
+        commitBlocks(updatedBlocks);
+        focusBlock(newBlock.id);
+        return;
+      }
+
+      // Normal typing on current block
+      const updatedBlocks = [...blocksRef.current];
+      updatedBlocks[index] = {
+        ...currentBlock,
+        text: newText,
+      };
+      commitBlocks(updatedBlocks);
+    },
+    [commitBlocks, focusBlock]
+  );
+
+  /**
+   * Handles Backspace when a block's text is empty.
+   */
+  const handleBlockKeyPress = useCallback(
+    (index: number, key: string) => {
+      if (key === 'Backspace') {
+        const currentBlock = blocksRef.current[index];
+        if (!currentBlock) return;
+
+        // If line is empty and has formatting (e.g. checkbox, bullet, heading), strip the format
+        if (currentBlock.text === '' && currentBlock.type !== 'normal') {
+          const updatedBlocks = [...blocksRef.current];
+          updatedBlocks[index] = {
+            ...currentBlock,
+            type: 'normal',
+          };
+          commitBlocks(updatedBlocks);
+          return;
+        }
+
+        // If line is empty and normal, delete this line and jump to previous line
+        if (currentBlock.text === '' && currentBlock.type === 'normal' && index > 0) {
+          const prevBlock = blocksRef.current[index - 1];
+          const updatedBlocks = [...blocksRef.current];
+          updatedBlocks.splice(index, 1);
+          commitBlocks(updatedBlocks);
+          if (prevBlock) {
+            focusBlock(prevBlock.id);
+          }
+        }
+      }
+    },
+    [commitBlocks, focusBlock]
+  );
+
+  /**
+   * Toggles checkbox checked state.
+   */
+  const toggleCheckboxState = useCallback(
+    (index: number) => {
+      const currentBlock = blocksRef.current[index];
+      if (!currentBlock || currentBlock.type !== 'checkbox') return;
+
+      const updatedBlocks = [...blocksRef.current];
+      updatedBlocks[index] = {
+        ...currentBlock,
+        isChecked: !currentBlock.isChecked,
+      };
+      commitBlocks(updatedBlocks);
+    },
+    [commitBlocks]
+  );
+
+  /**
+   * Toolbar helpers to toggle line types.
+   */
+  const toggleHeading = useCallback(
+    (level: 1 | 2 | 3) => {
+      const idx = getActiveIndex();
+      const currentBlock = blocksRef.current[idx];
+      if (!currentBlock) return;
+
+      const targetType = `h${level}` as BlockType;
+      const nextType = currentBlock.type === targetType ? 'normal' : targetType;
+
+      const updatedBlocks = [...blocksRef.current];
+      updatedBlocks[idx] = {
+        ...currentBlock,
+        type: nextType,
+      };
+      commitBlocks(updatedBlocks);
+      focusBlock(currentBlock.id);
+    },
+    [getActiveIndex, commitBlocks, focusBlock]
+  );
+
+  const toggleChecklist = useCallback(() => {
+    const idx = getActiveIndex();
+    const currentBlock = blocksRef.current[idx];
+    if (!currentBlock) return;
+
+    let nextType: BlockType = 'checkbox';
+    let nextChecked = false;
+
+    if (currentBlock.type === 'checkbox') {
+      if (!currentBlock.isChecked) {
+        // Unchecked -> Checked
+        nextType = 'checkbox';
+        nextChecked = true;
+      } else {
+        // Checked -> Normal (toggle off)
+        nextType = 'normal';
+        nextChecked = false;
+      }
+    }
+
+    const updatedBlocks = [...blocksRef.current];
+    updatedBlocks[idx] = {
+      ...currentBlock,
+      type: nextType,
+      isChecked: nextChecked,
+    };
+    commitBlocks(updatedBlocks);
+    focusBlock(currentBlock.id);
+  }, [getActiveIndex, commitBlocks, focusBlock]);
+
+  const toggleBullet = useCallback(() => {
+    const idx = getActiveIndex();
+    const currentBlock = blocksRef.current[idx];
+    if (!currentBlock) return;
+
+    const nextType = currentBlock.type === 'bullet' ? 'normal' : 'bullet';
+    const updatedBlocks = [...blocksRef.current];
+    updatedBlocks[idx] = {
+      ...currentBlock,
+      type: nextType,
+    };
+    commitBlocks(updatedBlocks);
+    focusBlock(currentBlock.id);
+  }, [getActiveIndex, commitBlocks, focusBlock]);
+
+  const toggleNumber = useCallback(() => {
+    const idx = getActiveIndex();
+    const currentBlock = blocksRef.current[idx];
+    if (!currentBlock) return;
+
+    const nextType = currentBlock.type === 'number' ? 'normal' : 'number';
+    const updatedBlocks = [...blocksRef.current];
+    updatedBlocks[idx] = {
+      ...currentBlock,
+      type: nextType,
+      num: 1,
+    };
+    commitBlocks(updatedBlocks);
+    focusBlock(currentBlock.id);
+  }, [getActiveIndex, commitBlocks, focusBlock]);
+
+  const toggleQuote = useCallback(() => {
+    const idx = getActiveIndex();
+    const currentBlock = blocksRef.current[idx];
+    if (!currentBlock) return;
+
+    const nextType = currentBlock.type === 'quote' ? 'normal' : 'quote';
+    const updatedBlocks = [...blocksRef.current];
+    updatedBlocks[idx] = {
+      ...currentBlock,
+      type: nextType,
+    };
+    commitBlocks(updatedBlocks);
+    focusBlock(currentBlock.id);
+  }, [getActiveIndex, commitBlocks, focusBlock]);
+
+  const insertHashtag = useCallback(() => {
+    const idx = getActiveIndex();
+    const currentBlock = blocksRef.current[idx];
+    if (!currentBlock) return;
+
+    const prefix = currentBlock.text.length > 0 && !currentBlock.text.endsWith(' ') ? ' ' : '';
+    const updatedBlocks = [...blocksRef.current];
+    updatedBlocks[idx] = {
+      ...currentBlock,
+      text: `${currentBlock.text}${prefix}#tag `,
+    };
+    commitBlocks(updatedBlocks);
+    focusBlock(currentBlock.id);
+  }, [getActiveIndex, commitBlocks, focusBlock]);
+
+  const applyInlineFormat = useCallback(
+    (marker: '**' | '__' | '~~') => {
+      const idx = getActiveIndex();
+      const currentBlock = blocksRef.current[idx];
+      if (!currentBlock) return;
+
+      const placeholderText = `${marker}text${marker}`;
+      const updatedBlocks = [...blocksRef.current];
+      updatedBlocks[idx] = {
+        ...currentBlock,
+        text: currentBlock.text ? `${currentBlock.text} ${placeholderText}` : placeholderText,
+      };
+      commitBlocks(updatedBlocks);
+      focusBlock(currentBlock.id);
+    },
+    [getActiveIndex, commitBlocks, focusBlock]
+  );
+
+  const insertDivider = useCallback(() => {
+    const idx = getActiveIndex();
+    const newDivider: BlockItem = { id: generateId(), type: 'divider', text: '' };
+    const nextNormal: BlockItem = { id: generateId(), type: 'normal', text: '' };
+
+    const updatedBlocks = [...blocksRef.current];
+    updatedBlocks.splice(idx + 1, 0, newDivider, nextNormal);
+    commitBlocks(updatedBlocks);
+    focusBlock(nextNormal.id);
+  }, [getActiveIndex, commitBlocks, focusBlock]);
+
+  const focus = useCallback(() => {
+    const lastBlock = blocksRef.current[blocksRef.current.length - 1];
+    if (lastBlock) {
+      focusBlock(lastBlock.id);
+    }
+  }, [focusBlock]);
+
+  useImperativeHandle(
+    ref,
+    () => ({
+      toggleHeading,
+      toggleChecklist,
+      toggleBullet,
+      toggleNumber,
+      toggleQuote,
+      insertHashtag,
+      applyInlineFormat,
+      insertDivider,
+      getPlainText: () => serializeBlocksToMarkdown(blocksRef.current),
+      focus,
+    }),
+    [
+      toggleHeading,
+      toggleChecklist,
+      toggleBullet,
+      toggleNumber,
+      toggleQuote,
+      insertHashtag,
+      applyInlineFormat,
+      insertDivider,
+      focus,
+    ]
+  );
+
+  const baseFontSize = baseStyle?.fontSize || 17;
   const activeFontFamily = baseStyle?.fontFamily;
   const activeFontWeight = baseStyle?.fontWeight || 'normal';
   const activeFontStyle = baseStyle?.fontStyle || 'normal';
   const activeFontColor = baseStyle?.color || colors.text;
 
-  const base = useMemo(
-    () => ({
-      text: activeFontColor,
-      headingColor: isDark ? '#ffffff' : '#111111',
-      quoteColor: isDark ? '#c9c9c9' : '#555555',
-      bulletColor: isDark ? '#e0e0e0' : '#222222',
-      muted: colors.textMuted,
-      accent: colors.accent || '#4a9eff',
-      tagColor: '#4a9eff',
-      baseFont: { fontFamily: activeFontFamily, fontWeight: activeFontWeight as any, fontStyle: activeFontStyle as any },
-    }),
-    [activeFontColor, isDark, colors, activeFontFamily, activeFontWeight, activeFontStyle]
-  );
-
-  const [lines, setLines] = useState<string[]>(() => (value && value.length ? value.split('\n') : ['']));
-  const [activeLine, setActiveLine] = useState<number | null>(null);
-  const [tick, setTick] = useState(0);
-  const inputRef = useRef<TextInput | null>(null);
-  const lastTypeRef = useRef<LineType>('normal');
-  const editingScrollRef = useRef<ScrollView | null>(null);
-
-  useEffect(() => {
-    const next = value && value.length ? value.split('\n') : [''];
-    setLines((prev) => (prev.join('\n') === next.join('\n') ? prev : next));
-  }, [value]);
-
-  const commit = useCallback(
-    (next: string[]) => {
-      setLines(next);
-      onChange(next.join('\n'));
-    },
-    [onChange]
-  );
-
-  const startEditing = useCallback(
-    (idx: number) => {
-      setActiveLine(idx);
-      lastTypeRef.current = mdLine(lines[idx] ?? '').type;
-    },
-    [lines]
-  );
-
-  const handleBlurCommit = useCallback(() => {
-    setActiveLine(null);
-  }, []);
-
-  const handleTextChange = useCallback(
-    (idx: number, newText: string) => {
-      const nl = newText.indexOf('\n');
-      if (nl >= 0) {
-        const before = newText.slice(0, nl);
-        const after = newText.slice(nl + 1);
-        const cur = lines[idx] ?? '';
-        const { type } = mdLine(cur);
-        const m = cur.match(/^(\s*)([#>\-*]|\d+\.)\s?(.*)$/);
-        let insertMarker = markerFor(type, (cur.match(/^(\s*)/) || ['', ''])[1]);
-        let clearToNormal = false;
-
-        if (type === 'checkbox') {
-          const cm = cur.match(/^(\s*)[-*]\s*\[[ xX]\]\s?(.*)$/);
-          const txt = cm ? cm[2] : cur.replace(/^\s*[-*]\s*\[[ xX]\]\s?/, '');
-          if (txt.trim() === '') { insertMarker = ''; clearToNormal = true; }
-          else insertMarker = (cm ? cm[1] : '') + '[ ] ';
-        } else if (type === 'number') {
-          const nm = cur.match(/^(\s*)(\d+)\.\s?(.*)$/);
-          const num = nm ? parseInt(nm[2], 10) : 1;
-          const txt = nm ? nm[3] : '';
-          if (txt.trim() === '') { insertMarker = ''; clearToNormal = true; }
-          else insertMarker = (nm ? nm[1] : '') + (num + 1) + '. ';
-        } else if (type === 'bullet') {
-          const bm = cur.match(/^(\s*)[-*]\s?(.*)$/);
-          const txt = bm ? bm[2] : '';
-          if (txt.trim() === '') { insertMarker = ''; clearToNormal = true; }
-          else insertMarker = (bm ? bm[1] : '') + '• ';
-        } else if (type === 'h1' || type === 'h2' || type === 'h3' || type === 'quote') {
-          const txt = m ? m[3] : '';
-          if (txt.trim() === '') { insertMarker = ''; clearToNormal = true; }
+  return (
+    <View style={styles.container}>
+      {blocks.map((block, index) => {
+        if (block.type === 'divider') {
+          return (
+            <View
+              key={block.id}
+              style={[
+                styles.divider,
+                { backgroundColor: colors.border || 'rgba(255, 255, 255, 0.12)' },
+              ]}
+            />
+          );
         }
 
-        const afterParts = after.split('\n');
-        const next = [...lines];
-        next[idx] = before;
-        next.splice(idx + 1, 0, (clearToNormal ? '' : insertMarker) + afterParts[0]);
-        for (let i = 1; i < afterParts.length; i++) next.splice(idx + 1 + i, 0, afterParts[i]);
-        lastTypeRef.current = clearToNormal || type === 'normal' ? 'normal' : type;
-        commit(next);
-        setActiveLine(idx + 1);
-        setTick((t) => t + 1);
-        onCursorChange?.(before.length);
-        return;
-      }
+        // Determine typography styles based on block type
+        let fontSize = baseFontSize;
+        let fontWeight = activeFontWeight;
+        let fontStyle = activeFontStyle;
+        let textColor = activeFontColor;
+        let lineHeight = Math.round(baseFontSize * 1.45);
 
-      const next = [...lines];
-      next[idx] = newText;
-      commit(next);
-      onCursorChange?.(newText.length);
-    },
-    [lines, commit, onCursorChange]
-  );
+        if (block.type === 'h1') {
+          fontSize = Math.round(baseFontSize * 1.55);
+          fontWeight = '800';
+          lineHeight = Math.round(fontSize * 1.3);
+        } else if (block.type === 'h2') {
+          fontSize = Math.round(baseFontSize * 1.3);
+          fontWeight = '700';
+          lineHeight = Math.round(fontSize * 1.35);
+        } else if (block.type === 'h3') {
+          fontSize = Math.round(baseFontSize * 1.12);
+          fontWeight = '700';
+          lineHeight = Math.round(fontSize * 1.4);
+        } else if (block.type === 'quote') {
+          fontStyle = 'italic';
+          textColor = colors.textMuted || activeFontColor;
+        }
 
-  const startLineEdit = useCallback(
-    (idx: number) => {
-      const cur = lines[idx] ?? '';
-      const { type, indent } = mdLine(cur);
-      let newText = cur;
-      if (type === 'normal') {
-        newText = markerFor(lastTypeRef.current, indent) + cur;
-      } else {
-        const stripped = cur.replace(/^(\s*)(#{1,3}|>|[-*]\s+\[[ xX]\]\s|[-*]\s+|\d+\.\s+)/, '');
-        newText = markerFor('normal', indent) + stripped;
-        lastTypeRef.current = 'normal';
-      }
-      const next = [...lines];
-      next[idx] = newText;
-      commit(next);
-      setActiveLine(idx);
-      setTick((t) => t + 1);
-      onCursorChange?.(newText.length);
-    },
-    [lines, commit, onCursorChange]
-  );
+        if (block.type === 'checkbox' && block.isChecked) {
+          textColor = colors.textMuted || '#888';
+        }
 
-  const toggleHeading = useCallback(
-    (level: 1 | 2 | 3) => {
-      const idx = activeLine ?? lines.length - 1;
-      const cur = lines[idx] ?? '';
-      const { type, indent } = mdLine(cur);
-      let newText: string;
-      if (type === (`h${level}` as LineType)) {
-        newText = cur.replace(/^(\s*)#{1,3}\s?/, indent);
-        lastTypeRef.current = 'normal';
-      } else {
-        const stripped = cur.replace(/^(\s*)(#{1,3}|>|[-*]\s+\[[ xX]\]\s|[-*]\s+|\d+\.\s+)/, '');
-        newText = indent + '#'.repeat(level) + ' ' + stripped;
-        lastTypeRef.current = (`h${level}` as LineType);
-      }
-      const next = [...lines];
-      next[idx] = newText;
-      commit(next);
-      setActiveLine(idx);
-      setTick((t) => t + 1);
-      onCursorChange?.(newText.length);
-    },
-    [activeLine, lines, commit, onCursorChange]
-  );
-
-  const toggleChecklist = useCallback(() => {
-    const idx = activeLine ?? lines.length - 1;
-    const cur = lines[idx] ?? '';
-    const { type, indent } = mdLine(cur);
-    let newText: string;
-    if (type === 'checkbox') {
-      newText = cur.replace(/^(\s*)[-*]\s+\[[ xX]\]\s?/, indent);
-      lastTypeRef.current = 'normal';
-    } else {
-      const stripped = cur.replace(/^(\s*)(#{1,3}|>|[-*]\s+\[[ xX]\]\s|[-*]\s+|\d+\.\s+)/, '');
-      newText = indent + '- [ ] ' + stripped;
-      lastTypeRef.current = 'checkbox';
-    }
-    const next = [...lines];
-    next[idx] = newText;
-    commit(next);
-    setActiveLine(idx);
-    setTick((t) => t + 1);
-    onCursorChange?.(newText.length);
-  }, [activeLine, lines, commit, onCursorChange]);
-
-  const toggleBullet = useCallback(() => {
-    const idx = activeLine ?? lines.length - 1;
-    const cur = lines[idx] ?? '';
-    const { type, indent } = mdLine(cur);
-    let newText: string;
-    if (type === 'bullet') {
-      newText = cur.replace(/^(\s*)[-*]\s?/, indent);
-      lastTypeRef.current = 'normal';
-    } else {
-      const stripped = cur.replace(/^(\s*)(#{1,3}|>|[-*]\s+\[[ xX]\]\s|[-*]\s+|\d+\.\s+)/, '');
-      newText = indent + '• ' + stripped;
-      lastTypeRef.current = 'bullet';
-    }
-    const next = [...lines];
-    next[idx] = newText;
-    commit(next);
-    setActiveLine(idx);
-    setTick((t) => t + 1);
-    onCursorChange?.(newText.length);
-  }, [activeLine, lines, commit, onCursorChange]);
-
-  const toggleNumber = useCallback(() => {
-    const idx = activeLine ?? lines.length - 1;
-    const cur = lines[idx] ?? '';
-    const { type, indent } = mdLine(cur);
-    let newText: string;
-    if (type === 'number') {
-      newText = cur.replace(/^(\s*)\d+\.\s?/, indent);
-      lastTypeRef.current = 'normal';
-    } else {
-      const stripped = cur.replace(/^(\s*)(#{1,3}|>|[-*]\s+\[[ xX]\]\s|[-*]\s+|\d+\.\s+)/, '');
-      newText = indent + '1. ' + stripped;
-      lastTypeRef.current = 'number';
-    }
-    const next = [...lines];
-    next[idx] = newText;
-    commit(next);
-    setActiveLine(idx);
-    setTick((t) => t + 1);
-    onCursorChange?.(newText.length);
-  }, [activeLine, lines, commit, onCursorChange]);
-
-  const toggleQuote = useCallback(() => {
-    const idx = activeLine ?? lines.length - 1;
-    const cur = lines[idx] ?? '';
-    const { type, indent } = mdLine(cur);
-    let newText: string;
-    if (type === 'quote') {
-      newText = cur.replace(/^(\s*)>\s?/, indent);
-      lastTypeRef.current = 'normal';
-    } else {
-      const stripped = cur.replace(/^(\s*)(#{1,3}|>|[-*]\s+\[[ xX]\]\s|[-*]\s+|\d+\.\s+)/, '');
-      newText = indent + '> ' + stripped;
-      lastTypeRef.current = 'quote';
-    }
-    const next = [...lines];
-    next[idx] = newText;
-    commit(next);
-    setActiveLine(idx);
-    setTick((t) => t + 1);
-    onCursorChange?.(newText.length);
-  }, [activeLine, lines, commit, onCursorChange]);
-
-  const insertHashtag = useCallback(() => {
-    const idx = activeLine ?? lines.length - 1;
-    const cur = lines[idx] ?? '';
-    const insert = cur.length && !/\s$/.test(cur) ? ' #tag' : '#tag';
-    const next = [...lines];
-    next[idx] = cur + insert;
-    commit(next);
-    setActiveLine(idx);
-    setTick((t) => t + 1);
-    onCursorChange?.(next[idx].length);
-  }, [activeLine, lines, commit, onCursorChange]);
-
-  const applyInlineFormat = useCallback(
-    (marker: '**' | '__' | '~~') => {
-      const idx = activeLine ?? lines.length - 1;
-      const cur = lines[idx] ?? '';
-      const newText = cur.length ? `${marker}${cur}${marker}` : `${marker}text${marker}`;
-      const next = [...lines];
-      next[idx] = newText;
-      commit(next);
-      setActiveLine(idx);
-      setTick((t) => t + 1);
-      onCursorChange?.(newText.length);
-    },
-    [activeLine, lines, commit, onCursorChange]
-  );
-
-  const insertDivider = useCallback(() => {
-    const idx = activeLine ?? lines.length - 1;
-    const next = [...lines];
-    next.splice(idx + 1, 0, '---');
-    next.splice(idx + 2, 0, '');
-    commit(next);
-    setActiveLine(idx + 2);
-    setTick((t) => t + 1);
-    onCursorChange?.(0);
-  }, [activeLine, lines, commit, onCursorChange]);
-
-  const toggleCheckOnLine = useCallback(
-    (idx: number) => {
-      const cur = lines[idx] ?? '';
-      if (!/^\s*[-*]\s+\[[ xX]\]\s?/.test(cur)) return;
-      const newText = cur.replace(/^(\s*[-*]\s+\[)([ xX])(\]\s?)/, (_m, a, b, c) => `${a}${b === ' ' ? 'x' : ' '}${c}`);
-      const next = [...lines];
-      next[idx] = newText;
-      commit(next);
-      setTick((t) => t + 1);
-    },
-    [lines, commit]
-  );
-
-  useImperativeHandle(ref, () => ({
-    toggleHeading,
-    toggleChecklist,
-    toggleBullet,
-    toggleNumber,
-    toggleQuote,
-    insertHashtag,
-    applyInlineFormat,
-    insertDivider,
-    getPlainText: () => lines.join('\n'),
-    focus: () => inputRef.current?.focus(),
-  }));
-
-  // Keep focus on the body editor whenever the active line changes (this is what
-  // prevents the focus from falling back to the title input).
-  useEffect(() => {
-    if (activeLine !== null && inputRef.current) {
-      const id = setTimeout(() => inputRef.current?.focus(), 0);
-      return () => clearTimeout(id);
-    }
-  }, [activeLine, tick]);
-
-  const activeMd = activeLine !== null ? mdLine(lines[activeLine] ?? '') : null;
-  const isActiveCheckbox = activeMd?.type === 'checkbox';
-
-  // Inline editable input that lives in normal flow (no absolute overlay), so it
-  // scrolls with the content and never drifts when the keyboard (resize mode) opens.
-  const renderActiveInput = (idx: number) => {
-    const line = lines[idx] ?? '';
-    const md = mdLine(line);
-    const isCheckbox = md.type === 'checkbox';
-    const content = line.replace(/^(\s*)(#{1,3}|>|[-*]\s+\[[ xX]\]\s|[-*]\s+|\d+\.\s+)/, '');
-    const editableText = isCheckbox ? content : line;
-    const size = md.type === 'h1' ? 26 : md.type === 'h2' ? 21 : md.type === 'h3' ? 18 : md.type === 'quote' ? 16 : 16;
-    const weight = md.type === 'h1' || md.type === 'h2' || md.type === 'h3' ? '800' : (activeFontWeight as any);
-    const isArabicLine = isArabic && /[؀-ۿ]/.test(editableText);
-    return (
-      <View style={{ flexDirection: 'row', alignItems: 'flex-start', paddingVertical: 2 }}>
-        {isCheckbox && (
-          <TouchableWithoutFeedback onPress={() => toggleCheckOnLine(idx)}>
-            <View
-              style={{
-                width: 20, height: 20, borderRadius: 6, marginTop: (size - 16) / 2 + 2, marginRight: 10,
-                borderWidth: 2,
-                borderColor: /\[[xX]\]/.test(line) ? (colors.accent || '#4a9eff') : colors.textMuted,
-                backgroundColor: /\[[xX]\]/.test(line) ? (colors.accent || '#4a9eff') : 'transparent',
-                alignItems: 'center', justifyContent: 'center',
-              }}
-            >
-              {/\[[xX]\]/.test(line) && (
-                <Text style={{ color: '#fff', fontSize: 13, fontWeight: '800' }}>✓</Text>
-              )}
-            </View>
-          </TouchableWithoutFeedback>
-        )}
-        <TextInput
-          key="note-editor-input"
-          ref={inputRef}
-          style={{
-            flex: 1,
-            fontSize: size,
-            fontWeight: weight,
-            fontStyle: activeFontStyle as any,
-            fontFamily: activeFontFamily,
-            color: isCheckbox && /\[[xX]\]/.test(line) ? colors.textMuted : activeFontColor,
-            lineHeight: size * 1.4,
-            textAlign: isArabicLine ? 'right' : 'left',
-            paddingVertical: 0,
-          }}
-          value={editableText}
-          onChangeText={(t) => handleTextChange(idx, isCheckbox ? t : t)}
-          onBlur={handleBlurCommit}
-          multiline
-          blurOnSubmit={false}
-          autoFocus={false}
-          scrollEnabled={false}
-          placeholderTextColor={colors.textMuted}
-          selectionColor={colors.accent || '#4a9eff'}
-        />
-      </View>
-    );
-  };
-
-  return (
-    <ScrollView
-      ref={editingScrollRef}
-      style={{ flex: 1 }}
-      contentContainerStyle={{ paddingHorizontal: 16, paddingVertical: 4 }}
-      keyboardShouldPersistTaps="handled"
-      keyboardDismissMode="interactive"
-    >
-      {lines.map((line, idx) => {
-        const isActive = idx === activeLine;
         return (
-          <View key={`line-${idx}`} style={{ minHeight: 22 }}>
-            {isActive ? (
-              renderActiveInput(idx)
-            ) : (
-              <TouchableWithoutFeedback onPress={() => startEditing(idx)}>
-                <View style={{ paddingVertical: 2 }}>
-                  <RenderLine line={line} base={base} isArabic={isArabic} />
-                </View>
-              </TouchableWithoutFeedback>
+          <View
+            key={block.id}
+            style={[
+              styles.blockRow,
+              block.type === 'quote' && {
+                borderLeftWidth: 3,
+                borderLeftColor: colors.primary || '#6366F1',
+                paddingLeft: 12,
+                marginLeft: 4,
+              },
+            ]}
+          >
+            {/* Interactive Checkbox Widget */}
+            {block.type === 'checkbox' && (
+              <TouchableOpacity
+                onPress={() => toggleCheckboxState(index)}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                style={[
+                  styles.checkboxBox,
+                  {
+                    borderColor: block.isChecked
+                      ? colors.primary || '#6366F1'
+                      : colors.textMuted || '#666',
+                    backgroundColor: block.isChecked
+                      ? colors.primary || '#6366F1'
+                      : 'transparent',
+                    marginTop: Math.max(3, (lineHeight - 20) / 2),
+                  },
+                ]}
+              >
+                {block.isChecked && (
+                  <Text style={styles.checkmarkIcon}>✓</Text>
+                )}
+              </TouchableOpacity>
             )}
+
+            {/* Bullet Point Widget */}
+            {block.type === 'bullet' && (
+              <Text
+                style={[
+                  styles.bulletGlyph,
+                  {
+                    color: colors.primary || colors.text,
+                    fontSize: baseFontSize,
+                    lineHeight: lineHeight,
+                    marginTop: 1,
+                  },
+                ]}
+              >
+                •
+              </Text>
+            )}
+
+            {/* Numbered List Widget */}
+            {block.type === 'number' && (
+              <Text
+                style={[
+                  styles.numberGlyph,
+                  {
+                    color: colors.primary || colors.text,
+                    fontSize: baseFontSize,
+                    lineHeight: lineHeight,
+                    marginTop: 1,
+                  },
+                ]}
+              >
+                {`${block.num ?? index + 1}.`}
+              </Text>
+            )}
+
+            {/* Main Text Input for this Line */}
+            <TextInput
+              ref={(r) => {
+                inputRefs.current[block.id] = r;
+              }}
+              style={[
+                styles.blockInput,
+                {
+                  fontSize,
+                  fontWeight: fontWeight as any,
+                  fontStyle: fontStyle as any,
+                  fontFamily: activeFontFamily,
+                  color: textColor,
+                  lineHeight,
+                  textAlign: isArabic ? 'right' : 'left',
+                  textDecorationLine:
+                    block.type === 'checkbox' && block.isChecked
+                      ? 'line-through'
+                      : 'none',
+                },
+              ]}
+              value={block.text}
+              onChangeText={(t) => handleBlockTextChange(index, t)}
+              onKeyPress={(e) => handleBlockKeyPress(index, e.nativeEvent.key)}
+              onFocus={() => {
+                activeIdRef.current = block.id;
+                setActiveId(block.id);
+                onCursorChange?.(0);
+              }}
+              multiline
+              blurOnSubmit={false}
+              placeholder={
+                blocks.length === 1 && index === 0
+                  ? placeholder || (isArabic ? 'ابدأ الكتابة هنا...' : 'Start typing here...')
+                  : undefined
+              }
+              placeholderTextColor={colors.textMuted}
+              selectionColor={colors.primary || '#6366F1'}
+              underlineColorAndroid="transparent"
+              disableFullscreenUI
+              scrollEnabled={false}
+            />
           </View>
         );
       })}
 
-      {lines.length === 1 && lines[0] === '' && activeLine === null && (
-        <Text style={{ position: 'absolute', top: 6, left: 16, color: colors.textMuted, fontSize: 16 }}>
-          {placeholder || (isArabic ? 'ابدأ الكتابة...' : 'Start typing...')}
-        </Text>
-      )}
-    </ScrollView>
+      {/* Trailing empty tap zone to continue writing at the end */}
+      <TouchableWithoutFeedback onPress={focus}>
+        <View style={styles.trailingArea} />
+      </TouchableWithoutFeedback>
+    </View>
   );
 });
 
 NoteBodyEditor.displayName = 'NoteBodyEditor';
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    paddingHorizontal: 20,
+    paddingVertical: 8,
+    minHeight: 350,
+  },
+  blockRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginVertical: 2,
+    minHeight: 28,
+  },
+  blockInput: {
+    flex: 1,
+    paddingVertical: 2,
+    paddingHorizontal: 0,
+    margin: 0,
+  },
+  checkboxBox: {
+    width: 20,
+    height: 20,
+    borderRadius: 6,
+    borderWidth: 2,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 10,
+  },
+  checkmarkIcon: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '800',
+  },
+  bulletGlyph: {
+    width: 22,
+    textAlign: 'center',
+    fontWeight: '700',
+    marginRight: 4,
+  },
+  numberGlyph: {
+    minWidth: 22,
+    textAlign: 'left',
+    fontWeight: '700',
+    marginRight: 6,
+  },
+  divider: {
+    height: 1,
+    marginVertical: 12,
+    opacity: 0.6,
+  },
+  trailingArea: {
+    flex: 1,
+    minHeight: 200,
+  },
+});
 
 export default NoteBodyEditor;
