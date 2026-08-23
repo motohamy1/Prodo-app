@@ -26,7 +26,10 @@
         "android.permission.POST_NOTIFICATIONS",
         "android.permission.VIBRATE",
         "android.permission.RECEIVE_BOOT_COMPLETED",
-        "android.permission.RECORD_AUDIO"
+        "android.permission.RECORD_AUDIO",
+        "android.permission.MODIFY_AUDIO_SETTINGS",
+        "android.permission.FOREGROUND_SERVICE",
+        "android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK"
       ]
     },
     "web": {
@@ -72,7 +75,8 @@
         {
           "android": {
             "enableProguardInReleaseBuilds": true,
-            "enableShrinkResourcesInReleaseBuilds": true
+            "enableShrinkResourcesInReleaseBuilds": true,
+            "enableMinifyInReleaseBuilds": true
           }
         }
       ]
@@ -83,7 +87,7 @@
     "extra": {
       "router": {},
       "eas": {
-        "projectId": "e341c08b-c194-454e-9beb-bb58bd658384"
+        "projectId": "933ab2d7-9343-4d11-b37c-0a5b7d25061c"
       }
     },
     "owner": "motohamy735"
