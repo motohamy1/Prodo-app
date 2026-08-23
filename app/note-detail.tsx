@@ -96,7 +96,6 @@ export default function NoteDetailScreen() {
   const [isScheduleVisible, setScheduleVisible] = useState(isReminder === 'true');
   const [dateTimeConfirmed, setDateTimeConfirmed] = useState(false);
 
-  const bodyInputRef = useRef<TextInput | null>(null);
   const bodyEditorRef = useRef<NoteBodyEditorHandle>(null);
   const scrollViewRef = useRef<ScrollView | null>(null);
 

@@ -10,7 +10,7 @@ import React, {
   useState,
 } from 'react';
 import {
-  Dimensions,
+  ScrollView,
   Text,
   TextInput,
   TouchableWithoutFeedback,
@@ -189,9 +189,7 @@ const NoteBodyEditor = forwardRef<NoteBodyEditorHandle, NoteBodyEditorProps>((pr
   const [tick, setTick] = useState(0);
   const inputRef = useRef<TextInput | null>(null);
   const lastTypeRef = useRef<LineType>('normal');
-  const [lineLayouts, setLineLayouts] = useState<Record<number, { x: number; y: number; width: number; height: number }>>({});
-  const lastLayoutRef = useRef<{ x: number; y: number; width: number; height: number } | null>(null);
-  const [containerWidth, setContainerWidth] = useState<number>(Dimensions.get('window').width - 48);
+  const editingScrollRef = useRef<ScrollView | null>(null);
 
   useEffect(() => {
     const next = value && value.length ? value.split('\n') : [''];
@@ -216,17 +214,6 @@ const NoteBodyEditor = forwardRef<NoteBodyEditorHandle, NoteBodyEditorProps>((pr
 
   const handleBlurCommit = useCallback(() => {
     setActiveLine(null);
-  }, []);
-
-  const recordLayout = useCallback((idx: number, layout: { x: number; y: number; width: number; height: number }) => {
-    lastLayoutRef.current = layout;
-    setLineLayouts((prev) => {
-      const old = prev[idx];
-      if (old && old.x === layout.x && old.y === layout.y && old.width === layout.width && old.height === layout.height) {
-        return prev;
-      }
-      return { ...prev, [idx]: layout };
-    });
   }, []);
 
   const handleTextChange = useCallback(
@@ -486,90 +473,55 @@ const NoteBodyEditor = forwardRef<NoteBodyEditorHandle, NoteBodyEditorProps>((pr
     }
   }, [activeLine, tick]);
 
-  const activeLayout = activeLine !== null ? lineLayouts[activeLine] ?? lastLayoutRef.current : null;
   const activeMd = activeLine !== null ? mdLine(lines[activeLine] ?? '') : null;
   const isActiveCheckbox = activeMd?.type === 'checkbox';
-  const checkboxOffset = isActiveCheckbox ? 30 : 0;
 
-  const overlayStyle: any = useMemo(() => {
-    const size = activeMd
-      ? activeMd.type === 'h1' ? 26 : activeMd.type === 'h2' ? 21 : activeMd.type === 'h3' ? 18 : activeMd.type === 'quote' ? 16 : 16
-      : 16;
-    const weight = activeMd && (activeMd.type === 'h1' || activeMd.type === 'h2' || activeMd.type === 'h3') ? '800' : (activeFontWeight as any);
-    return {
-      position: 'absolute',
-      paddingVertical: 2,
-      paddingHorizontal: 0,
-      fontSize: size,
-      fontWeight: weight,
-      fontStyle: activeFontStyle as any,
-      fontFamily: activeFontFamily,
-      color: activeFontColor,
-      lineHeight: size * 1.4,
-      textAlign: isArabic && /[؀-ۿ]/.test(lines[activeLine ?? -1] ?? '') ? 'right' : 'left',
-    };
-  }, [activeMd, activeFontWeight, activeFontStyle, activeFontFamily, activeFontColor, isArabic, lines, activeLine]);
-
-  return (
-    <View
-      style={{ flex: 1, position: 'relative' }}
-      onStartShouldSetResponderCapture={(e) => {
-        const target = (e.target as any)?.props?.children;
-        if (target === undefined) {
-          if (activeLine !== null) handleBlurCommit();
-        }
-        return false;
-      }}
-    >
-      <View
-        style={{ position: 'relative', paddingHorizontal: 16 }}
-        onLayout={(e) => setContainerWidth(e.nativeEvent.layout.width - 32)}
-      >
-        {lines.map((line, idx) => {
-          const isActive = idx === activeLine;
-          return (
+  // Inline editable input that lives in normal flow (no absolute overlay), so it
+  // scrolls with the content and never drifts when the keyboard (resize mode) opens.
+  const renderActiveInput = (idx: number) => {
+    const line = lines[idx] ?? '';
+    const md = mdLine(line);
+    const isCheckbox = md.type === 'checkbox';
+    const content = line.replace(/^(\s*)(#{1,3}|>|[-*]\s+\[[ xX]\]\s|[-*]\s+|\d+\.\s+)/, '');
+    const editableText = isCheckbox ? content : line;
+    const size = md.type === 'h1' ? 26 : md.type === 'h2' ? 21 : md.type === 'h3' ? 18 : md.type === 'quote' ? 16 : 16;
+    const weight = md.type === 'h1' || md.type === 'h2' || md.type === 'h3' ? '800' : (activeFontWeight as any);
+    const isArabicLine = isArabic && /[؀-ۿ]/.test(editableText);
+    return (
+      <View style={{ flexDirection: 'row', alignItems: 'flex-start', paddingVertical: 2 }}>
+        {isCheckbox && (
+          <TouchableWithoutFeedback onPress={() => toggleCheckOnLine(idx)}>
             <View
-              key={`line-${idx}`}
-              onLayout={(e) => recordLayout(idx, e.nativeEvent.layout)}
-              style={{ paddingVertical: 3, minHeight: 24 }}
+              style={{
+                width: 20, height: 20, borderRadius: 6, marginTop: (size - 16) / 2 + 2, marginRight: 10,
+                borderWidth: 2,
+                borderColor: /\[[xX]\]/.test(line) ? (colors.accent || '#4a9eff') : colors.textMuted,
+                backgroundColor: /\[[xX]\]/.test(line) ? (colors.accent || '#4a9eff') : 'transparent',
+                alignItems: 'center', justifyContent: 'center',
+              }}
             >
-              {isActive ? (
-                <View style={{ opacity: 0 }}>
-                  <RenderLine line={line} base={base} isArabic={isArabic} />
-                </View>
-              ) : (
-                <TouchableWithoutFeedback onPress={() => startEditing(idx)}>
-                  <View>
-                    <RenderLine line={line} base={base} isArabic={isArabic} />
-                  </View>
-                </TouchableWithoutFeedback>
+              {/\[[xX]\]/.test(line) && (
+                <Text style={{ color: '#fff', fontSize: 13, fontWeight: '800' }}>✓</Text>
               )}
             </View>
-          );
-        })}
-
-        {lines.length === 1 && lines[0] === '' && (
-          <Text style={{ position: 'absolute', top: 3, left: 16, color: colors.textMuted, fontSize: 16 }}>
-            {placeholder || (isArabic ? 'ابدأ الكتابة...' : 'Start typing...')}
-          </Text>
+          </TouchableWithoutFeedback>
         )}
-      </View>
-
-      {activeLine !== null && (
         <TextInput
           key="note-editor-input"
           ref={inputRef}
-          style={[
-            overlayStyle,
-            {
-              top: (activeLayout?.y ?? 0) + 3,
-              left: (activeLayout?.x ?? 0) + checkboxOffset,
-              width: (activeLayout?.width ?? containerWidth) - checkboxOffset,
-              height: activeLayout?.height ?? 28,
-            },
-          ]}
-          value={lines[activeLine] ?? ''}
-          onChangeText={(t) => handleTextChange(activeLine, t)}
+          style={{
+            flex: 1,
+            fontSize: size,
+            fontWeight: weight,
+            fontStyle: activeFontStyle as any,
+            fontFamily: activeFontFamily,
+            color: isCheckbox && /\[[xX]\]/.test(line) ? colors.textMuted : activeFontColor,
+            lineHeight: size * 1.4,
+            textAlign: isArabicLine ? 'right' : 'left',
+            paddingVertical: 0,
+          }}
+          value={editableText}
+          onChangeText={(t) => handleTextChange(idx, isCheckbox ? t : t)}
           onBlur={handleBlurCommit}
           multiline
           blurOnSubmit={false}
@@ -578,38 +530,41 @@ const NoteBodyEditor = forwardRef<NoteBodyEditorHandle, NoteBodyEditorProps>((pr
           placeholderTextColor={colors.textMuted}
           selectionColor={colors.accent || '#4a9eff'}
         />
-      )}
+      </View>
+    );
+  };
 
-      {activeLine !== null && isActiveCheckbox && activeLayout && (
-        <TouchableWithoutFeedback onPress={() => toggleCheckOnLine(activeLine)}>
-          <View
-            style={{
-              position: 'absolute',
-              top: activeLayout.y + 4,
-              left: activeLayout.x,
-              width: 26,
-              height: 26,
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
-            <View
-              style={{
-                width: 20, height: 20, borderRadius: 6,
-                borderWidth: 2,
-                borderColor: /\[[xX]\]/.test(lines[activeLine] ?? '') ? (colors.accent || '#4a9eff') : colors.textMuted,
-                backgroundColor: /\[[xX]\]/.test(lines[activeLine] ?? '') ? (colors.accent || '#4a9eff') : 'transparent',
-                alignItems: 'center', justifyContent: 'center',
-              }}
-            >
-              {/\[[xX]\]/.test(lines[activeLine] ?? '') && (
-                <Text style={{ color: '#fff', fontSize: 13, fontWeight: '800' }}>✓</Text>
-              )}
-            </View>
+  return (
+    <ScrollView
+      ref={editingScrollRef}
+      style={{ flex: 1 }}
+      contentContainerStyle={{ paddingHorizontal: 16, paddingVertical: 4 }}
+      keyboardShouldPersistTaps="handled"
+      keyboardDismissMode="interactive"
+    >
+      {lines.map((line, idx) => {
+        const isActive = idx === activeLine;
+        return (
+          <View key={`line-${idx}`} style={{ minHeight: 22 }}>
+            {isActive ? (
+              renderActiveInput(idx)
+            ) : (
+              <TouchableWithoutFeedback onPress={() => startEditing(idx)}>
+                <View style={{ paddingVertical: 2 }}>
+                  <RenderLine line={line} base={base} isArabic={isArabic} />
+                </View>
+              </TouchableWithoutFeedback>
+            )}
           </View>
-        </TouchableWithoutFeedback>
+        );
+      })}
+
+      {lines.length === 1 && lines[0] === '' && activeLine === null && (
+        <Text style={{ position: 'absolute', top: 6, left: 16, color: colors.textMuted, fontSize: 16 }}>
+          {placeholder || (isArabic ? 'ابدأ الكتابة...' : 'Start typing...')}
+        </Text>
       )}
-    </View>
+    </ScrollView>
   );
 });
 
