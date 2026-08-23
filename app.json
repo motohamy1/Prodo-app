@@ -1,26 +1,25 @@
 {
   "expo": {
-    "name": "Prodo",
-    "slug": "do-it",
+    "name": "Nizam",
+    "slug": "nizam",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/prodo.png",
-    "scheme": "prodoapp",
+    "icon": "./assets/images/nizam.png",
+    "scheme": "nizamapp",
     "userInterfaceStyle": "automatic",
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.motohamy.prodoapp"
+      "bundleIdentifier": "com.motohamy.nizamapp"
     },
     "android": {
       "softwareKeyboardLayoutMode": "resize",
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
-        "foregroundImage": "./assets/images/prodo.png",
-        "backgroundImage": "./assets/images/prodo.png",
-        "monochromeImage": "./assets/images/prodo.png"
+        "backgroundColor": "#0E0F14",
+        "foregroundImage": "./assets/images/adaptive-icon.png",
+        "monochromeImage": "./assets/images/adaptive-icon.png"
       },
       "predictiveBackGestureEnabled": false,
-      "package": "com.motohamy.prodoapp",
+      "package": "com.motohamy.nizamapp",
       "permissions": [
         "android.permission.SCHEDULE_EXACT_ALARM",
         "android.permission.USE_EXACT_ALARM",
@@ -32,14 +31,14 @@
     },
     "web": {
       "output": "static",
-      "favicon": "./assets/images/prodo.png"
+      "favicon": "./assets/images/nizam.png"
     },
     "plugins": [
       "expo-router",
       [
         "expo-splash-screen",
         {
-          "image": "./assets/images/prodo.png",
+          "image": "./assets/images/nizam.png",
           "imageWidth": 200,
           "resizeMode": "contain",
           "backgroundColor": "#ffffff",

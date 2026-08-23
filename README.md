@@ -1,6 +1,6 @@
-# ToDoIt 👋
+# Nizam (نظام) 👋
 
-ToDoIt is a mobile productivity application built with **Expo + React Native** and powered by **Convex**.
+Nizam is a next-generation mobile productivity and life-operating application built with **Expo + React Native** and powered by **Convex**.
 
 It helps users manage tasks, projects, planning, and reminders in one place, with support for:
 - real-time sync,

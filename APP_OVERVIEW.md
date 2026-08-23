@@ -1,6 +1,6 @@
-# 🚀 Prodo — Next-Generation AI Productivity & Life Operating System
+# 🚀 Nizam (نظام) — Next-Generation AI Productivity & Life Operating System
 
-> **Prodo** is an AI-powered, offline-first productivity and life management application built with **React Native (Expo SDK 57)**, **TypeScript**, and a reactive real-time **Convex** cloud backend. Designed with fluid aesthetics, Arabic/English bilingual RTL support, and multi-tier project architectures, Prodo combines fast daily execution with long-range planning.
+> **Nizam** is an AI-powered, offline-first productivity and life management application built with **React Native (Expo SDK 57)**, **TypeScript**, and a reactive real-time **Convex** cloud backend. Designed with fluid aesthetics, Arabic/English bilingual RTL support, and multi-tier project architectures, Nizam combines fast daily execution with long-range planning.
 
 ---
 

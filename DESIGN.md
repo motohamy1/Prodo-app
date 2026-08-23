@@ -1,5 +1,5 @@
 ---
-name: Prodo
+name: Nizam
 description: Modern dark obsidian workspace — 4-color palette system (#f6e5c9, #e5f19d, #defef9, #dbd4fd), clean typography, rich contrast
 colors:
   bg: "#0E0F14"
@@ -56,13 +56,13 @@ spacing:
   xxxl: "64px"
 ---
 
-# Design System: Prodo (Modern Dark Precision)
+# Design System: Nizam (Modern Dark Precision)
 
 ## 1. Overview
 
 **Creative North Star: "Precision Obsidian Quartet"**
 
-Prodo uses a deep OLED dark theme (`#0E0F14`) anchored by a curated 4-color palette that appears immediately after the background:
+Nizam uses a deep OLED dark theme (`#0E0F14`) anchored by a curated 4-color palette that appears immediately after the background:
 - **Warm Cream (`#f6e5c9`)** — Warmth, elevated FAB action button, in-progress indicator, warm category theme
 - **Pastel Lime (`#e5f19d`)** — Energy, completion/done status, streak/productivity metrics, chartreuse theme
 - **Ice Mint (`#defef9`)** — Glacial serenity, upcoming events, calendar chips, checklist accents, aqua theme
@@ -129,7 +129,7 @@ The currently focused item gets a 3px amber edge on one side (left in LTR, right
 - Active filter pills
 - Active navigation tab (underline variant)
 
-This is the single visual signature that makes ToDoIt recognizable.
+This is the single visual signature that makes Nizam recognizable.
 
 ## 6. Spacing Scale
 

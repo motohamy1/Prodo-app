@@ -34,9 +34,9 @@ export const FOLDER_PALETTES = [
   { bg: '#FB7185', darkBg: '#E11D48', tabBg: '#F43F5E', ink: '#2A040D', subInk: '#5E0D1F', badgeBg: '#FFE4E6', iconColor: '#BE123C' }, // Coral Pink/Red (like "Tasty food")
   { bg: '#34D399', darkBg: '#059669', tabBg: '#10B981', ink: '#022C22', subInk: '#064E3B', badgeBg: '#D1FAE5', iconColor: '#047857' }, // Fresh Green (like "Sport")
   { bg: '#38BDF8', darkBg: '#0284C7', tabBg: '#0EA5E9', ink: '#082F49', subInk: '#0C4A6E', badgeBg: '#E0F2FE', iconColor: '#0369A1' }, // Sky Cyan
-  { bg: '#e5f19d', darkBg: '#a8be36', tabBg: '#cbe068', ink: '#1A290E', subInk: '#364B1D', badgeBg: '#FFFFFF', iconColor: '#476318' }, // Pastel Lime (Prodo theme)
-  { bg: '#dbd4fd', darkBg: '#9e8ef8', tabBg: '#c4b6f7', ink: '#1E143C', subInk: '#3E2F6B', badgeBg: '#FFFFFF', iconColor: '#5B41A8' }, // Soft Lavender (Prodo theme)
-  { bg: '#f6e5c9', darkBg: '#d8b982', tabBg: '#edd5af', ink: '#2B1C0B', subInk: '#4D361E', badgeBg: '#FFFFFF', iconColor: '#6B4A23' }, // Warm Cream (Prodo theme)
+  { bg: '#e5f19d', darkBg: '#a8be36', tabBg: '#cbe068', ink: '#1A290E', subInk: '#364B1D', badgeBg: '#FFFFFF', iconColor: '#476318' }, // Pastel Lime (Nizam theme)
+  { bg: '#dbd4fd', darkBg: '#9e8ef8', tabBg: '#c4b6f7', ink: '#1E143C', subInk: '#3E2F6B', badgeBg: '#FFFFFF', iconColor: '#5B41A8' }, // Soft Lavender (Nizam theme)
+  { bg: '#f6e5c9', darkBg: '#d8b982', tabBg: '#edd5af', ink: '#2B1C0B', subInk: '#4D361E', badgeBg: '#FFFFFF', iconColor: '#6B4A23' }, // Warm Cream (Nizam theme)
 ];
 
 export const getFolderPalette = (index: number, customColor?: string) => {

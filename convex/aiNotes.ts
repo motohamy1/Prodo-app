@@ -268,8 +268,8 @@ Transcript: ${noteTranscript}
         const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
 
         const systemInstruction = isArabic
-          ? `أنت مساعد ذكي للملاحظات داخل تطبيق ToDoIt. أجب عن أسئلة المستخدم باللغة العربية بدقة واعتماداً على محتوى الملاحظة والتسجيل الصوتي التالي فقط. إذا لم تكن الإجابة موجودة في الملاحظة، وضح ذلك بلطف.\nمحتوى الملاحظة والتسجيل الصوتي:\n"""\n${noteContent}\n"""`
-          : `You are an intelligent note AI assistant in the ToDoIt app. Answer the user's questions accurately based strictly on this note's content and voice transcript. If the answer is not mentioned, politely clarify.\nNote Content and Voice Transcript:\n"""\n${noteContent}\n"""`;
+          ? `أنت مساعد ذكي للملاحظات داخل تطبيق نظام (Nizam). أجب عن أسئلة المستخدم باللغة العربية بدقة واعتماداً على محتوى الملاحظة والتسجيل الصوتي التالي فقط. إذا لم تكن الإجابة موجودة في الملاحظة، وضح ذلك بلطف.\nمحتوى الملاحظة والتسجيل الصوتي:\n"""\n${noteContent}\n"""`
+          : `You are an intelligent note AI assistant in the Nizam app. Answer the user's questions accurately based strictly on this note's content and voice transcript. If the answer is not mentioned, politely clarify.\nNote Content and Voice Transcript:\n"""\n${noteContent}\n"""`;
 
         const contents: any[] = [
           {
