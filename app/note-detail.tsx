@@ -13,8 +13,8 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Dimensions,
+  KeyboardAvoidingView,
   Keyboard,
-  KeyboardEvent,
   Modal,
   Platform,
   ScrollView,
@@ -24,15 +24,17 @@ import {
   View,
   Alert,
   StyleSheet,
-  ActivityIndicator
 } from 'react-native';
 import { useMutation, useAction, useQuery } from 'convex/react';
-import AudioPlayerCard from '@/components/AudioPlayerCard';
-import VoiceWaveform from '@/components/VoiceWaveform';
+import { AudioPlayerCard } from '@/components/AudioPlayerCard';
+import { VoiceWaveform } from '@/components/VoiceWaveform';
 import * as FileSystem from 'expo-file-system/legacy';
 import { FileSystemUploadType } from 'expo-file-system/legacy';
 import NoteAIChatSheet from '@/components/NoteAIChatSheet';
-import NoteBodyEditor, { NoteBodyEditorHandle } from '@/components/NoteBodyEditor';
+import NoteBodyEditor, {
+  ActiveBlockInfo,
+  NoteBodyEditorHandle,
+} from '@/components/NoteBodyEditor';
 import { useVoiceRecorder } from '@/hooks/useVoiceRecorder';
 import { AIChatMessage } from '@/types/voiceNote';
 import { BlurView } from 'expo-blur';
@@ -98,9 +100,7 @@ export default function NoteDetailScreen() {
 
   const bodyEditorRef = useRef<NoteBodyEditorHandle>(null);
   const scrollViewRef = useRef<ScrollView | null>(null);
-  // Latest measured position of the active body line (from NoteBodyEditor).
   const activeLineYRef = useRef<{ y: number; h: number } | null>(null);
-  // Y of the editor inside the scroll content (for caret-visibility math).
   const editorTopRef = useRef(0);
 
   const scrollToBottom = () => {
@@ -109,105 +109,78 @@ export default function NoteDetailScreen() {
     }, 100);
   };
 
-  // Typography State
+  // Typography & Active Block State
   const [activeFontSize, setActiveFontSize] = useState(17);
   const [activeFontFamily, setActiveFontFamily] = useState(Platform.OS === 'ios' ? 'System' : 'sans-serif');
   const [activeFontColor, setActiveFontColor] = useState(colors.text);
   const [activeFontWeight, setActiveFontWeight] = useState<'normal' | 'bold'>('normal');
   const [activeFontStyle, setActiveFontStyle] = useState<'normal' | 'italic'>('normal');
 
-  type ActiveMenuType = 'none' | 'fontFamily' | 'fontSize' | 'color';
+  const [activeBlockInfo, setActiveBlockInfo] = useState<ActiveBlockInfo>({
+    blockType: 'normal',
+    isChecked: false,
+    hasSelection: false,
+    selectedText: '',
+    isBold: false,
+    isItalic: false,
+    isStrike: false,
+  });
+
+  const isH1Active = activeBlockInfo.blockType === 'h1';
+  const isH2Active = activeBlockInfo.blockType === 'h2';
+  const isH3Active = activeBlockInfo.blockType === 'h3';
+  const isChecklistActive = activeBlockInfo.blockType === 'checkbox';
+  const isBulletActive = activeBlockInfo.blockType === 'bullet';
+  const isNumberActive = activeBlockInfo.blockType === 'number';
+  const isQuoteActive = activeBlockInfo.blockType === 'quote';
+  const isBoldActive = activeBlockInfo.isBold;
+  const isItalicActive = activeBlockInfo.isItalic;
+  const isStrikeActive = activeBlockInfo.isStrike;
+
+  type ActiveMenuType = 'none' | 'typography' | 'fontFamily' | 'fontSize' | 'color';
   const [activeMenu, setActiveMenu] = useState<ActiveMenuType>('none');
-  const [keyboardHeight, setKeyboardHeight] = useState(0);
-  // True when the OS window itself shrinks for the keyboard (Android adjustResize
-  // without edge-to-edge). In that case bottom-anchored bars ride up automatically;
-  // compensating again (manual offsets) double-shifts the layout and is what
-  // previously squeezed/cut off the body input.
-  const baselineWindowH = useRef(Dimensions.get('window').height);
-  // How far to raise the bottom toolbars when the OS does NOT resize the window.
-  const [toolbarLift, setToolbarLift] = useState(0);
-  const toolbarDockRef = useRef<View | null>(null);
+  const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
 
   useEffect(() => {
-    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
-    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
-    // Fallback to Did events if Will not fired (some Android devices)
-    const handleShow = (e: KeyboardEvent) => {
-      setKeyboardHeight(e.endCoordinates.height);
-    };
-    const handleHide = () => {
-      setKeyboardHeight(0);
-    };
-    const showSub = Keyboard.addListener(showEvent as any, handleShow);
-    const hideSub = Keyboard.addListener(hideEvent as any, handleHide);
-    const showFallback = Platform.OS === 'ios'
-      ? Keyboard.addListener('keyboardDidShow' as any, handleShow)
-      : { remove: () => {} } as any;
-    const hideFallback = Platform.OS === 'ios'
-      ? Keyboard.addListener('keyboardDidHide' as any, handleHide)
-      : { remove: () => {} } as any;
+    const showSub = Keyboard.addListener(
+      Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
+      () => setIsKeyboardVisible(true)
+    );
+    const hideSub = Keyboard.addListener(
+      Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide',
+      () => setIsKeyboardVisible(false)
+    );
 
-    return () => { showSub.remove(); hideSub.remove(); showFallback.remove(); hideFallback.remove(); }
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
   }, []);
 
-  // Dock the bottom toolbars above the keyboard. measureInWindow gives the toolbar's
-  // ABSOLUTE window position, compared against the PRE-KEYBOARD baseline height —
-  // this is correct under resize AND non-resize modes:
-  //   resize mode:    toolbar already rides up with the window -> covered = 0.
-  //   non-resize:     toolbar stays pinned to the old bottom -> covered = overlap.
-  useEffect(() => {
-    if (keyboardHeight <= 0) {
-      setToolbarLift(0);
-      return;
-    }
-    let timer: ReturnType<typeof setTimeout> | undefined;
-    const measure = () => {
-      toolbarDockRef.current?.measureInWindow((x, y, w, h) => {
-        const bottomEdge = y + h;
-        const visibleBottom = baselineWindowH.current - keyboardHeight;
-        const covered = Math.max(0, Math.min(keyboardHeight, bottomEdge - visibleBottom));
-        setToolbarLift(covered > 2 ? covered : 0);
-      });
-    };
-    const id = requestAnimationFrame(() => {
-      measure();
-      // Self-correct once the resize animation settles (Android animates the window).
-      timer = setTimeout(measure, 380);
-    });
-    return () => {
-      cancelAnimationFrame(id);
-      if (timer) clearTimeout(timer);
-    };
-  }, [keyboardHeight]);
-
-  // Keeps the caret line visible above the toolbars whenever it activates/moves,
-  // or the keyboard opens. Pure math on measured content coordinates.
   const keepCaretVisible = useCallback((y: number | null) => {
     if (y === null && activeLineYRef.current) y = activeLineYRef.current.y;
     if (y === null || y === undefined) return;
     const editorTop = editorTopRef.current;
-    const target = Math.max(0, editorTop + y - 130);
+    const target = Math.max(0, editorTop + y - 120);
     requestAnimationFrame(() =>
       scrollViewRef.current?.scrollTo({ y: target, animated: true })
     );
   }, []);
 
-  // Called by NoteBodyEditor whenever the active line moves/resizes.
   const handleActiveLineMove = useCallback((y: number, h: number) => {
     activeLineYRef.current = { y, h };
     keepCaretVisible(y);
   }, [keepCaretVisible]);
 
-  // Keyboard opening/closing also needs one visibility pass.
   useEffect(() => {
-    if (activeLineYRef.current) keepCaretVisible(activeLineYRef.current.y);
-  }, [keyboardHeight, keepCaretVisible]);
+    if (activeLineYRef.current && isKeyboardVisible) {
+      keepCaretVisible(activeLineYRef.current.y);
+    }
+  }, [isKeyboardVisible, keepCaretVisible]);
 
   // Custom Calendar State
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [currentMonth, setCurrentMonth] = useState<Date>(new Date());
-  
-  // Custom Exact Time state
   const [selectedTime, setSelectedTime] = useState<Date>(new Date());
   const [showTimePicker, setShowTimePicker] = useState(false);
 
@@ -216,15 +189,11 @@ export default function NoteDetailScreen() {
   const [isAILoading, setIsAILoading] = useState(false);
   const [isTranscribing, setIsTranscribing] = useState(false);
 
-  // Native Voice Recorder Hook (Inline, No Disruptive Modals)
   const {
     isRecording,
-    isPaused,
     duration: recordingDuration,
     audioLevel,
     startRecording,
-    pauseRecording,
-    resumeRecording,
     stopRecording,
     cancelRecording,
   } = useVoiceRecorder();
@@ -237,11 +206,10 @@ export default function NoteDetailScreen() {
 
   // Queries & Mutations
   const existingNote = useOfflineQuery<any[]>('todos', api.todos.get, userId ? { userId } : 'skip')?.find((t: any) => t._id === id);
-  const addNote = useOfflineMutation(api.todos.addTodo, "todos:addTodo");
-  const updateNote = useOfflineMutation(api.todos.updateTodo, "todos:updateTodo");
-  const deleteNoteMutation = useOfflineMutation(api.todos.deleteTodo, "todos:deleteTodo");
+  const addNote = useOfflineMutation(api.todos.addTodo, 'todos:addTodo');
+  const updateNote = useOfflineMutation(api.todos.updateTodo, 'todos:updateTodo');
+  const deleteNoteMutation = useOfflineMutation(api.todos.deleteTodo, 'todos:deleteTodo');
 
-  // Audio & AI Convex Actions
   const generateAudioUploadUrl = useMutation(api.audio.generateAudioUploadUrl);
   const attachAudioToNote = useMutation(api.audio.attachAudioToNote);
   const removeAudioFromNote = useMutation(api.audio.removeAudioFromNote);
@@ -316,7 +284,6 @@ export default function NoteDetailScreen() {
             hashtags: [noteTag || '#work'],
           });
         }
-        // Schedule sound notification for reminders with future due dates
         if (isScheduleVisible) {
           const reminderDate = dueDate || Date.now();
           if (reminderDate > Date.now()) {
@@ -348,10 +315,9 @@ export default function NoteDetailScreen() {
   const formattedNoteDate = new Date(dueDate || Date.now()).toLocaleDateString('en-US', {
     month: 'long',
     day: 'numeric',
-    year: 'numeric'
+    year: 'numeric',
   });
 
-  // Audio Recording & Upload Handler
   const handleToggleRecording = async () => {
     if (isRecording) {
       const result = await stopRecording();
@@ -385,10 +351,7 @@ export default function NoteDetailScreen() {
     try {
       setIsTranscribing(true);
 
-      // 1. Get pre-signed Convex storage upload URL
       const uploadUrl = await generateAudioUploadUrl();
-
-      // 2. Upload audio file binary directly to Convex storage
       const uploadResult = await FileSystem.uploadAsync(uploadUrl, result.uri, {
         httpMethod: 'POST',
         uploadType: FileSystemUploadType.BINARY_CONTENT,
@@ -403,7 +366,6 @@ export default function NoteDetailScreen() {
 
       const { storageId } = JSON.parse(uploadResult.body);
 
-      // 3. Attach audio metadata to Note record in Convex if ID exists
       if (targetId) {
         try {
           await attachAudioToNote({
@@ -416,7 +378,6 @@ export default function NoteDetailScreen() {
         }
       }
 
-      // 4. Trigger AI transcription asynchronously via action
       const transcribeRes = await transcribeAudioAction({
         noteId: targetId ? (targetId as any) : undefined,
         storageId,
@@ -427,7 +388,6 @@ export default function NoteDetailScreen() {
         const transText = transcribeRes.transcript.trim();
         setCurrentTranscript(transText);
 
-        // Put transcription AT CURSOR POSITION!
         const insertPos = cursorPosRef.current ?? body.length;
         const before = body.slice(0, insertPos);
         const after = body.slice(insertPos);
@@ -540,7 +500,7 @@ export default function NoteDetailScreen() {
         Alert.alert(
           t.aiTasksExtracted || 'Tasks Extracted',
           `${res.tasks.length} ${isArabic ? 'مهمة مستخرجة' : 'task(s) found'}:\n` +
-            res.tasks.map((t) => `• ${t.text}`).join('\n') +
+            res.tasks.map((taskItem) => `• ${taskItem.text}`).join('\n') +
             '\n\n' + (isArabic ? 'هل تريد إضافتها إلى لوحة المهام الخاصة بك؟' : 'Add them to your To-Do task list?'),
           [
             { text: t.cancel, style: 'cancel' },
@@ -593,7 +553,7 @@ export default function NoteDetailScreen() {
         content: userPrompt,
         timestamp: Date.now(),
       };
-      setLocalChatHistory(prev => [...prev, userMsg]);
+      setLocalChatHistory((prev) => [...prev, userMsg]);
 
       const res = await chatWithNoteAction({
         noteId: currentNoteId ? (currentNoteId as any) : (id ? (id as any) : undefined),
@@ -606,7 +566,7 @@ export default function NoteDetailScreen() {
       });
 
       if (res?.reply) {
-        setLocalChatHistory(prev => [
+        setLocalChatHistory((prev) => [
           ...prev,
           { id: `${Date.now()}-model`, role: 'model', content: res.reply, timestamp: Date.now() },
         ]);
@@ -641,7 +601,7 @@ export default function NoteDetailScreen() {
       });
 
       if (res?.reply) {
-        setLocalChatHistory(prev => [
+        setLocalChatHistory((prev) => [
           ...prev,
           { id: `${Date.now()}-model`, role: 'model', content: res.reply, timestamp: Date.now() },
         ]);
@@ -677,29 +637,6 @@ export default function NoteDetailScreen() {
     scrollToBottom();
   };
 
-  // Current line analysis for active toolbar highlight states
-  const currentLine = useMemo(() => {
-    const pos = cursorPosRef.current || selection.start || 0;
-    const before = body.slice(0, pos);
-    const after = body.slice(pos);
-    const lastNewlineBefore = before.lastIndexOf('\n');
-    const lineStart = lastNewlineBefore === -1 ? 0 : lastNewlineBefore + 1;
-    const nextNewlineAfter = after.indexOf('\n');
-    const lineEnd = nextNewlineAfter === -1 ? body.length : pos + nextNewlineAfter;
-    return body.slice(lineStart, lineEnd);
-  }, [body, selection]);
-
-  // Toolbar highlight detection — MUST match the canonical storage markers used by
-  // NoteBodyEditor ('# ', '- [ ] ', '- ' …), not the old display glyphs (☐ / •).
-  const isH1Active = /^#{1}\s/.test(currentLine) && !/^#{2,3}\s/.test(currentLine);
-  const isH2Active = /^#{2}\s/.test(currentLine) && !/^#{3}\s/.test(currentLine);
-  const isH3Active = /^#{3}\s/.test(currentLine);
-  const isChecklistActive = /^\s*[-*]\s*\[[xX ]\]\s?/.test(currentLine);
-  const isBulletActive = /^\s*[-*]\s+/.test(currentLine) && !isChecklistActive;
-  const isNumberActive = /^\s*\d+\.\s/.test(currentLine);
-  const isQuoteActive = /^\s*>\s?/.test(currentLine);
-
-
   // Calendar Helpers
   const daysInMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0).getDate();
   const firstDayOfMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1).getDay();
@@ -715,214 +652,864 @@ export default function NoteDetailScreen() {
     }
 
     for (let i = 1; i <= daysInMonth; i++) {
-        const isActive = isCurrentMonthSelected && selectedDate.getDate() === i;
-        cells.push(
-          <TouchableOpacity 
-            key={`day-${i}`} 
-            style={[styles.dayCell, isActive && styles.dayCellActive]}
-            onPress={() => setSelectedDate(new Date(currentMonth.getFullYear(), currentMonth.getMonth(), i))}
-          >
-            <Text style={[styles.dayText, isActive && styles.dayTextActive]}>{i}</Text>
-          </TouchableOpacity>
-        );
+      const isActive = isCurrentMonthSelected && selectedDate.getDate() === i;
+      cells.push(
+        <TouchableOpacity 
+          key={`day-${i}`} 
+          style={[styles.dayCell, isActive && styles.dayCellActive]}
+          onPress={() => setSelectedDate(new Date(currentMonth.getFullYear(), currentMonth.getMonth(), i))}
+        >
+          <Text style={[styles.dayText, isActive && styles.dayTextActive]}>{i}</Text>
+        </TouchableOpacity>
+      );
     }
     return cells;
   };
 
   return (
-    <View style={[styles.container, { flex: 1, backgroundColor: isDark ? '#0e0f14' : colors.bg }]}>
-      {/* No KeyboardAvoidingView: Android 'resize' mode already shrinks the window, and
-          adding KAV padding on top double-compensates (the reported "input cut off" bug).
-          The toolbar container below measures its own distance to the window bottom and
-          offsets itself by exactly what the keyboard covers. */}
+    <KeyboardAvoidingView 
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      style={{ flex: 1, backgroundColor: isDark ? '#0e0f14' : colors.bg }}
+    >
       <View style={{ flex: 1 }}>
-          <ScrollView 
-            ref={scrollViewRef}
-            style={{ flex: 1 }}
-            contentContainerStyle={{ 
-              paddingTop: insets.top + 70,
-              paddingBottom: 24,
-              flexGrow: 1,
-            }}
-            keyboardShouldPersistTaps="handled"
-            showsVerticalScrollIndicator={false}
-            keyboardDismissMode="interactive"
-          >
-            {/* Note Title & Date */}
-            <NoteHeader 
-              title={title}
-              setTitle={setTitle}
-              formattedNoteDate={formattedNoteDate}
-              isArabic={isArabic}
-              colors={colors}
-              styles={styles}
-            />
+        <ScrollView 
+          ref={scrollViewRef}
+          style={{ flex: 1 }}
+          contentContainerStyle={{ 
+            paddingTop: insets.top + 60,
+            paddingBottom: isKeyboardVisible ? 30 : Math.max(insets.bottom + 20, 36),
+            flexGrow: 1,
+          }}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+          keyboardDismissMode="interactive"
+        >
+          {/* Note Title & Date */}
+          <NoteHeader 
+            title={title}
+            setTitle={setTitle}
+            formattedNoteDate={formattedNoteDate}
+            isArabic={isArabic}
+            colors={colors}
+            styles={styles}
+          />
 
-            {/* Inline Active Voice Recording Bar */}
-            {isRecording && (
-              <View
-                style={{
-                  marginHorizontal: 16,
-                  marginBottom: 12,
-                  paddingVertical: 10,
-                  paddingHorizontal: 8,
-                  backgroundColor: 'transparent',
-                }}
-              >
-                <View
-                  style={[
-                    {
-                      flexDirection: 'row',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      marginBottom: 10,
-                    },
-                    isArabic && { flexDirection: 'row-reverse' },
-                  ]}
+          {/* Inline Active Voice Recording Studio */}
+          {isRecording && (
+            <View
+              style={{
+                marginHorizontal: 20,
+                marginBottom: 16,
+                padding: 14,
+                backgroundColor: isDark ? 'rgba(239, 68, 68, 0.1)' : 'rgba(239, 68, 68, 0.05)',
+                borderRadius: 16,
+                borderWidth: 1,
+                borderColor: 'rgba(239, 68, 68, 0.25)',
+                flexDirection: isArabic ? 'row-reverse' : 'row',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+              }}
+            >
+              <View style={{ flexDirection: isArabic ? 'row-reverse' : 'row', alignItems: 'center', gap: 10, flex: 1 }}>
+                <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: '#EF4444' }} />
+                <Text style={{ fontSize: 14, fontWeight: '800', color: '#EF4444' }}>
+                  {formatRecordingTime(recordingDuration)}
+                </Text>
+                <View style={{ flex: 1, height: 36, overflow: 'hidden' }}>
+                  <VoiceWaveform isListening={isRecording} audioLevel={audioLevel} />
+                </View>
+              </View>
+              <View style={{ flexDirection: isArabic ? 'row-reverse' : 'row', alignItems: 'center', gap: 8 }}>
+                <TouchableOpacity
+                  onPress={cancelRecording}
+                  style={{ paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8, backgroundColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)' }}
                 >
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                    <View
-                      style={{
-                        width: 9,
-                        height: 9,
-                        borderRadius: 5,
-                        backgroundColor: isPaused ? '#F59E0B' : '#EF4444',
-                      }}
-                    />
-                    <Text style={{ fontSize: 13, fontWeight: '700', color: colors.text }}>
-                      {isPaused
-                        ? (isArabic ? 'متوقف مؤقتاً' : 'Paused')
-                        : (isArabic ? 'جارِ التسجيل' : 'Recording')}
-                    </Text>
-                    <Text style={{ fontSize: 13, fontWeight: '600', color: '#6366F1' }}>
-                      {formatRecordingTime(recordingDuration)}
-                    </Text>
+                  <Text style={{ fontSize: 12, fontWeight: '600', color: colors.textMuted }}>
+                    {isArabic ? 'إلغاء' : 'Cancel'}
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={handleToggleRecording}
+                  style={{ paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8, backgroundColor: '#EF4444' }}
+                >
+                  <Text style={{ fontSize: 12, fontWeight: '700', color: '#FFFFFF' }}>
+                    {isArabic ? 'تم' : 'Done'}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          )}
+
+          {/* Audio Player Card */}
+          {existingNote?.audioStorageId && (
+            <View style={{ marginHorizontal: 20, marginBottom: 16 }}>
+              <AudioPlayerCard
+                audioUrl={audioUrl || null}
+                duration={existingNote.audioDuration || 0}
+                transcript={currentTranscript || existingNote.transcript}
+                transcriptStatus={isTranscribing ? 'transcribing' : currentTranscript || existingNote.transcript ? 'completed' : 'none'}
+                onDeleteAudio={handleDeleteAudio}
+                onRetryTranscribe={handleRetryTranscribe}
+                isArabic={isArabic}
+              />
+            </View>
+          )}
+
+          {/* Reminder / Calendar Scheduler */}
+          {isScheduleVisible && (
+            <View style={[styles.calendarCard, { marginHorizontal: 20, marginBottom: 16 }]}>
+              <View style={styles.calendarHeader}>
+                <TouchableOpacity onPress={prevMonth} style={{ padding: 4 }}>
+                  <Ionicons name={isArabic ? 'chevron-forward' : 'chevron-back'} size={20} color={colors.text} />
+                </TouchableOpacity>
+                <Text style={styles.calendarTitle}>
+                  {currentMonth.toLocaleDateString(isArabic ? 'ar-EG' : 'en-US', { month: 'long', year: 'numeric' })}
+                </Text>
+                <TouchableOpacity onPress={nextMonth} style={{ padding: 4 }}>
+                  <Ionicons name={isArabic ? 'chevron-back' : 'chevron-forward'} size={20} color={colors.text} />
+                </TouchableOpacity>
+              </View>
+
+              <View style={styles.weekDaysRow}>
+                {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((day, index) => (
+                  <Text key={`weekday-${index}`} style={styles.weekDayText}>{day}</Text>
+                ))}
+              </View>
+
+              <View style={styles.daysGrid}>
+                {renderCalendarDays()}
+              </View>
+
+              {dateTimeConfirmed ? (
+                <View style={{ marginTop: 16, padding: 14, backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.03)', borderRadius: 14, borderWidth: 1, borderColor: colors.border }}>
+                  <View style={{ flexDirection: isArabic ? 'row-reverse' : 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <View style={{ flexDirection: isArabic ? 'row-reverse' : 'row', alignItems: 'center', gap: 8 }}>
+                      <Ionicons name="notifications" size={18} color={colors.warning} />
+                      <Text style={{ fontSize: 13, fontWeight: '700', color: colors.text }}>
+                        {isArabic ? 'موعد التنبيه المحدد:' : 'Scheduled Reminder:'}
+                      </Text>
+                    </View>
+                    <TouchableOpacity
+                      onPress={() => setDateTimeConfirmed(false)}
+                      style={{ paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8, backgroundColor: colors.warning + '20' }}
+                    >
+                      <Text style={{ fontSize: 12, fontWeight: '700', color: colors.warning }}>
+                        {isArabic ? 'تعديل' : 'Edit'}
+                      </Text>
+                    </TouchableOpacity>
                   </View>
-
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                  <Text style={{ fontSize: 14, fontWeight: '800', color: colors.warning, marginTop: 6, textAlign: isArabic ? 'right' : 'left' }}>
+                    {new Date(dueDate).toLocaleString(isArabic ? 'ar-EG' : 'en-US', {
+                      weekday: 'short',
+                      month: 'short',
+                      day: 'numeric',
+                      hour: 'numeric',
+                      minute: '2-digit',
+                      hour12: true,
+                    })}
+                  </Text>
+                </View>
+              ) : (
+                <View style={{ marginTop: 14, borderTopWidth: StyleSheet.hairlineWidth, borderColor: colors.border, paddingTop: 14 }}>
+                  <Text style={{ fontSize: 13, fontWeight: '700', color: colors.textMuted, marginBottom: 8, textAlign: isArabic ? 'right' : 'left' }}>
+                    {isArabic ? 'وقت التنبيه السريع:' : 'Quick Notification Time:'}
+                  </Text>
+                  <View style={{ flexDirection: isArabic ? 'row-reverse' : 'row', flexWrap: 'wrap', gap: 6 }}>
+                    {[
+                      { label: isArabic ? '9:00 ص' : '9:00 AM', h: 9, m: 0 },
+                      { label: isArabic ? '12:00 م' : '12:00 PM', h: 12, m: 0 },
+                      { label: isArabic ? '3:00 م' : '3:00 PM', h: 15, m: 0 },
+                      { label: isArabic ? '6:00 م' : '6:00 PM', h: 18, m: 0 },
+                      { label: isArabic ? '9:00 م' : '9:00 PM', h: 21, m: 0 },
+                    ].map((preset, idx) => {
+                      const isPresetActive = selectedTime.getHours() === preset.h && selectedTime.getMinutes() === preset.m;
+                      return (
+                        <TouchableOpacity
+                          key={idx}
+                          onPress={() => {
+                            const d = new Date(selectedTime);
+                            d.setHours(preset.h, preset.m, 0, 0);
+                            setSelectedTime(d);
+                          }}
+                          style={[
+                            {
+                              paddingHorizontal: 10,
+                              paddingVertical: 6,
+                              borderRadius: 8,
+                              borderWidth: 1,
+                              borderColor: isPresetActive ? colors.primary : colors.border,
+                              backgroundColor: isPresetActive ? colors.primary + '20' : 'transparent',
+                            },
+                          ]}
+                        >
+                          <Text style={{ fontSize: 12, fontWeight: isPresetActive ? '700' : '500', color: isPresetActive ? colors.primary : colors.text }}>
+                            {preset.label}
+                          </Text>
+                        </TouchableOpacity>
+                      );
+                    })}
                     <TouchableOpacity
-                      onPress={isPaused ? resumeRecording : pauseRecording}
+                      onPress={() => setShowTimePicker(true)}
                       style={{
-                        padding: 7,
-                        borderRadius: 10,
-                        backgroundColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.05)',
-                      }}
-                    >
-                      <Ionicons
-                        name={isPaused ? 'play' : 'pause'}
-                        size={16}
-                        color={colors.text}
-                      />
-                    </TouchableOpacity>
-
-                    <TouchableOpacity
-                      onPress={cancelRecording}
-                      style={{
-                        padding: 7,
-                        borderRadius: 10,
-                        backgroundColor: 'rgba(239, 68, 68, 0.12)',
-                      }}
-                    >
-                      <Ionicons name="close" size={16} color="#EF4444" />
-                    </TouchableOpacity>
-
-                    <TouchableOpacity
-                      onPress={handleToggleRecording}
-                      style={{
-                        paddingHorizontal: 12,
-                        paddingVertical: 7,
-                        borderRadius: 10,
-                        backgroundColor: '#6366F1',
+                        paddingHorizontal: 10,
+                        paddingVertical: 6,
+                        borderRadius: 8,
+                        borderWidth: 1,
+                        borderColor: colors.border,
                         flexDirection: 'row',
                         alignItems: 'center',
                         gap: 4,
                       }}
                     >
-                      <Ionicons name="checkmark" size={16} color="#FFFFFF" />
-                      <Text style={{ fontSize: 12, fontWeight: '700', color: '#FFFFFF' }}>
-                        {isArabic ? 'تم' : 'Done'}
+                      <Ionicons name="time-outline" size={14} color={colors.text} />
+                      <Text style={{ fontSize: 12, fontWeight: '600', color: colors.text }}>
+                        {selectedTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                       </Text>
                     </TouchableOpacity>
                   </View>
-                </View>
 
-                {/* Real-time Dynamic Waveform */}
-                <View style={{ height: 65, justifyContent: 'center', alignItems: 'center' }}>
-                  <VoiceWaveform isListening={!isPaused} audioLevel={audioLevel} />
-                </View>
-              </View>
-            )}
+                  {showTimePicker && (
+                    <>
+                      {Platform.OS === 'ios' ? (
+                        <Modal transparent animationType="fade" visible={showTimePicker}>
+                          <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center' }}>
+                            <View style={{ backgroundColor: colors.surface, padding: 20, borderRadius: 16, width: '80%', alignItems: 'center' }}>
+                              <DateTimePicker
+                                value={selectedTime}
+                                mode="time"
+                                display="spinner"
+                                onChange={(_, date) => {
+                                  if (date) setSelectedTime(date);
+                                }}
+                              />
+                              <TouchableOpacity
+                                onPress={() => setShowTimePicker(false)}
+                                style={{ marginTop: 10, paddingVertical: 8, paddingHorizontal: 20, backgroundColor: colors.primary, borderRadius: 8 }}
+                              >
+                                <Text style={{ color: '#fff', fontWeight: 'bold' }}>{t.done || 'Done'}</Text>
+                              </TouchableOpacity>
+                            </View>
+                          </View>
+                        </Modal>
+                      ) : (
+                        <DateTimePicker
+                          value={selectedTime}
+                          mode="time"
+                          is24Hour={false}
+                          display="default"
+                          onChange={(_, date) => {
+                            setShowTimePicker(false);
+                            if (date) setSelectedTime(date);
+                          }}
+                        />
+                      )}
+                    </>
+                  )}
 
-            {/* Audio Player Card (if audio attached) */}
-            {(existingNote?.audioStorageId || audioUrl) && !isRecording && (
-              <View style={{ paddingHorizontal: 24 }}>
-                <AudioPlayerCard
-                  audioUrl={audioUrl}
-                  duration={existingNote?.audioDuration || 0}
-                  transcriptStatus={existingNote?.transcriptStatus || (isTranscribing ? 'transcribing' : 'none')}
-                  transcript={existingNote?.transcript}
-                  onDeleteAudio={handleDeleteAudio}
-                  onRetryTranscribe={handleRetryTranscribe}
-                  isArabic={isArabic}
+                  <TouchableOpacity
+                    onPress={() => {
+                      const finalDate = new Date(selectedDate);
+                      finalDate.setHours(selectedTime.getHours(), selectedTime.getMinutes(), 0, 0);
+                      setDueDate(finalDate.getTime());
+                      setDateTimeConfirmed(true);
+                    }}
+                    style={{
+                      marginTop: 16,
+                      backgroundColor: colors.warning,
+                      borderRadius: 12,
+                      paddingVertical: 12,
+                      alignItems: 'center',
+                    }}
+                  >
+                    <Text style={{ color: colors.text, fontWeight: '800', fontSize: 15 }}>
+                      {isArabic ? 'تأكيد الموعد' : 'Confirm Date & Time'}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+            </View>
+          )}
+
+          {/* Rendered Markdown Body Editor */}
+          <View
+            onLayout={(e) => {
+              editorTopRef.current = e.nativeEvent.layout.y;
+            }}
+            style={{ flexGrow: 1 }}
+          >
+            <NoteBodyEditor
+              ref={bodyEditorRef}
+              value={body}
+              onChange={setBody}
+              onActiveBlockChange={setActiveBlockInfo}
+              onCursorChange={(pos) => {
+                cursorPosRef.current = pos;
+                setSelection({ start: pos, end: pos });
+              }}
+              onActivateLine={handleActiveLineMove}
+              colors={colors}
+              isArabic={isArabic}
+              isDark={isDark}
+              baseStyle={{
+                fontSize: activeFontSize,
+                fontFamily: activeFontFamily === 'System' ? undefined : activeFontFamily,
+                color: activeFontColor,
+                fontWeight: activeFontWeight,
+                fontStyle: activeFontStyle,
+              }}
+              placeholder={
+                isArabic
+                  ? 'ابدأ في كتابة ملاحظتك هنا...\n• استخدم الشريط أدناه لإضافة العناوين، القوائم، أو المهام.'
+                  : 'Start typing your note here...\n• Use the toolbar below to add Headings, Checklists, Bullets, or Formats.'
+              }
+            />
+          </View>
+        </ScrollView>
+
+        {/* Floating Header */}
+        <BlurView
+          tint={isDark ? 'dark' : 'light'}
+          intensity={80}
+          style={[
+            {
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              right: 0,
+              paddingTop: insets.top,
+              backgroundColor: isDark ? '#0e0f14' : colors.bg,
+              borderBottomWidth: StyleSheet.hairlineWidth,
+              borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.08)',
+              zIndex: 10,
+            },
+          ]}
+        >
+          <View style={[styles.detailHeader, { paddingBottom: 10, paddingTop: 10 }, isArabic && { flexDirection: 'row-reverse' }]}>
+            <TouchableOpacity style={styles.detailHeaderBtn} onPress={handleSaveNote}>
+              <Ionicons name={isArabic ? 'chevron-forward' : 'chevron-back'} size={24} color={colors.text} style={styles.detailHeaderBtnIcon} />
+            </TouchableOpacity>
+            
+            <View style={styles.detailHeaderRight}>
+              <TouchableOpacity 
+                style={[styles.detailHeaderBtn, isScheduleVisible && { backgroundColor: colors.warning + '20' }]} 
+                onPress={() => {
+                  if (isScheduleVisible && dateTimeConfirmed) {
+                    setDateTimeConfirmed(false);
+                  } else {
+                    setScheduleVisible(!isScheduleVisible);
+                    setDateTimeConfirmed(false);
+                  }
+                }}
+              >
+                <Ionicons 
+                  name={isScheduleVisible ? 'alarm' : 'alarm-outline'} 
+                  size={22} 
+                  color={isScheduleVisible ? colors.warning : colors.text} 
                 />
-              </View>
-            )}
+              </TouchableOpacity>
 
-            {/* Live Transcribing Indicator */}
-            {(existingNote?.transcriptStatus === 'transcribing' || isTranscribing) && !existingNote?.transcript && (
-              <View
-                style={{
-                  marginHorizontal: 24,
-                  marginBottom: 16,
-                  padding: 14,
-                  borderRadius: 16,
-                  backgroundColor: isDark ? 'rgba(99, 102, 241, 0.12)' : 'rgba(99, 102, 241, 0.08)',
-                  borderWidth: 1,
-                  borderColor: isDark ? 'rgba(99, 102, 241, 0.3)' : 'rgba(99, 102, 241, 0.2)',
+              {/* Voice Record Button in Header */}
+              <TouchableOpacity 
+                style={[
+                  styles.detailHeaderBtn,
+                  isRecording && { backgroundColor: 'rgba(239, 68, 68, 0.18)' },
+                  !isRecording && { backgroundColor: isDark ? 'rgba(99, 102, 241, 0.15)' : 'rgba(99, 102, 241, 0.1)' },
+                ]} 
+                onPress={handleToggleRecording}
+              >
+                <Ionicons
+                  name={isRecording ? 'stop-circle' : 'mic'}
+                  size={20}
+                  color={isRecording ? '#EF4444' : '#6366F1'}
+                />
+              </TouchableOpacity>
+
+              <TouchableOpacity style={styles.detailHeaderBtn} onPress={handleSaveNote}>
+                <Ionicons name="checkmark" size={24} color={colors.success} />
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.detailHeaderBtn}
+                onPress={() => {
+                  if (id) handleDeleteNote();
+                  else router.back();
+                }}
+              >
+                <Ionicons name="trash-outline" size={20} color={colors.danger} />
+              </TouchableOpacity>
+            </View>
+          </View>
+        </BlurView>
+
+        {/* BOTTOM TOOLBAR / ACCESSORY BAR */}
+        <View
+          style={{
+            backgroundColor: isDark ? '#11131a' : colors.surface,
+            borderTopWidth: StyleSheet.hairlineWidth,
+            borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.08)',
+            zIndex: 9,
+          }}
+        >
+          {isKeyboardVisible ? (
+            /* 1-LINE UNIFIED ACCESSORY BAR ABOVE KEYBOARD */
+            <View style={{ height: 46, justifyContent: 'center' }}>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                keyboardShouldPersistTaps="always"
+                contentContainerStyle={{
                   flexDirection: isArabic ? 'row-reverse' : 'row',
                   alignItems: 'center',
-                  gap: 10,
+                  paddingHorizontal: 8,
+                  gap: 4,
                 }}
               >
-                <ActivityIndicator size="small" color="#6366F1" />
-                <Text style={{ fontSize: 13, fontWeight: '600', color: '#6366F1' }}>
-                  {isArabic ? 'جارِ تفريغ التسجيل بالذكاء الاصطناعي...' : 'Transcribing audio with AI...'}
-                </Text>
-              </View>
-            )}
+                {/* 1. Dismiss Keyboard Button */}
+                <TouchableOpacity
+                  onPress={() => Keyboard.dismiss()}
+                  style={styles.toolbarIconBtn}
+                  hitSlop={{ top: 8, bottom: 8, left: 4, right: 4 }}
+                >
+                  <Ionicons name="chevron-down" size={20} color={colors.textMuted} />
+                </TouchableOpacity>
 
-            {/* Transcript Box */}
-            {existingNote?.transcript && (
-              <View
-                style={{
-                  marginHorizontal: 24,
-                  marginBottom: 16,
-                  padding: 14,
-                  borderRadius: 16,
-                  backgroundColor: isDark ? 'rgba(30, 41, 59, 0.5)' : 'rgba(248, 250, 252, 0.9)',
-                  borderWidth: 1,
-                  borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.05)',
-                }}
-              >
-                <View
+                <View style={{ width: 1, height: 20, backgroundColor: colors.border, marginHorizontal: 2 }} />
+
+                {/* 2. Headings */}
+                <TouchableOpacity
+                  style={[styles.toolbarIconBtn, isH1Active && styles.toolbarIconBtnActive]}
+                  onPress={() => bodyEditorRef.current?.toggleHeading(1)}
+                >
+                  <Text style={{ fontSize: 14, fontWeight: '800', color: isH1Active ? colors.primary : colors.surfaceText }}>H1</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[styles.toolbarIconBtn, isH2Active && styles.toolbarIconBtnActive]}
+                  onPress={() => bodyEditorRef.current?.toggleHeading(2)}
+                >
+                  <Text style={{ fontSize: 13, fontWeight: '700', color: isH2Active ? colors.primary : colors.surfaceText }}>H2</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[styles.toolbarIconBtn, isH3Active && styles.toolbarIconBtnActive]}
+                  onPress={() => bodyEditorRef.current?.toggleHeading(3)}
+                >
+                  <Text style={{ fontSize: 12, fontWeight: '700', color: isH3Active ? colors.primary : colors.surfaceText }}>H3</Text>
+                </TouchableOpacity>
+
+                <View style={{ width: 1, height: 20, backgroundColor: colors.border, marginHorizontal: 2 }} />
+
+                {/* 3. Inline Formats */}
+                <TouchableOpacity
+                  style={[styles.toolbarIconBtn, isBoldActive && styles.toolbarIconBtnActive]}
+                  onPress={() => bodyEditorRef.current?.applyInlineFormat('**')}
+                >
+                  <Text style={{ fontSize: 15, fontWeight: '900', color: isBoldActive ? colors.primary : colors.surfaceText }}>B</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[styles.toolbarIconBtn, isItalicActive && styles.toolbarIconBtnActive]}
+                  onPress={() => bodyEditorRef.current?.applyInlineFormat('__')}
+                >
+                  <Text style={{ fontSize: 15, fontWeight: '700', fontStyle: 'italic', color: isItalicActive ? colors.primary : colors.surfaceText }}>I</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[styles.toolbarIconBtn, isStrikeActive && styles.toolbarIconBtnActive]}
+                  onPress={() => bodyEditorRef.current?.applyInlineFormat('~~')}
+                >
+                  <Text style={{ fontSize: 14, fontWeight: '700', textDecorationLine: 'line-through', color: isStrikeActive ? colors.primary : colors.surfaceText }}>S</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={styles.toolbarIconBtn}
+                  onPress={() => bodyEditorRef.current?.applyInlineFormat('`')}
+                >
+                  <Ionicons name="code-slash" size={17} color={colors.surfaceText} />
+                </TouchableOpacity>
+
+                <View style={{ width: 1, height: 20, backgroundColor: colors.border, marginHorizontal: 2 }} />
+
+                {/* 4. Lists & Blocks */}
+                <TouchableOpacity
+                  style={[styles.toolbarIconBtn, isChecklistActive && styles.toolbarIconBtnActive]}
+                  onPress={() => bodyEditorRef.current?.toggleChecklist()}
+                >
+                  <Ionicons
+                    name={isChecklistActive ? 'checkbox' : 'checkbox-outline'}
+                    size={19}
+                    color={isChecklistActive ? colors.primary : colors.surfaceText}
+                  />
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[styles.toolbarIconBtn, isBulletActive && styles.toolbarIconBtnActive]}
+                  onPress={() => bodyEditorRef.current?.toggleBullet()}
+                >
+                  <Ionicons
+                    name="list-outline"
+                    size={19}
+                    color={isBulletActive ? colors.primary : colors.surfaceText}
+                  />
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[styles.toolbarIconBtn, isNumberActive && styles.toolbarIconBtnActive]}
+                  onPress={() => bodyEditorRef.current?.toggleNumber()}
+                >
+                  <Ionicons
+                    name="reorder-four-outline"
+                    size={19}
+                    color={isNumberActive ? colors.primary : colors.surfaceText}
+                  />
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[styles.toolbarIconBtn, isQuoteActive && styles.toolbarIconBtnActive]}
+                  onPress={() => bodyEditorRef.current?.toggleQuote()}
+                >
+                  <Ionicons
+                    name="chatbox-ellipses-outline"
+                    size={18}
+                    color={isQuoteActive ? colors.primary : colors.surfaceText}
+                  />
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={styles.toolbarIconBtn}
+                  onPress={() => bodyEditorRef.current?.insertDivider()}
+                >
+                  <Ionicons name="remove-outline" size={20} color={colors.surfaceText} />
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={styles.toolbarIconBtn}
+                  onPress={() => bodyEditorRef.current?.insertHashtag()}
+                >
+                  <Ionicons name="pricetag-outline" size={17} color={colors.surfaceText} />
+                </TouchableOpacity>
+
+                <View style={{ width: 1, height: 20, backgroundColor: colors.border, marginHorizontal: 2 }} />
+
+                {/* 5. Typography Inspector Sheet Trigger */}
+                <TouchableOpacity
+                  onPress={() => setActiveMenu('typography')}
                   style={[
+                    styles.toolbarIconBtn,
                     {
-                      flexDirection: 'row',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      marginBottom: 8,
+                      paddingHorizontal: 8,
+                      width: 'auto',
+                      minWidth: 36,
+                      backgroundColor: isDark ? 'rgba(99, 102, 241, 0.15)' : 'rgba(99, 102, 241, 0.1)',
                     },
-                    isArabic && { flexDirection: 'row-reverse' },
                   ]}
                 >
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                    <Ionicons name="document-text-outline" size={16} color="#6366F1" />
-                    <Text style={{ fontSize: 13, fontWeight: '700', color: colors.text }}>
-                      {t.transcript}
-                    </Text>
-                  </View>
+                  <Text style={{ color: '#6366F1', fontSize: 13, fontWeight: '800' }}>Aa</Text>
+                </TouchableOpacity>
+
+                {/* 6. Color Quick Swatch */}
+                <TouchableOpacity onPress={() => setActiveMenu('color')} style={{ padding: 4 }}>
+                  <View
+                    style={{
+                      width: 20,
+                      height: 20,
+                      borderRadius: 10,
+                      backgroundColor: activeFontColor,
+                      borderWidth: 2,
+                      borderColor: colors.border,
+                    }}
+                  />
+                </TouchableOpacity>
+
+                <View style={{ width: 1, height: 20, backgroundColor: colors.border, marginHorizontal: 2 }} />
+
+                {/* 7. AI Quick Ask Trigger */}
+                <TouchableOpacity
+                  onPress={() => setAIChatVisible(true)}
+                  style={[
+                    styles.toolbarIconBtn,
+                    {
+                      flexDirection: 'row',
+                      gap: 4,
+                      width: 'auto',
+                      paddingHorizontal: 8,
+                      backgroundColor: isDark ? 'rgba(99, 102, 241, 0.2)' : 'rgba(99, 102, 241, 0.12)',
+                      borderRadius: 8,
+                    },
+                  ]}
+                >
+                  <Ionicons name="sparkles" size={13} color="#6366F1" />
+                  <Text style={{ fontSize: 11, fontWeight: '700', color: '#6366F1' }}>AI</Text>
+                </TouchableOpacity>
+              </ScrollView>
+            </View>
+          ) : (
+            /* COMFORTABLE DUAL-TIER TOOLBAR WHEN KEYBOARD IS CLOSED */
+            <View style={{ paddingBottom: Math.max(insets.bottom, 10) }}>
+              {/* Row 1: AI Presets Bar */}
+              <View style={{ paddingVertical: 8, paddingHorizontal: 12 }}>
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  keyboardShouldPersistTaps="always"
+                  contentContainerStyle={{
+                    gap: 8,
+                    flexDirection: isArabic ? 'row-reverse' : 'row',
+                    alignItems: 'center',
+                  }}
+                >
                   <TouchableOpacity
-                    onPress={handleInsertTranscript}
+                    onPress={handleSummarizeNote}
+                    disabled={isAILoading}
+                    style={{
+                      flexDirection: isArabic ? 'row-reverse' : 'row',
+                      alignItems: 'center',
+                      gap: 5,
+                      paddingHorizontal: 12,
+                      paddingVertical: 6,
+                      borderRadius: 12,
+                      backgroundColor: isDark ? 'rgba(99, 102, 241, 0.18)' : 'rgba(99, 102, 241, 0.1)',
+                      borderWidth: 1,
+                      borderColor: isDark ? 'rgba(99, 102, 241, 0.35)' : 'rgba(99, 102, 241, 0.2)',
+                    }}
+                  >
+                    <Ionicons name="sparkles" size={13} color="#6366F1" />
+                    <Text style={{ fontSize: 12, fontWeight: '700', color: '#6366F1' }}>
+                      {t.aiSummarize}
+                    </Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    onPress={handleExtractTasks}
+                    disabled={isAILoading}
+                    style={{
+                      flexDirection: isArabic ? 'row-reverse' : 'row',
+                      alignItems: 'center',
+                      gap: 5,
+                      paddingHorizontal: 12,
+                      paddingVertical: 6,
+                      borderRadius: 12,
+                      backgroundColor: isDark ? 'rgba(16, 185, 129, 0.18)' : 'rgba(16, 185, 129, 0.1)',
+                      borderWidth: 1,
+                      borderColor: isDark ? 'rgba(16, 185, 129, 0.35)' : 'rgba(16, 185, 129, 0.2)',
+                    }}
+                  >
+                    <Ionicons name="checkbox-outline" size={13} color="#10B981" />
+                    <Text style={{ fontSize: 12, fontWeight: '700', color: '#10B981' }}>
+                      {t.aiExtractTasks}
+                    </Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    onPress={handleExplainNote}
+                    disabled={isAILoading}
+                    style={{
+                      flexDirection: isArabic ? 'row-reverse' : 'row',
+                      alignItems: 'center',
+                      gap: 5,
+                      paddingHorizontal: 12,
+                      paddingVertical: 6,
+                      borderRadius: 12,
+                      backgroundColor: isDark ? 'rgba(245, 158, 11, 0.18)' : 'rgba(245, 158, 11, 0.1)',
+                      borderWidth: 1,
+                      borderColor: isDark ? 'rgba(245, 158, 11, 0.35)' : 'rgba(245, 158, 11, 0.2)',
+                    }}
+                  >
+                    <Ionicons name="bulb-outline" size={13} color="#F59E0B" />
+                    <Text style={{ fontSize: 12, fontWeight: '700', color: '#F59E0B' }}>
+                      {t.aiExplain}
+                    </Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    onPress={() => setAIChatVisible(true)}
+                    style={{
+                      flexDirection: isArabic ? 'row-reverse' : 'row',
+                      alignItems: 'center',
+                      gap: 5,
+                      paddingHorizontal: 12,
+                      paddingVertical: 6,
+                      borderRadius: 12,
+                      backgroundColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.05)',
+                      borderWidth: 1,
+                      borderColor: isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(0, 0, 0, 0.08)',
+                    }}
+                  >
+                    <Ionicons name="chatbubbles-outline" size={13} color={colors.text} />
+                    <Text style={{ fontSize: 12, fontWeight: '600', color: colors.text }}>
+                      {t.aiAsk}
+                    </Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    onPress={handleToggleRecording}
+                    style={{
+                      flexDirection: isArabic ? 'row-reverse' : 'row',
+                      alignItems: 'center',
+                      gap: 5,
+                      paddingHorizontal: 12,
+                      paddingVertical: 6,
+                      borderRadius: 12,
+                      backgroundColor: isRecording
+                        ? 'rgba(239, 68, 68, 0.25)'
+                        : isDark
+                        ? 'rgba(239, 68, 68, 0.18)'
+                        : 'rgba(239, 68, 68, 0.1)',
+                      borderWidth: 1,
+                      borderColor: isRecording
+                        ? '#EF4444'
+                        : isDark
+                        ? 'rgba(239, 68, 68, 0.35)'
+                        : 'rgba(239, 68, 68, 0.2)',
+                    }}
+                  >
+                    <Ionicons
+                      name={isRecording ? 'stop-circle' : 'mic-outline'}
+                      size={13}
+                      color="#EF4444"
+                    />
+                    <Text style={{ fontSize: 12, fontWeight: '700', color: '#EF4444' }}>
+                      {isRecording ? (isArabic ? 'إيقاف وحفظ' : 'Stop & Save') : t.voiceRecord}
+                    </Text>
+                  </TouchableOpacity>
+                </ScrollView>
+              </View>
+
+              {/* Row 2: Rich Formatting Toolbar */}
+              <View style={[styles.toolbarWrapper, { backgroundColor: 'transparent', borderTopWidth: 0, paddingTop: 0 }]}>
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  keyboardShouldPersistTaps="always"
+                  contentContainerStyle={{
+                    flexDirection: isArabic ? 'row-reverse' : 'row',
+                    alignItems: 'center',
+                    gap: 6,
+                    paddingHorizontal: 4,
+                  }}
+                >
+                  {/* Headings */}
+                  <TouchableOpacity 
+                    style={[styles.toolbarIconBtn, isH1Active && styles.toolbarIconBtnActive]} 
+                    onPress={() => bodyEditorRef.current?.toggleHeading(1)}
+                  >
+                    <Text style={{ fontSize: 15, fontWeight: '800', color: isH1Active ? colors.primary : colors.surfaceText }}>H1</Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity 
+                    style={[styles.toolbarIconBtn, isH2Active && styles.toolbarIconBtnActive]} 
+                    onPress={() => bodyEditorRef.current?.toggleHeading(2)}
+                  >
+                    <Text style={{ fontSize: 14, fontWeight: '700', color: isH2Active ? colors.primary : colors.surfaceText }}>H2</Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity 
+                    style={[styles.toolbarIconBtn, isH3Active && styles.toolbarIconBtnActive]} 
+                    onPress={() => bodyEditorRef.current?.toggleHeading(3)}
+                  >
+                    <Text style={{ fontSize: 13, fontWeight: '700', color: isH3Active ? colors.primary : colors.surfaceText }}>H3</Text>
+                  </TouchableOpacity>
+
+                  <View style={{ width: 1, height: 20, backgroundColor: colors.border, marginHorizontal: 2 }} />
+
+                  {/* Checklist */}
+                  <TouchableOpacity 
+                    style={[styles.toolbarIconBtn, isChecklistActive && styles.toolbarIconBtnActive]} 
+                    onPress={() => bodyEditorRef.current?.toggleChecklist()}
+                  >
+                    <Ionicons 
+                      name={isChecklistActive ? 'checkbox' : 'checkbox-outline'} 
+                      size={20} 
+                      color={isChecklistActive ? colors.primary : colors.surfaceText} 
+                    />
+                  </TouchableOpacity>
+
+                  {/* Bullet List */}
+                  <TouchableOpacity 
+                    style={[styles.toolbarIconBtn, isBulletActive && styles.toolbarIconBtnActive]} 
+                    onPress={() => bodyEditorRef.current?.toggleBullet()}
+                  >
+                    <Ionicons 
+                      name="list-outline" 
+                      size={20} 
+                      color={isBulletActive ? colors.primary : colors.surfaceText} 
+                    />
+                  </TouchableOpacity>
+
+                  {/* Numbered List */}
+                  <TouchableOpacity 
+                    style={[styles.toolbarIconBtn, isNumberActive && styles.toolbarIconBtnActive]} 
+                    onPress={() => bodyEditorRef.current?.toggleNumber()}
+                  >
+                    <Ionicons 
+                      name="reorder-four-outline" 
+                      size={20} 
+                      color={isNumberActive ? colors.primary : colors.surfaceText} 
+                    />
+                  </TouchableOpacity>
+
+                  {/* Quote */}
+                  <TouchableOpacity 
+                    style={[styles.toolbarIconBtn, isQuoteActive && styles.toolbarIconBtnActive]} 
+                    onPress={() => bodyEditorRef.current?.toggleQuote()}
+                  >
+                    <Ionicons 
+                      name="chatbox-ellipses-outline" 
+                      size={19} 
+                      color={isQuoteActive ? colors.primary : colors.surfaceText} 
+                    />
+                  </TouchableOpacity>
+
+                  {/* Hashtag */}
+                  <TouchableOpacity 
+                    style={styles.toolbarIconBtn} 
+                    onPress={() => bodyEditorRef.current?.insertHashtag()}
+                  >
+                    <Ionicons 
+                      name="pricetag-outline" 
+                      size={18} 
+                      color={colors.surfaceText} 
+                    />
+                  </TouchableOpacity>
+
+                  <View style={{ width: 1, height: 20, backgroundColor: colors.border, marginHorizontal: 2 }} />
+
+                  {/* Bold */}
+                  <TouchableOpacity 
+                    style={[styles.toolbarIconBtn, isBoldActive && styles.toolbarIconBtnActive]} 
+                    onPress={() => bodyEditorRef.current?.applyInlineFormat('**')}
+                  >
+                    <Text style={{ fontSize: 16, fontWeight: '900', color: isBoldActive ? colors.primary : colors.surfaceText }}>B</Text>
+                  </TouchableOpacity>
+
+                  {/* Italic */}
+                  <TouchableOpacity 
+                    style={[styles.toolbarIconBtn, isItalicActive && styles.toolbarIconBtnActive]} 
+                    onPress={() => bodyEditorRef.current?.applyInlineFormat('__')}
+                  >
+                    <Text style={{ fontSize: 16, fontWeight: '700', fontStyle: 'italic', color: isItalicActive ? colors.primary : colors.surfaceText }}>I</Text>
+                  </TouchableOpacity>
+
+                  {/* Strikethrough */}
+                  <TouchableOpacity 
+                    style={[styles.toolbarIconBtn, isStrikeActive && styles.toolbarIconBtnActive]} 
+                    onPress={() => bodyEditorRef.current?.applyInlineFormat('~~')}
+                  >
+                    <Text style={{ fontSize: 15, fontWeight: '700', textDecorationLine: 'line-through', color: isStrikeActive ? colors.primary : colors.surfaceText }}>S</Text>
+                  </TouchableOpacity>
+
+                  {/* Divider */}
+                  <TouchableOpacity 
+                    style={styles.toolbarIconBtn} 
+                    onPress={() => bodyEditorRef.current?.insertDivider()}
+                  >
+                    <Ionicons name="remove-outline" size={22} color={colors.surfaceText} />
+                  </TouchableOpacity>
+
+                  <View style={{ width: 1, height: 20, backgroundColor: colors.border, marginHorizontal: 2 }} />
+
+                  {/* Typography Sheet Trigger */}
+                  <TouchableOpacity 
+                    onPress={() => setActiveMenu('typography')} 
                     style={{
                       flexDirection: 'row',
                       alignItems: 'center',
@@ -930,559 +1517,31 @@ export default function NoteDetailScreen() {
                       paddingHorizontal: 8,
                       paddingVertical: 4,
                       borderRadius: 8,
-                      backgroundColor: isDark ? 'rgba(99, 102, 241, 0.2)' : 'rgba(99, 102, 241, 0.1)',
+                      backgroundColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.05)',
                     }}
                   >
-                    <Ionicons name="add" size={14} color="#6366F1" />
-                    <Text style={{ fontSize: 11, fontWeight: '700', color: '#6366F1' }}>
-                      {t.insertToNote}
-                    </Text>
+                    <Text style={{ color: colors.surfaceText, fontSize: 13, fontWeight: '700' }}>{activeFontSize}pt</Text>
+                    <Ionicons name="chevron-up" size={12} color={colors.textMuted} />
                   </TouchableOpacity>
-                </View>
-                <Text
-                  style={{
-                    fontSize: 13,
-                    lineHeight: 20,
-                    color: colors.textMuted,
-                    textAlign: isArabic ? 'right' : 'left',
-                  }}
-                >
-                  {existingNote.transcript}
-                </Text>
-              </View>
-            )}
-            
-            {/* Reminder Picker */}
-            {isScheduleVisible && (
-              <View style={{ paddingHorizontal: 24, marginBottom: 16 }}>
-                {dateTimeConfirmed ? (
-                  <TouchableOpacity
-                    onPress={() => setDateTimeConfirmed(false)}
-                    style={{
-                      flexDirection: isArabic ? 'row-reverse' : 'row',
-                      alignItems: 'center',
-                      gap: 10,
-                      backgroundColor: colors.warning + '18',
-                      borderWidth: 1,
-                      borderColor: colors.warning + '50',
-                      borderRadius: 12,
-                      paddingHorizontal: 14,
-                      paddingVertical: 10,
-                      alignSelf: 'flex-start',
-                    }}
+
+                  {/* Color */}
+                  <TouchableOpacity onPress={() => setActiveMenu('color')}>
+                    <View style={{ width: 22, height: 22, borderRadius: 11, backgroundColor: activeFontColor, borderWidth: 2, borderColor: colors.border }} />
+                  </TouchableOpacity>
+
+                  {/* Font Family */}
+                  <TouchableOpacity 
+                    onPress={() => setActiveMenu('fontFamily')}
+                    style={[styles.toolbarIconBtn]}
                   >
-                    <Ionicons name="alarm" size={18} color={colors.warning} />
-                    <Text style={{ color: colors.warning, fontWeight: '700', fontSize: 14 }}>
-                      {new Date(dueDate).toLocaleDateString(isArabic ? 'ar-SA' : 'en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-                      {'  '}
-                      {new Date(dueDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                    </Text>
-                    <Ionicons name="pencil-outline" size={14} color={colors.warning} />
+                    <Ionicons name="text" size={18} color={colors.surfaceText} />
                   </TouchableOpacity>
-                ) : (
-                  <View style={styles.inlineReminderHeader}>
-                    <Text style={[styles.inlineReminderTitle, isArabic && { textAlign: 'right' }]}>
-                      {isArabic ? 'موعد التذكير' : 'Reminder Schedule'}
-                    </Text>
-                    
-                    <View style={styles.calendarCard}>
-                      <View style={[styles.calendarHeader, isArabic && { flexDirection: 'row-reverse' }]}>
-                        <TouchableOpacity onPress={prevMonth}>
-                          <Ionicons name="chevron-back" size={20} color={colors.text} />
-                        </TouchableOpacity>
-                        <Text style={styles.calendarTitle}>
-                          {currentMonth.toLocaleString('en-US', { month: 'long', year: 'numeric' })}
-                        </Text>
-                        <TouchableOpacity onPress={nextMonth}>
-                          <Ionicons name="chevron-forward" size={20} color={colors.text} />
-                        </TouchableOpacity>
-                      </View>
-
-                      <View style={[styles.weekDaysRow, isArabic && { flexDirection: 'row-reverse' }]}>
-                        {['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'].map((d) => (
-                          <Text key={d} style={styles.weekDayText}>{d}</Text>
-                        ))}
-                      </View>
-
-                      <View style={[styles.daysGrid, isArabic && { flexDirection: 'row-reverse' }]}>
-                        {renderCalendarDays()}
-                      </View>
-                    </View>
-
-                    <View style={[styles.timePresetsRow, isArabic && { flexDirection: 'row-reverse' }, { alignItems: 'center', marginTop: 16 }]}>
-                      {Platform.OS === 'ios' ? (
-                        <DateTimePicker
-                          value={selectedTime}
-                          mode="time"
-                          display="spinner"
-                          themeVariant={isDarkMode ? 'dark' : 'light'}
-                          style={{ flex: 1, height: 100 }}
-                          onChange={(e, d) => {
-                            if (d) {
-                              setSelectedTime(d);
-                              const finalDate = new Date(selectedDate);
-                              finalDate.setHours(d.getHours(), d.getMinutes(), 0, 0);
-                              setDueDate(finalDate.getTime());
-                            }
-                          }}
-                        />
-                      ) : (
-                        <>
-                          <TouchableOpacity 
-                            style={[styles.timePresetBtn, { backgroundColor: colors.bg, flexDirection: 'row', alignItems: 'center', height: 50, borderRadius: 12 }]}
-                            onPress={() => setShowTimePicker(true)}
-                          >
-                            <Ionicons name="time-outline" size={20} color={colors.text} style={{ marginRight: 8 }} />
-                            <Text style={[styles.timePresetMain, { color: colors.text, fontSize: 18 }]}>
-                              {selectedTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                            </Text>
-                          </TouchableOpacity>
-                          {showTimePicker && (
-                            <DateTimePicker
-                              value={selectedTime}
-                              mode="time"
-                              display="default"
-                              themeVariant={isDarkMode ? 'dark' : 'light'}
-                              is24Hour={true}
-                              onChange={(e, d) => {
-                                 setShowTimePicker(false);
-                                 if (d) {
-                                   setSelectedTime(d);
-                                   const finalDate = new Date(selectedDate);
-                                   finalDate.setHours(d.getHours(), d.getMinutes(), 0, 0);
-                                   setDueDate(finalDate.getTime());
-                                 }
-                              }}
-                            />
-                          )}
-                        </>
-                      )}
-                    </View>
-
-                    {/* Confirm button */}
-                    <TouchableOpacity
-                      onPress={() => {
-                        const finalDate = new Date(selectedDate);
-                        finalDate.setHours(selectedTime.getHours(), selectedTime.getMinutes(), 0, 0);
-                        setDueDate(finalDate.getTime());
-                        setDateTimeConfirmed(true);
-                      }}
-                      style={{
-                        marginTop: 16,
-                        backgroundColor: colors.warning,
-                        borderRadius: 12,
-                        paddingVertical: 12,
-                        alignItems: 'center',
-                      }}
-                    >
-                      <Text style={{ color: colors.text, fontWeight: '800', fontSize: 15 }}>
-                        {isArabic ? 'تأكيد الموعد' : 'Confirm Date & Time'}
-                      </Text>
-                    </TouchableOpacity>
-                  </View>
-                )}
-              </View>
-            )}
-
-            {/* Rendered Markdown Body Editor */}
-            <View
-              onLayout={(e) => {
-                editorTopRef.current = e.nativeEvent.layout.y;
-              }}
-              style={{ flexGrow: 1 }}
-            >
-              <NoteBodyEditor
-                ref={bodyEditorRef}
-                value={body}
-                onChange={setBody}
-                onCursorChange={(pos) => { cursorPosRef.current = pos; setSelection({ start: pos, end: pos }); }}
-                onActivateLine={handleActiveLineMove}
-                colors={colors}
-                isArabic={isArabic}
-                isDark={isDark}
-                baseStyle={{
-                  fontSize: activeFontSize,
-                  fontFamily: activeFontFamily === 'System' ? undefined : activeFontFamily,
-                  color: activeFontColor,
-                  fontWeight: activeFontWeight,
-                  fontStyle: activeFontStyle,
-                }}
-                placeholder={isArabic ? 'ابدأ في كتابة ملاحظتك هنا...\n• استخدم الشريط أدناه لإضافة العناوين، القوائم، أو المهام.' : 'Start typing your note here...\n• Use the toolbar below to add Headings, Checklists, Bullets, or Formats.'}
-              />
-            </View>
-
-          </ScrollView>
-
-          {/* Floating Header */}
-          <BlurView
-            tint={isDark ? "dark" : "light"}
-            intensity={80}
-            style={[
-              {
-                position: 'absolute',
-                top: 0,
-                left: 0,
-                right: 0,
-                paddingTop: insets.top,
-                backgroundColor: isDark ? '#0e0f14' : colors.bg,
-                borderBottomWidth: StyleSheet.hairlineWidth,
-                borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.08)',
-                zIndex: 10,
-              }
-            ]}
-          >
-            <View style={[styles.detailHeader, { paddingBottom: 10, paddingTop: 10 }, isArabic && { flexDirection: 'row-reverse' }]}>
-              <TouchableOpacity style={styles.detailHeaderBtn} onPress={handleSaveNote}>
-                <Ionicons name={isArabic ? "chevron-forward" : "chevron-back"} size={24} color={colors.text} style={styles.detailHeaderBtnIcon} />
-              </TouchableOpacity>
-              
-              <View style={styles.detailHeaderRight}>
-                <TouchableOpacity 
-                  style={[styles.detailHeaderBtn, isScheduleVisible && { backgroundColor: colors.warning + '20' }]} 
-                  onPress={() => {
-                    if (isScheduleVisible && dateTimeConfirmed) {
-                      setDateTimeConfirmed(false);
-                    } else {
-                      setScheduleVisible(!isScheduleVisible);
-                      setDateTimeConfirmed(false);
-                    }
-                  }}
-                >
-                   <Ionicons 
-                     name={isScheduleVisible ? "alarm" : "alarm-outline"} 
-                     size={22} 
-                     color={isScheduleVisible ? colors.warning : colors.text} 
-                   />
-                </TouchableOpacity>
-
-                {/* Voice Record Button in Header */}
-                <TouchableOpacity 
-                  style={[
-                    styles.detailHeaderBtn,
-                    isRecording && { backgroundColor: 'rgba(239, 68, 68, 0.18)' },
-                    !isRecording && { backgroundColor: isDark ? 'rgba(99, 102, 241, 0.15)' : 'rgba(99, 102, 241, 0.1)' }
-                  ]} 
-                  onPress={handleToggleRecording}
-                >
-                   <Ionicons
-                     name={isRecording ? "stop-circle" : "mic"}
-                     size={20}
-                     color={isRecording ? "#EF4444" : "#6366F1"}
-                   />
-                </TouchableOpacity>
-
-                <TouchableOpacity style={styles.detailHeaderBtn} onPress={handleSaveNote}>
-                   <Ionicons name="checkmark" size={24} color={colors.success} />
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.detailHeaderBtn} onPress={() => {
-                   if (id) handleDeleteNote();
-                   else router.back();
-                }}>
-                   <Ionicons name="trash-outline" size={20} color={colors.danger} />
-                </TouchableOpacity>
+                </ScrollView>
               </View>
             </View>
-          </BlurView>
-
-          {/* AI Quick Actions Bar + Rich Toolbar - docked above keyboard / screen bottom */}
-          <View
-            ref={toolbarDockRef}
-            style={{
-              backgroundColor: isDark ? '#0e0f14' : colors.bg,
-              borderTopWidth: StyleSheet.hairlineWidth,
-              borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.08)',
-              zIndex: 9,
-              marginBottom: toolbarLift,
-            }}
-          >
-            <View style={{ paddingVertical: 8, paddingHorizontal: 14 }}>
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              keyboardShouldPersistTaps="always"
-              contentContainerStyle={{
-                gap: 8,
-                flexDirection: isArabic ? 'row-reverse' : 'row',
-                alignItems: 'center',
-              }}
-            >
-              <TouchableOpacity
-                onPress={handleSummarizeNote}
-                disabled={isAILoading}
-                style={{
-                  flexDirection: isArabic ? 'row-reverse' : 'row',
-                  alignItems: 'center',
-                  gap: 5,
-                  paddingHorizontal: 12,
-                  paddingVertical: 6,
-                  borderRadius: 12,
-                  backgroundColor: isDark ? 'rgba(99, 102, 241, 0.18)' : 'rgba(99, 102, 241, 0.1)',
-                  borderWidth: 1,
-                  borderColor: isDark ? 'rgba(99, 102, 241, 0.35)' : 'rgba(99, 102, 241, 0.2)',
-                }}
-              >
-                <Ionicons name="sparkles" size={13} color="#6366F1" />
-                <Text style={{ fontSize: 12, fontWeight: '700', color: '#6366F1' }}>
-                  {t.aiSummarize}
-                </Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                onPress={handleExtractTasks}
-                disabled={isAILoading}
-                style={{
-                  flexDirection: isArabic ? 'row-reverse' : 'row',
-                  alignItems: 'center',
-                  gap: 5,
-                  paddingHorizontal: 12,
-                  paddingVertical: 6,
-                  borderRadius: 12,
-                  backgroundColor: isDark ? 'rgba(16, 185, 129, 0.18)' : 'rgba(16, 185, 129, 0.1)',
-                  borderWidth: 1,
-                  borderColor: isDark ? 'rgba(16, 185, 129, 0.35)' : 'rgba(16, 185, 129, 0.2)',
-                }}
-              >
-                <Ionicons name="checkbox-outline" size={13} color="#10B981" />
-                <Text style={{ fontSize: 12, fontWeight: '700', color: '#10B981' }}>
-                  {t.aiExtractTasks}
-                </Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                onPress={handleExplainNote}
-                disabled={isAILoading}
-                style={{
-                  flexDirection: isArabic ? 'row-reverse' : 'row',
-                  alignItems: 'center',
-                  gap: 5,
-                  paddingHorizontal: 12,
-                  paddingVertical: 6,
-                  borderRadius: 12,
-                  backgroundColor: isDark ? 'rgba(245, 158, 11, 0.18)' : 'rgba(245, 158, 11, 0.1)',
-                  borderWidth: 1,
-                  borderColor: isDark ? 'rgba(245, 158, 11, 0.35)' : 'rgba(245, 158, 11, 0.2)',
-                }}
-              >
-                <Ionicons name="bulb-outline" size={13} color="#F59E0B" />
-                <Text style={{ fontSize: 12, fontWeight: '700', color: '#F59E0B' }}>
-                  {t.aiExplain}
-                </Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                onPress={() => setAIChatVisible(true)}
-                style={{
-                  flexDirection: isArabic ? 'row-reverse' : 'row',
-                  alignItems: 'center',
-                  gap: 5,
-                  paddingHorizontal: 12,
-                  paddingVertical: 6,
-                  borderRadius: 12,
-                  backgroundColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.05)',
-                  borderWidth: 1,
-                  borderColor: isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(0, 0, 0, 0.08)',
-                }}
-              >
-                <Ionicons name="chatbubbles-outline" size={13} color={colors.text} />
-                <Text style={{ fontSize: 12, fontWeight: '600', color: colors.text }}>
-                  {t.aiAsk}
-                </Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                onPress={handleToggleRecording}
-                style={{
-                  flexDirection: isArabic ? 'row-reverse' : 'row',
-                  alignItems: 'center',
-                  gap: 5,
-                  paddingHorizontal: 12,
-                  paddingVertical: 6,
-                  borderRadius: 12,
-                  backgroundColor: isRecording
-                    ? 'rgba(239, 68, 68, 0.25)'
-                    : isDark
-                    ? 'rgba(239, 68, 68, 0.18)'
-                    : 'rgba(239, 68, 68, 0.1)',
-                  borderWidth: 1,
-                  borderColor: isRecording
-                    ? '#EF4444'
-                    : isDark
-                    ? 'rgba(239, 68, 68, 0.35)'
-                    : 'rgba(239, 68, 68, 0.2)',
-                }}
-              >
-                <Ionicons
-                  name={isRecording ? 'stop-circle' : 'mic-outline'}
-                  size={13}
-                  color="#EF4444"
-                />
-                <Text style={{ fontSize: 12, fontWeight: '700', color: '#EF4444' }}>
-                  {isRecording ? (isArabic ? 'إيقاف وحفظ' : 'Stop & Save') : t.voiceRecord}
-                </Text>
-              </TouchableOpacity>
-            </ScrollView>
-            </View>
-
-            {/* Rich Formatting Toolbar */}
-            <View style={[
-              styles.toolbarWrapper,
-              {
-                paddingBottom: Math.max(insets.bottom, 8),
-                backgroundColor: 'transparent',
-              }
-            ]}>
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              keyboardShouldPersistTaps="always"
-              contentContainerStyle={[
-                { flexDirection: isArabic ? 'row-reverse' : 'row', alignItems: 'center', gap: 6, paddingHorizontal: 4 },
-              ]}
-            >
-              {/* Headings */}
-              <TouchableOpacity 
-                style={[styles.toolbarIconBtn, isH1Active && styles.toolbarIconBtnActive]} 
-                onPress={() => bodyEditorRef.current?.toggleHeading(1)}
-              >
-                <Text style={{ fontSize: 15, fontWeight: '800', color: isH1Active ? colors.primary : colors.surfaceText }}>H1</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity 
-                style={[styles.toolbarIconBtn, isH2Active && styles.toolbarIconBtnActive]} 
-                onPress={() => bodyEditorRef.current?.toggleHeading(2)}
-              >
-                <Text style={{ fontSize: 14, fontWeight: '700', color: isH2Active ? colors.primary : colors.surfaceText }}>H2</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity 
-                style={[styles.toolbarIconBtn, isH3Active && styles.toolbarIconBtnActive]} 
-                onPress={() => bodyEditorRef.current?.toggleHeading(3)}
-              >
-                <Text style={{ fontSize: 13, fontWeight: '700', color: isH3Active ? colors.primary : colors.surfaceText }}>H3</Text>
-              </TouchableOpacity>
-
-              <View style={{ width: 1, height: 20, backgroundColor: colors.border, marginHorizontal: 2 }} />
-
-              {/* Checklist */}
-              <TouchableOpacity 
-                style={[styles.toolbarIconBtn, isChecklistActive && styles.toolbarIconBtnActive]} 
-                onPress={() => bodyEditorRef.current?.toggleChecklist()}
-              >
-                <Ionicons 
-                  name={isChecklistActive ? "checkbox" : "checkbox-outline"} 
-                  size={20} 
-                  color={isChecklistActive ? colors.primary : colors.surfaceText} 
-                />
-              </TouchableOpacity>
-
-              {/* Bullet List */}
-              <TouchableOpacity 
-                style={[styles.toolbarIconBtn, isBulletActive && styles.toolbarIconBtnActive]} 
-                onPress={() => bodyEditorRef.current?.toggleBullet()}
-              >
-                <Ionicons 
-                  name="list-outline" 
-                  size={20} 
-                  color={isBulletActive ? colors.primary : colors.surfaceText} 
-                />
-              </TouchableOpacity>
-
-              {/* Numbered List */}
-              <TouchableOpacity 
-                style={[styles.toolbarIconBtn, isNumberActive && styles.toolbarIconBtnActive]} 
-                onPress={() => bodyEditorRef.current?.toggleNumber()}
-              >
-                <Ionicons 
-                  name="reorder-four-outline" 
-                  size={20} 
-                  color={isNumberActive ? colors.primary : colors.surfaceText} 
-                />
-              </TouchableOpacity>
-
-              {/* Quote */}
-              <TouchableOpacity 
-                style={[styles.toolbarIconBtn, isQuoteActive && styles.toolbarIconBtnActive]} 
-                onPress={() => bodyEditorRef.current?.toggleQuote()}
-              >
-                <Ionicons 
-                  name="chatbox-ellipses-outline" 
-                  size={19} 
-                  color={isQuoteActive ? colors.primary : colors.surfaceText} 
-                />
-              </TouchableOpacity>
-
-              {/* Hashtag */}
-              <TouchableOpacity 
-                style={styles.toolbarIconBtn} 
-                onPress={() => bodyEditorRef.current?.insertHashtag()}
-              >
-                <Ionicons 
-                  name="pricetag-outline" 
-                  size={18} 
-                  color={colors.surfaceText} 
-                />
-              </TouchableOpacity>
-
-              <View style={{ width: 1, height: 20, backgroundColor: colors.border, marginHorizontal: 2 }} />
-
-              {/* Bold */}
-              <TouchableOpacity 
-                style={styles.toolbarIconBtn} 
-                onPress={() => bodyEditorRef.current?.applyInlineFormat('**')}
-              >
-                <Text style={{ fontSize: 16, fontWeight: '900', color: colors.surfaceText }}>B</Text>
-              </TouchableOpacity>
-
-              {/* Italic */}
-              <TouchableOpacity 
-                style={styles.toolbarIconBtn} 
-                onPress={() => bodyEditorRef.current?.applyInlineFormat('__')}
-              >
-                <Text style={{ fontSize: 16, fontWeight: '700', fontStyle: 'italic', color: colors.surfaceText }}>I</Text>
-              </TouchableOpacity>
-
-              {/* Strikethrough */}
-              <TouchableOpacity 
-                style={styles.toolbarIconBtn} 
-                onPress={() => bodyEditorRef.current?.applyInlineFormat('~~')}
-              >
-                <Text style={{ fontSize: 15, fontWeight: '700', textDecorationLine: 'line-through', color: colors.surfaceText }}>S</Text>
-              </TouchableOpacity>
-
-              {/* Divider */}
-              <TouchableOpacity 
-                style={styles.toolbarIconBtn} 
-                onPress={() => bodyEditorRef.current?.insertDivider()}
-              >
-                <Ionicons name="remove-outline" size={22} color={colors.surfaceText} />
-              </TouchableOpacity>
-
-              <View style={{ width: 1, height: 20, backgroundColor: colors.border, marginHorizontal: 2 }} />
-
-              {/* Font Size */}
-              <TouchableOpacity 
-                onPress={() => setActiveMenu('fontSize')} 
-                style={{ paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8, backgroundColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.05)' }}
-              >
-                <Text style={{ color: colors.surfaceText, fontSize: 13, fontWeight: '700' }}>{activeFontSize}pt</Text>
-              </TouchableOpacity>
-
-              {/* Color */}
-              <TouchableOpacity onPress={() => setActiveMenu('color')}>
-                <View style={{ width: 22, height: 22, borderRadius: 11, backgroundColor: activeFontColor, borderWidth: 2, borderColor: colors.border }} />
-              </TouchableOpacity>
-
-              {/* Font Family */}
-              <TouchableOpacity 
-                onPress={() => setActiveMenu('fontFamily')}
-                style={[styles.toolbarIconBtn]}
-              >
-                <Ionicons name="text" size={18} color={colors.surfaceText} />
-              </TouchableOpacity>
-            </ScrollView>
-          </View>
-          </View>
+          )}
         </View>
+      </View>
 
       {/* AI Assistant Interactive Chat Bottom Sheet */}
       <NoteAIChatSheet
@@ -1496,21 +1555,34 @@ export default function NoteDetailScreen() {
         isLoading={isAILoading}
       />
 
-      {/* Action Menu Bottom Sheet (Font Size, Font Family, Color) */}
+      {/* Action Menu / Typography Inspector Bottom Sheet */}
       <Modal
         visible={activeMenu !== 'none'}
         animationType="slide"
         transparent={true}
         onRequestClose={() => setActiveMenu('none')}
+        statusBarTranslucent={true}
       >
         <TouchableOpacity 
           style={styles.modalOverlay} 
           activeOpacity={1} 
           onPress={() => setActiveMenu('none')}
         >
-          <View style={[styles.modalContent, { marginTop: 'auto', marginBottom: 0, borderBottomLeftRadius: 0, borderBottomRightRadius: 0, maxHeight: '60%' }]}>
+          <View
+            style={[
+              styles.modalContent,
+              {
+                marginTop: 'auto',
+                marginBottom: 0,
+                borderBottomLeftRadius: 0,
+                borderBottomRightRadius: 0,
+                maxHeight: '75%',
+              },
+            ]}
+          >
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>
+                {activeMenu === 'typography' && (isArabic ? 'تنسيق النص والخط' : 'Typography & Formatting')}
                 {activeMenu === 'fontFamily' && (isArabic ? 'اختر نوع الخط' : 'Select Font Family')}
                 {activeMenu === 'fontSize' && (isArabic ? 'اختر حجم الخط' : 'Select Font Size')}
                 {activeMenu === 'color' && (isArabic ? 'اختر لون النص' : 'Select Text Color')}
@@ -1520,14 +1592,227 @@ export default function NoteDetailScreen() {
               </TouchableOpacity>
             </View>
 
-            <ScrollView showsVerticalScrollIndicator={false}>
+            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 24 }}>
+              {/* 3-TIER COMPLETE TYPOGRAPHY INSPECTOR */}
+              {activeMenu === 'typography' && (
+                <View style={{ gap: 20 }}>
+                  {/* TIER 1: Text Hierarchy / Heading Level */}
+                  <View>
+                    <Text style={{ fontSize: 13, fontWeight: '700', color: colors.textMuted, marginBottom: 8, textAlign: isArabic ? 'right' : 'left' }}>
+                      {isArabic ? 'المستوى الهيكلي للنص' : 'Text Hierarchy'}
+                    </Text>
+                    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, flexDirection: isArabic ? 'row-reverse' : 'row' }}>
+                      {[
+                        { label: isArabic ? 'عنوان رئيسي (H1)' : 'Title (H1)', active: isH1Active, onSelect: () => bodyEditorRef.current?.toggleHeading(1) },
+                        { label: isArabic ? 'عنوان قسم (H2)' : 'Heading (H2)', active: isH2Active, onSelect: () => bodyEditorRef.current?.toggleHeading(2) },
+                        { label: isArabic ? 'عنوان فرعي (H3)' : 'Subheading (H3)', active: isH3Active, onSelect: () => bodyEditorRef.current?.toggleHeading(3) },
+                        { label: isArabic ? 'اقتباس' : 'Quote', active: isQuoteActive, onSelect: () => bodyEditorRef.current?.toggleQuote() },
+                      ].map((item, idx) => (
+                        <TouchableOpacity
+                          key={idx}
+                          onPress={item.onSelect}
+                          style={{
+                            paddingHorizontal: 14,
+                            paddingVertical: 10,
+                            borderRadius: 12,
+                            borderWidth: 1,
+                            borderColor: item.active ? colors.primary : colors.border,
+                            backgroundColor: item.active ? colors.primary + '20' : (isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)'),
+                          }}
+                        >
+                          <Text style={{ fontSize: 13, fontWeight: item.active ? '800' : '600', color: item.active ? colors.primary : colors.text }}>
+                            {item.label}
+                          </Text>
+                        </TouchableOpacity>
+                      ))}
+                    </ScrollView>
+                  </View>
+
+                  {/* TIER 2: Inline Styles & Lists */}
+                  <View>
+                    <Text style={{ fontSize: 13, fontWeight: '700', color: colors.textMuted, marginBottom: 8, textAlign: isArabic ? 'right' : 'left' }}>
+                      {isArabic ? 'الأنماط والقوائم' : 'Styles & Lists'}
+                    </Text>
+                    <View style={{ flexDirection: isArabic ? 'row-reverse' : 'row', flexWrap: 'wrap', gap: 10 }}>
+                      <TouchableOpacity
+                        onPress={() => bodyEditorRef.current?.applyInlineFormat('**')}
+                        style={{
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          gap: 6,
+                          paddingHorizontal: 14,
+                          paddingVertical: 10,
+                          borderRadius: 12,
+                          borderWidth: 1,
+                          borderColor: isBoldActive ? colors.primary : colors.border,
+                          backgroundColor: isBoldActive ? colors.primary + '20' : (isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)'),
+                        }}
+                      >
+                        <Text style={{ fontSize: 15, fontWeight: '900', color: isBoldActive ? colors.primary : colors.text }}>B</Text>
+                        <Text style={{ fontSize: 13, fontWeight: '600', color: colors.text }}>{isArabic ? 'عريض' : 'Bold'}</Text>
+                      </TouchableOpacity>
+
+                      <TouchableOpacity
+                        onPress={() => bodyEditorRef.current?.applyInlineFormat('__')}
+                        style={{
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          gap: 6,
+                          paddingHorizontal: 14,
+                          paddingVertical: 10,
+                          borderRadius: 12,
+                          borderWidth: 1,
+                          borderColor: isItalicActive ? colors.primary : colors.border,
+                          backgroundColor: isItalicActive ? colors.primary + '20' : (isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)'),
+                        }}
+                      >
+                        <Text style={{ fontSize: 15, fontWeight: '700', fontStyle: 'italic', color: isItalicActive ? colors.primary : colors.text }}>I</Text>
+                        <Text style={{ fontSize: 13, fontWeight: '600', color: colors.text }}>{isArabic ? 'مائل' : 'Italic'}</Text>
+                      </TouchableOpacity>
+
+                      <TouchableOpacity
+                        onPress={() => bodyEditorRef.current?.applyInlineFormat('~~')}
+                        style={{
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          gap: 6,
+                          paddingHorizontal: 14,
+                          paddingVertical: 10,
+                          borderRadius: 12,
+                          borderWidth: 1,
+                          borderColor: isStrikeActive ? colors.primary : colors.border,
+                          backgroundColor: isStrikeActive ? colors.primary + '20' : (isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)'),
+                        }}
+                      >
+                        <Text style={{ fontSize: 14, fontWeight: '700', textDecorationLine: 'line-through', color: isStrikeActive ? colors.primary : colors.text }}>S</Text>
+                        <Text style={{ fontSize: 13, fontWeight: '600', color: colors.text }}>{isArabic ? 'يتوسطه خط' : 'Strike'}</Text>
+                      </TouchableOpacity>
+
+                      <TouchableOpacity
+                        onPress={() => bodyEditorRef.current?.toggleChecklist()}
+                        style={{
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          gap: 6,
+                          paddingHorizontal: 14,
+                          paddingVertical: 10,
+                          borderRadius: 12,
+                          borderWidth: 1,
+                          borderColor: isChecklistActive ? colors.primary : colors.border,
+                          backgroundColor: isChecklistActive ? colors.primary + '20' : (isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)'),
+                        }}
+                      >
+                        <Ionicons name={isChecklistActive ? 'checkbox' : 'checkbox-outline'} size={18} color={isChecklistActive ? colors.primary : colors.text} />
+                        <Text style={{ fontSize: 13, fontWeight: '600', color: colors.text }}>{isArabic ? 'قائمة مهام' : 'Checklist'}</Text>
+                      </TouchableOpacity>
+
+                      <TouchableOpacity
+                        onPress={() => bodyEditorRef.current?.toggleBullet()}
+                        style={{
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          gap: 6,
+                          paddingHorizontal: 14,
+                          paddingVertical: 10,
+                          borderRadius: 12,
+                          borderWidth: 1,
+                          borderColor: isBulletActive ? colors.primary : colors.border,
+                          backgroundColor: isBulletActive ? colors.primary + '20' : (isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)'),
+                        }}
+                      >
+                        <Ionicons name="list-outline" size={18} color={isBulletActive ? colors.primary : colors.text} />
+                        <Text style={{ fontSize: 13, fontWeight: '600', color: colors.text }}>{isArabic ? 'قائمة نقطية' : 'Bullets'}</Text>
+                      </TouchableOpacity>
+
+                      <TouchableOpacity
+                        onPress={() => bodyEditorRef.current?.toggleNumber()}
+                        style={{
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          gap: 6,
+                          paddingHorizontal: 14,
+                          paddingVertical: 10,
+                          borderRadius: 12,
+                          borderWidth: 1,
+                          borderColor: isNumberActive ? colors.primary : colors.border,
+                          backgroundColor: isNumberActive ? colors.primary + '20' : (isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)'),
+                        }}
+                      >
+                        <Ionicons name="reorder-four-outline" size={18} color={isNumberActive ? colors.primary : colors.text} />
+                        <Text style={{ fontSize: 13, fontWeight: '600', color: colors.text }}>{isArabic ? 'قائمة رقمية' : 'Numbers'}</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+
+                  {/* TIER 3: Font Size Scale */}
+                  <View>
+                    <Text style={{ fontSize: 13, fontWeight: '700', color: colors.textMuted, marginBottom: 8, textAlign: isArabic ? 'right' : 'left' }}>
+                      {isArabic ? 'حجم الخط الأساسي' : 'Base Font Size'}
+                    </Text>
+                    <View style={{ flexDirection: isArabic ? 'row-reverse' : 'row', flexWrap: 'wrap', gap: 8 }}>
+                      {[14, 16, 17, 18, 20, 22, 24, 28].map((s) => {
+                        const isSizeActive = activeFontSize === s;
+                        return (
+                          <TouchableOpacity
+                            key={s}
+                            onPress={() => setActiveFontSize(s)}
+                            style={{
+                              paddingHorizontal: 12,
+                              paddingVertical: 8,
+                              borderRadius: 10,
+                              borderWidth: 1,
+                              borderColor: isSizeActive ? colors.primary : colors.border,
+                              backgroundColor: isSizeActive ? colors.primary + '20' : (isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)'),
+                            }}
+                          >
+                            <Text style={{ fontSize: 13, fontWeight: isSizeActive ? '800' : '500', color: isSizeActive ? colors.primary : colors.text }}>
+                              {s}pt
+                            </Text>
+                          </TouchableOpacity>
+                        );
+                      })}
+                    </View>
+                  </View>
+
+                  {/* TIER 4: Color Palette */}
+                  <View>
+                    <Text style={{ fontSize: 13, fontWeight: '700', color: colors.textMuted, marginBottom: 8, textAlign: isArabic ? 'right' : 'left' }}>
+                      {isArabic ? 'لون النص' : 'Text Color'}
+                    </Text>
+                    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12, justifyContent: 'flex-start' }}>
+                      {[colors.text, '#6366F1', '#10B981', '#F59E0B', '#EF4444', '#EC4899', '#8B5CF6', '#14B8A6', '#3B82F6', '#64748B'].map((c) => (
+                        <TouchableOpacity
+                          key={c}
+                          onPress={() => setActiveFontColor(c)}
+                          style={{
+                            width: 36,
+                            height: 36,
+                            borderRadius: 18,
+                            backgroundColor: c,
+                            borderWidth: 3,
+                            borderColor: activeFontColor === c ? colors.primary : colors.border,
+                            justifyContent: 'center',
+                            alignItems: 'center',
+                          }}
+                        >
+                          {activeFontColor === c && (
+                            <Ionicons name="checkmark" size={16} color="#FFFFFF" />
+                          )}
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  </View>
+                </View>
+              )}
+
+              {/* FONT FAMILY SUB-PICKER */}
               {activeMenu === 'fontFamily' && [
                 { label: isArabic ? 'الخط الافتراضي (System)' : 'System Default', val: 'System' },
                 { label: isArabic ? 'خط كلاسيكي (Serif / Georgia)' : 'Editorial Serif', val: Platform.OS === 'ios' ? 'Georgia' : 'serif' },
                 { label: isArabic ? 'خط برمجي (Monospace)' : 'Monospace (Code)', val: Platform.OS === 'ios' ? 'Courier New' : 'monospace' },
                 { label: isArabic ? 'خط حديث (Modern Sans)' : 'Modern Sans', val: Platform.OS === 'ios' ? 'Helvetica Neue' : 'sans-serif' },
                 { label: isArabic ? 'خط عريض (Clean Medium)' : 'Clean Medium', val: Platform.OS === 'ios' ? 'System' : 'sans-serif-medium' },
-              ].map(f => (
+              ].map((f) => (
                 <TouchableOpacity 
                   key={f.val} 
                   onPress={() => { 
@@ -1552,7 +1837,8 @@ export default function NoteDetailScreen() {
                 </TouchableOpacity>
               ))}
 
-              {activeMenu === 'fontSize' && [14, 16, 17, 18, 20, 22, 24, 28].map(s => (
+              {/* FONT SIZE SUB-PICKER */}
+              {activeMenu === 'fontSize' && [14, 16, 17, 18, 20, 22, 24, 28].map((s) => (
                 <TouchableOpacity 
                   key={s} 
                   onPress={() => { 
@@ -1577,9 +1863,10 @@ export default function NoteDetailScreen() {
                 </TouchableOpacity>
               ))}
 
+              {/* COLOR SUB-PICKER */}
               {activeMenu === 'color' && (
                 <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 16, padding: 16, justifyContent: 'space-around' }}>
-                  {[colors.text, colors.primary, colors.danger, colors.success, colors.warning, colors.border, colors.textMuted, '#6366F1', '#EC4899', '#8B5CF6', '#14B8A6'].map(c => (
+                  {[colors.text, colors.primary, colors.danger, colors.success, colors.warning, colors.border, colors.textMuted, '#6366F1', '#EC4899', '#8B5CF6', '#14B8A6', '#3B82F6'].map((c) => (
                     <TouchableOpacity 
                       key={c} 
                       onPress={() => { setActiveFontColor(c); setActiveMenu('none'); }} 
@@ -1593,9 +1880,15 @@ export default function NoteDetailScreen() {
                         shadowColor: colors.text,
                         shadowOpacity: 0.2,
                         shadowRadius: 4,
-                        elevation: 3
+                        elevation: 3,
+                        justifyContent: 'center',
+                        alignItems: 'center',
                       }} 
-                    />
+                    >
+                      {activeFontColor === c && (
+                        <Ionicons name="checkmark" size={22} color="#FFFFFF" />
+                      )}
+                    </TouchableOpacity>
                   ))}
                 </View>
               )}
@@ -1603,6 +1896,6 @@ export default function NoteDetailScreen() {
           </View>
         </TouchableOpacity>
       </Modal>
-    </View>
+    </KeyboardAvoidingView>
   );
 }

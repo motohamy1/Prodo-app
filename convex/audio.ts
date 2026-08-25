@@ -142,86 +142,96 @@ export const transcribeAudio = action({
       const groqApiKey = process.env.GROQ_API_KEY;
       const geminiApiKey = process.env.GEMINI_API_KEY;
 
-      // 1. Primary: Groq Whisper STT
+      // 1. Primary: Groq Whisper STT (whisper-large-v3-turbo, whisper-large-v3)
       if (groqApiKey) {
-        try {
-          const formData = new FormData();
-          const audioBlob = new Blob([audioBuffer], { type: "audio/m4a" });
-          formData.append("file", audioBlob, "recording.m4a");
-          formData.append("model", "whisper-large-v3-turbo");
-          formData.append("response_format", "verbose_json");
-          if (args.languageHint && args.languageHint !== "auto") {
-            formData.append("language", args.languageHint);
-          }
+        const whisperModels = ["whisper-large-v3-turbo", "whisper-large-v3"];
 
-          const groqRes = await fetch("https://api.groq.com/openai/v1/audio/transcriptions", {
-            method: "POST",
-            headers: {
-              Authorization: `Bearer ${groqApiKey}`,
-            },
-            body: formData,
-          });
+        for (const modelName of whisperModels) {
+          if (transcript) break;
+          try {
+            const formData = new FormData();
+            const audioBlob = new Blob([audioBuffer], { type: "audio/m4a" });
+            formData.append("file", audioBlob, "recording.m4a");
+            formData.append("model", modelName);
+            formData.append("response_format", "verbose_json");
+            if (args.languageHint && args.languageHint !== "auto") {
+              formData.append("language", args.languageHint);
+            }
 
-          if (groqRes.ok) {
-            const data = (await groqRes.json()) as any;
-            transcript = data.text || "";
-            detectedLanguage = data.language || detectedLanguage;
-          } else {
-            console.warn("Groq transcription failed, trying fallback:", await groqRes.text());
+            const groqRes = await fetch("https://api.groq.com/openai/v1/audio/transcriptions", {
+              method: "POST",
+              headers: {
+                Authorization: `Bearer ${groqApiKey}`,
+              },
+              body: formData,
+            });
+
+            if (groqRes.ok) {
+              const data = (await groqRes.json()) as any;
+              transcript = data.text || "";
+              detectedLanguage = data.language || detectedLanguage;
+            } else {
+              console.warn(`Groq STT model ${modelName} failed, trying next:`, await groqRes.text());
+            }
+          } catch (groqErr) {
+            console.warn(`Groq STT model ${modelName} error:`, groqErr);
           }
-        } catch (groqErr) {
-          console.warn("Groq STT encountered error, trying fallback:", groqErr);
         }
       }
 
-function arrayBufferToBase64(buffer: ArrayBuffer): string {
-  let binary = "";
-  const bytes = new Uint8Array(buffer);
-  const len = bytes.byteLength;
-  for (let i = 0; i < len; i++) {
-    binary += String.fromCharCode(bytes[i]);
-  }
-  return btoa(binary);
-}
+      function arrayBufferToBase64(buffer: ArrayBuffer): string {
+        let binary = "";
+        const bytes = new Uint8Array(buffer);
+        const len = bytes.byteLength;
+        for (let i = 0; i < len; i++) {
+          binary += String.fromCharCode(bytes[i]);
+        }
+        return btoa(binary);
+      }
 
-      // 2. Fallback: Google Gemini 2.0 Flash Audio Transcription
+      // 2. Fallback: Google Gemini Audio Transcription (gemini-2.0-flash, gemini-1.5-flash)
       if (!transcript && geminiApiKey) {
-        try {
-          const base64Audio = arrayBufferToBase64(audioBuffer);
-          const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiApiKey}`;
+        const geminiAudioModels = ["gemini-2.0-flash", "gemini-1.5-flash"];
+        const base64Audio = arrayBufferToBase64(audioBuffer);
 
-          const prompt = args.languageHint === "ar"
-            ? "يرجى تفريغ هذا الملف الصوتي بدقة عالية كلمة بكلمة باللغة العربية مع علامات الترقيم الصحيحة. أخرج النص المفرغ فقط بدون أي تعليقات إضافية."
-            : "Please transcribe this audio recording verbatim with accurate punctuation and paragraph breaks in its original spoken language (English or Arabic). Output only the raw transcript text.";
+        const prompt = args.languageHint === "ar"
+          ? "يرجى تفريغ هذا الملف الصوتي بدقة عالية كلمة بكلمة باللغة العربية مع علامات الترقيم الصحيحة. أخرج النص المفرغ فقط بدون أي تعليقات إضافية."
+          : "Please transcribe this audio recording verbatim with accurate punctuation and paragraph breaks in its original spoken language (English or Arabic). Output only the raw transcript text.";
 
-          const geminiRes = await fetch(geminiUrl, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              contents: [
-                {
-                  parts: [
-                    {
-                      inlineData: {
-                        mimeType: "audio/mp4",
-                        data: base64Audio,
+        for (const modelName of geminiAudioModels) {
+          if (transcript) break;
+          try {
+            const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${geminiApiKey}`;
+
+            const geminiRes = await fetch(geminiUrl, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                contents: [
+                  {
+                    parts: [
+                      {
+                        inlineData: {
+                          mimeType: "audio/mp4",
+                          data: base64Audio,
+                        },
                       },
-                    },
-                    { text: prompt },
-                  ],
-                },
-              ],
-            }),
-          });
+                      { text: prompt },
+                    ],
+                  },
+                ],
+              }),
+            });
 
-          if (geminiRes.ok) {
-            const data = (await geminiRes.json()) as any;
-            transcript = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || "";
-          } else {
-            console.warn("Gemini transcription failed:", await geminiRes.text());
+            if (geminiRes.ok) {
+              const data = (await geminiRes.json()) as any;
+              transcript = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || "";
+            } else {
+              console.warn(`Gemini STT model ${modelName} failed:`, await geminiRes.text());
+            }
+          } catch (geminiErr) {
+            console.warn(`Gemini STT model ${modelName} error:`, geminiErr);
           }
-        } catch (geminiErr) {
-          console.warn("Gemini Audio STT error:", geminiErr);
         }
       }
 

@@ -15,31 +15,6 @@ import {
   View,
 } from 'react-native';
 
-export interface NoteBodyEditorHandle {
-  toggleHeading: (level: 1 | 2 | 3) => void;
-  toggleChecklist: () => void;
-  toggleBullet: () => void;
-  toggleNumber: () => void;
-  toggleQuote: () => void;
-  insertHashtag: () => void;
-  applyInlineFormat: (marker: '**' | '__' | '~~') => void;
-  insertDivider: () => void;
-  getPlainText: () => string;
-  focus: () => void;
-}
-
-interface NoteBodyEditorProps {
-  value: string;
-  onChange: (text: string) => void;
-  onCursorChange?: (pos: number) => void;
-  onActivateLine?: (y: number, height: number) => void;
-  colors: any;
-  isArabic: boolean;
-  isDark?: boolean;
-  baseStyle?: any;
-  placeholder?: string;
-}
-
 export type BlockType =
   | 'normal'
   | 'h1'
@@ -57,6 +32,42 @@ export interface BlockItem {
   text: string;
   isChecked?: boolean;
   num?: number;
+}
+
+export interface ActiveBlockInfo {
+  blockType: BlockType;
+  isChecked?: boolean;
+  hasSelection: boolean;
+  selectedText: string;
+  isBold: boolean;
+  isItalic: boolean;
+  isStrike: boolean;
+}
+
+export interface NoteBodyEditorHandle {
+  toggleHeading: (level: 1 | 2 | 3) => void;
+  toggleChecklist: () => void;
+  toggleBullet: () => void;
+  toggleNumber: () => void;
+  toggleQuote: () => void;
+  insertHashtag: () => void;
+  applyInlineFormat: (marker: '**' | '__' | '~~' | '`') => void;
+  insertDivider: () => void;
+  getPlainText: () => string;
+  focus: () => void;
+}
+
+interface NoteBodyEditorProps {
+  value: string;
+  onChange: (text: string) => void;
+  onCursorChange?: (pos: number) => void;
+  onActivateLine?: (y: number, height: number) => void;
+  onActiveBlockChange?: (info: ActiveBlockInfo) => void;
+  colors: any;
+  isArabic: boolean;
+  isDark?: boolean;
+  baseStyle?: any;
+  placeholder?: string;
 }
 
 let nextId = 1;
@@ -183,6 +194,7 @@ const NoteBodyEditor = forwardRef<NoteBodyEditorHandle, NoteBodyEditorProps>((pr
     value,
     onChange,
     onCursorChange,
+    onActiveBlockChange,
     colors,
     isArabic,
     baseStyle,
@@ -194,10 +206,39 @@ const NoteBodyEditor = forwardRef<NoteBodyEditorHandle, NoteBodyEditorProps>((pr
   const activeIdRef = useRef<string | null>(null);
   const blocksRef = useRef<BlockItem[]>(blocks);
   const inputRefs = useRef<Record<string, TextInput | null>>({});
+  const selectionMapRef = useRef<Record<string, { start: number; end: number }>>({});
   const lastSerializedRef = useRef<string>(value || '');
 
   // Keep blocksRef in sync
   blocksRef.current = blocks;
+
+  const notifyActiveState = useCallback(
+    (blockId: string | null) => {
+      if (!blockId) return;
+      const block = blocksRef.current.find((b) => b.id === blockId);
+      if (!block) return;
+
+      const sel = selectionMapRef.current[blockId] || { start: 0, end: 0 };
+      const selText = block.text.slice(sel.start, sel.end);
+      const hasSelection = sel.start !== sel.end;
+
+      const checkText = hasSelection ? selText : block.text;
+      const isBold = /\*\*[^*]+\*\*/.test(checkText);
+      const isItalic = /__[^_]+__|_[^_]+_|\*[^*]+\*/.test(checkText);
+      const isStrike = /~~[^~]+~~/.test(checkText);
+
+      onActiveBlockChange?.({
+        blockType: block.type,
+        isChecked: block.isChecked,
+        hasSelection,
+        selectedText: selText,
+        isBold,
+        isItalic,
+        isStrike,
+      });
+    },
+    [onActiveBlockChange]
+  );
 
   // Sync external changes (e.g. AI summary insertions, initial load) while ignoring local keystrokes
   useEffect(() => {
@@ -230,13 +271,30 @@ const NoteBodyEditor = forwardRef<NoteBodyEditorHandle, NoteBodyEditorProps>((pr
     return idx >= 0 ? idx : blocksRef.current.length - 1;
   }, [activeId]);
 
-  const focusBlock = useCallback((id: string) => {
+  const focusBlock = useCallback((id: string, cursorPosition?: number) => {
     activeIdRef.current = id;
     setActiveId(id);
     setTimeout(() => {
-      inputRefs.current[id]?.focus();
+      const input = inputRefs.current[id];
+      if (input) {
+        input.focus();
+        if (typeof cursorPosition === 'number') {
+          input.setNativeProps({
+            selection: { start: cursorPosition, end: cursorPosition },
+          });
+        }
+      }
     }, 30);
   }, []);
+
+  const handleSelectionChange = useCallback(
+    (blockId: string, selection: { start: number; end: number }) => {
+      selectionMapRef.current[blockId] = selection;
+      onCursorChange?.(selection.start);
+      notifyActiveState(blockId);
+    },
+    [onCursorChange, notifyActiveState]
+  );
 
   /**
    * Handles text changes and Enter keypresses within a specific line block.
@@ -270,7 +328,8 @@ const NoteBodyEditor = forwardRef<NoteBodyEditorHandle, NoteBodyEditorProps>((pr
             text: '',
           };
           commitBlocks(updatedBlocks);
-          focusBlock(currentBlock.id);
+          focusBlock(currentBlock.id, 0);
+          notifyActiveState(currentBlock.id);
           return;
         }
 
@@ -306,7 +365,8 @@ const NoteBodyEditor = forwardRef<NoteBodyEditorHandle, NoteBodyEditorProps>((pr
         updatedBlocks.splice(index + 1, 0, newBlock);
 
         commitBlocks(updatedBlocks);
-        focusBlock(newBlock.id);
+        focusBlock(newBlock.id, 0);
+        notifyActiveState(newBlock.id);
         return;
       }
 
@@ -317,8 +377,9 @@ const NoteBodyEditor = forwardRef<NoteBodyEditorHandle, NoteBodyEditorProps>((pr
         text: newText,
       };
       commitBlocks(updatedBlocks);
+      notifyActiveState(currentBlock.id);
     },
-    [commitBlocks, focusBlock]
+    [commitBlocks, focusBlock, notifyActiveState]
   );
 
   /**
@@ -330,7 +391,7 @@ const NoteBodyEditor = forwardRef<NoteBodyEditorHandle, NoteBodyEditorProps>((pr
         const currentBlock = blocksRef.current[index];
         if (!currentBlock) return;
 
-        // If line is empty and has formatting (e.g. checkbox, bullet, heading), strip the format
+        // If line is empty and has formatting, strip format back to normal
         if (currentBlock.text === '' && currentBlock.type !== 'normal') {
           const updatedBlocks = [...blocksRef.current];
           updatedBlocks[index] = {
@@ -338,6 +399,7 @@ const NoteBodyEditor = forwardRef<NoteBodyEditorHandle, NoteBodyEditorProps>((pr
             type: 'normal',
           };
           commitBlocks(updatedBlocks);
+          notifyActiveState(currentBlock.id);
           return;
         }
 
@@ -348,12 +410,13 @@ const NoteBodyEditor = forwardRef<NoteBodyEditorHandle, NoteBodyEditorProps>((pr
           updatedBlocks.splice(index, 1);
           commitBlocks(updatedBlocks);
           if (prevBlock) {
-            focusBlock(prevBlock.id);
+            focusBlock(prevBlock.id, prevBlock.text.length);
+            notifyActiveState(prevBlock.id);
           }
         }
       }
     },
-    [commitBlocks, focusBlock]
+    [commitBlocks, focusBlock, notifyActiveState]
   );
 
   /**
@@ -370,8 +433,9 @@ const NoteBodyEditor = forwardRef<NoteBodyEditorHandle, NoteBodyEditorProps>((pr
         isChecked: !currentBlock.isChecked,
       };
       commitBlocks(updatedBlocks);
+      notifyActiveState(currentBlock.id);
     },
-    [commitBlocks]
+    [commitBlocks, notifyActiveState]
   );
 
   /**
@@ -393,8 +457,9 @@ const NoteBodyEditor = forwardRef<NoteBodyEditorHandle, NoteBodyEditorProps>((pr
       };
       commitBlocks(updatedBlocks);
       focusBlock(currentBlock.id);
+      notifyActiveState(currentBlock.id);
     },
-    [getActiveIndex, commitBlocks, focusBlock]
+    [getActiveIndex, commitBlocks, focusBlock, notifyActiveState]
   );
 
   const toggleChecklist = useCallback(() => {
@@ -407,11 +472,9 @@ const NoteBodyEditor = forwardRef<NoteBodyEditorHandle, NoteBodyEditorProps>((pr
 
     if (currentBlock.type === 'checkbox') {
       if (!currentBlock.isChecked) {
-        // Unchecked -> Checked
         nextType = 'checkbox';
         nextChecked = true;
       } else {
-        // Checked -> Normal (toggle off)
         nextType = 'normal';
         nextChecked = false;
       }
@@ -425,7 +488,8 @@ const NoteBodyEditor = forwardRef<NoteBodyEditorHandle, NoteBodyEditorProps>((pr
     };
     commitBlocks(updatedBlocks);
     focusBlock(currentBlock.id);
-  }, [getActiveIndex, commitBlocks, focusBlock]);
+    notifyActiveState(currentBlock.id);
+  }, [getActiveIndex, commitBlocks, focusBlock, notifyActiveState]);
 
   const toggleBullet = useCallback(() => {
     const idx = getActiveIndex();
@@ -440,7 +504,8 @@ const NoteBodyEditor = forwardRef<NoteBodyEditorHandle, NoteBodyEditorProps>((pr
     };
     commitBlocks(updatedBlocks);
     focusBlock(currentBlock.id);
-  }, [getActiveIndex, commitBlocks, focusBlock]);
+    notifyActiveState(currentBlock.id);
+  }, [getActiveIndex, commitBlocks, focusBlock, notifyActiveState]);
 
   const toggleNumber = useCallback(() => {
     const idx = getActiveIndex();
@@ -456,7 +521,8 @@ const NoteBodyEditor = forwardRef<NoteBodyEditorHandle, NoteBodyEditorProps>((pr
     };
     commitBlocks(updatedBlocks);
     focusBlock(currentBlock.id);
-  }, [getActiveIndex, commitBlocks, focusBlock]);
+    notifyActiveState(currentBlock.id);
+  }, [getActiveIndex, commitBlocks, focusBlock, notifyActiveState]);
 
   const toggleQuote = useCallback(() => {
     const idx = getActiveIndex();
@@ -471,7 +537,8 @@ const NoteBodyEditor = forwardRef<NoteBodyEditorHandle, NoteBodyEditorProps>((pr
     };
     commitBlocks(updatedBlocks);
     focusBlock(currentBlock.id);
-  }, [getActiveIndex, commitBlocks, focusBlock]);
+    notifyActiveState(currentBlock.id);
+  }, [getActiveIndex, commitBlocks, focusBlock, notifyActiveState]);
 
   const insertHashtag = useCallback(() => {
     const idx = getActiveIndex();
@@ -486,24 +553,59 @@ const NoteBodyEditor = forwardRef<NoteBodyEditorHandle, NoteBodyEditorProps>((pr
     };
     commitBlocks(updatedBlocks);
     focusBlock(currentBlock.id);
-  }, [getActiveIndex, commitBlocks, focusBlock]);
+    notifyActiveState(currentBlock.id);
+  }, [getActiveIndex, commitBlocks, focusBlock, notifyActiveState]);
 
   const applyInlineFormat = useCallback(
-    (marker: '**' | '__' | '~~') => {
+    (marker: '**' | '__' | '~~' | '`') => {
       const idx = getActiveIndex();
       const currentBlock = blocksRef.current[idx];
       if (!currentBlock) return;
 
-      const placeholderText = `${marker}text${marker}`;
+      const sel = selectionMapRef.current[currentBlock.id] || {
+        start: currentBlock.text.length,
+        end: currentBlock.text.length,
+      };
+      const { start, end } = sel;
+      const original = currentBlock.text;
+
+      let newText = '';
+      let newCursor = start;
+
+      if (start !== end) {
+        const selected = original.slice(start, end);
+        if (
+          start >= marker.length &&
+          original.slice(start - marker.length, start) === marker &&
+          original.slice(end, end + marker.length) === marker
+        ) {
+          // Unwrap
+          newText =
+            original.slice(0, start - marker.length) +
+            selected +
+            original.slice(end + marker.length);
+          newCursor = start - marker.length + selected.length;
+        } else {
+          // Wrap selected text
+          newText = original.slice(0, start) + marker + selected + marker + original.slice(end);
+          newCursor = end + marker.length * 2;
+        }
+      } else {
+        // No selection: insert marker pair with cursor in the middle
+        newText = original.slice(0, start) + marker + marker + original.slice(start);
+        newCursor = start + marker.length;
+      }
+
       const updatedBlocks = [...blocksRef.current];
       updatedBlocks[idx] = {
         ...currentBlock,
-        text: currentBlock.text ? `${currentBlock.text} ${placeholderText}` : placeholderText,
+        text: newText,
       };
       commitBlocks(updatedBlocks);
-      focusBlock(currentBlock.id);
+      focusBlock(currentBlock.id, newCursor);
+      notifyActiveState(currentBlock.id);
     },
-    [getActiveIndex, commitBlocks, focusBlock]
+    [getActiveIndex, commitBlocks, focusBlock, notifyActiveState]
   );
 
   const insertDivider = useCallback(() => {
@@ -514,15 +616,17 @@ const NoteBodyEditor = forwardRef<NoteBodyEditorHandle, NoteBodyEditorProps>((pr
     const updatedBlocks = [...blocksRef.current];
     updatedBlocks.splice(idx + 1, 0, newDivider, nextNormal);
     commitBlocks(updatedBlocks);
-    focusBlock(nextNormal.id);
-  }, [getActiveIndex, commitBlocks, focusBlock]);
+    focusBlock(nextNormal.id, 0);
+    notifyActiveState(nextNormal.id);
+  }, [getActiveIndex, commitBlocks, focusBlock, notifyActiveState]);
 
   const focus = useCallback(() => {
     const lastBlock = blocksRef.current[blocksRef.current.length - 1];
     if (lastBlock) {
-      focusBlock(lastBlock.id);
+      focusBlock(lastBlock.id, lastBlock.text.length);
+      notifyActiveState(lastBlock.id);
     }
-  }, [focusBlock]);
+  }, [focusBlock, notifyActiveState]);
 
   useImperativeHandle(
     ref,
@@ -605,12 +709,21 @@ const NoteBodyEditor = forwardRef<NoteBodyEditorHandle, NoteBodyEditorProps>((pr
             key={block.id}
             style={[
               styles.blockRow,
-              block.type === 'quote' && {
-                borderLeftWidth: 3,
-                borderLeftColor: colors.primary || '#6366F1',
-                paddingLeft: 12,
-                marginLeft: 4,
-              },
+              isArabic && { flexDirection: 'row-reverse' },
+              block.type === 'quote' &&
+                (isArabic
+                  ? {
+                      borderRightWidth: 3,
+                      borderRightColor: colors.primary || '#6366F1',
+                      paddingRight: 12,
+                      marginRight: 4,
+                    }
+                  : {
+                      borderLeftWidth: 3,
+                      borderLeftColor: colors.primary || '#6366F1',
+                      paddingLeft: 12,
+                      marginLeft: 4,
+                    }),
             ]}
           >
             {/* Interactive Checkbox Widget */}
@@ -620,6 +733,7 @@ const NoteBodyEditor = forwardRef<NoteBodyEditorHandle, NoteBodyEditorProps>((pr
                 hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                 style={[
                   styles.checkboxBox,
+                  isArabic ? { marginLeft: 10, marginRight: 0 } : { marginRight: 10, marginLeft: 0 },
                   {
                     borderColor: block.isChecked
                       ? colors.primary || '#6366F1'
@@ -642,6 +756,7 @@ const NoteBodyEditor = forwardRef<NoteBodyEditorHandle, NoteBodyEditorProps>((pr
               <Text
                 style={[
                   styles.bulletGlyph,
+                  isArabic ? { marginLeft: 6, marginRight: 0 } : { marginRight: 6, marginLeft: 0 },
                   {
                     color: colors.primary || colors.text,
                     fontSize: baseFontSize,
@@ -659,6 +774,9 @@ const NoteBodyEditor = forwardRef<NoteBodyEditorHandle, NoteBodyEditorProps>((pr
               <Text
                 style={[
                   styles.numberGlyph,
+                  isArabic
+                    ? { marginLeft: 6, marginRight: 0, textAlign: 'right' }
+                    : { marginRight: 6, marginLeft: 0, textAlign: 'left' },
                   {
                     color: colors.primary || colors.text,
                     fontSize: baseFontSize,
@@ -694,11 +812,12 @@ const NoteBodyEditor = forwardRef<NoteBodyEditorHandle, NoteBodyEditorProps>((pr
               ]}
               value={block.text}
               onChangeText={(t) => handleBlockTextChange(index, t)}
+              onSelectionChange={(e) => handleSelectionChange(block.id, e.nativeEvent.selection)}
               onKeyPress={(e) => handleBlockKeyPress(index, e.nativeEvent.key)}
               onFocus={() => {
                 activeIdRef.current = block.id;
                 setActiveId(block.id);
-                onCursorChange?.(0);
+                notifyActiveState(block.id);
               }}
               multiline
               blurOnSubmit={false}

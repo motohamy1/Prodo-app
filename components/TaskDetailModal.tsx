@@ -449,16 +449,15 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ visible, onClose, tod
   if (!visible) return null;
 
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={handleBack}>
+    <Modal visible={visible} transparent animationType="slide" onRequestClose={handleBack} statusBarTranslucent={true}>
       <View style={styles.overlay}>
         <TouchableWithoutFeedback onPress={handleBack}>
           <View style={StyleSheet.absoluteFill} />
         </TouchableWithoutFeedback>
-        <View style={[styles.container, { backgroundColor: colors.bg }]}>
-              <KeyboardAvoidingView 
-                behavior="padding" 
-                style={{ flex: 1 }}
-              >
+        <KeyboardAvoidingView 
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined} 
+          style={[styles.container, { backgroundColor: colors.bg }]}
+        >
             {/* Header */}
            <View style={[styles.header, { borderBottomColor: colors.border + '40' }]}>
             <TouchableOpacity onPress={handleBack} style={styles.headerIcon}>
@@ -1163,14 +1162,12 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ visible, onClose, tod
             </TouchableOpacity>
           </View>
 
-          </KeyboardAvoidingView>
-
           <ProjectPickerModal
             visible={isProjectModalVisible}
             onClose={() => setProjectModalVisible(false)}
             onSelect={handleSelectProject}
           />
-            </View>
+        </KeyboardAvoidingView>
       </View>
     </Modal>
   );

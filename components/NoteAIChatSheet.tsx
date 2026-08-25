@@ -71,7 +71,7 @@ export const NoteAIChatSheet: React.FC<NoteAIChatSheetProps> = ({
   if (!visible) return null;
 
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
+    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose} statusBarTranslucent={true}>
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         style={styles.overlay}
@@ -147,7 +147,14 @@ export const NoteAIChatSheet: React.FC<NoteAIChatSheetProps> = ({
                     style={[
                       styles.bubble,
                       isUser
-                        ? { backgroundColor: colors.primary || '#6366F1' }
+                        ? {
+                            backgroundColor: colors.primary || '#6366F1',
+                            shadowColor: colors.primary || '#6366F1',
+                            shadowOffset: { width: 0, height: 2 },
+                            shadowOpacity: 0.15,
+                            shadowRadius: 6,
+                            elevation: 2,
+                          }
                         : {
                             backgroundColor: isDark
                               ? 'rgba(30, 41, 59, 0.85)'
@@ -162,7 +169,12 @@ export const NoteAIChatSheet: React.FC<NoteAIChatSheetProps> = ({
                     <Text
                       style={[
                         styles.messageText,
-                        { color: isUser ? '#FFFFFF' : colors.text },
+                        {
+                          color: isUser
+                            ? (colors.primaryText || (isDark ? '#181326' : '#FFFFFF'))
+                            : colors.text,
+                          fontWeight: isUser ? '600' : '400',
+                        },
                         isArabic && { textAlign: 'right' },
                       ]}
                     >
@@ -222,7 +234,7 @@ export const NoteAIChatSheet: React.FC<NoteAIChatSheetProps> = ({
                   ]}
                 >
                   <ActivityIndicator size="small" color="#6366F1" />
-                  <Text style={{ color: colors.textMuted, fontSize: 13 }}>
+                  <Text style={{ color: colors.textMuted, fontSize: 13, fontWeight: '500' }}>
                     {t.aiThinking}
                   </Text>
                 </View>
@@ -270,7 +282,7 @@ export const NoteAIChatSheet: React.FC<NoteAIChatSheetProps> = ({
               <Ionicons
                 name="arrow-up"
                 size={18}
-                color={inputMessage.trim() ? '#FFFFFF' : colors.textMuted}
+                color={inputMessage.trim() ? (colors.primaryText || '#FFFFFF') : colors.textMuted}
               />
             </TouchableOpacity>
           </View>
