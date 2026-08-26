@@ -114,7 +114,7 @@ export const updateTranscriptStatus = mutation({
 });
 
 /**
- * Transcribes audio via Groq Whisper API (primary) with fallback to Gemini 2.0 Flash audio.
+ * Transcribes audio via Groq Whisper API (primary) with fallback to Gemini 3.6 Flash audio.
  */
 export const transcribeAudio = action({
   args: {
@@ -189,9 +189,9 @@ export const transcribeAudio = action({
         return btoa(binary);
       }
 
-      // 2. Fallback: Google Gemini Audio Transcription (gemini-2.0-flash, gemini-1.5-flash)
+      // 2. Fallback: Google Gemini Audio Transcription (gemini-3.6-flash, gemini-2.5-flash)
       if (!transcript && geminiApiKey) {
-        const geminiAudioModels = ["gemini-2.0-flash", "gemini-1.5-flash"];
+        const geminiAudioModels = ["gemini-3.6-flash", "gemini-2.5-flash"];
         const base64Audio = arrayBufferToBase64(audioBuffer);
 
         const prompt = args.languageHint === "ar"
@@ -225,7 +225,11 @@ export const transcribeAudio = action({
 
             if (geminiRes.ok) {
               const data = (await geminiRes.json()) as any;
-              transcript = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || "";
+              let rawText = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || "";
+              rawText = rawText.replace(/<think>[\s\S]*?<\/think>/gi, "").trim();
+              if (rawText) {
+                transcript = rawText;
+              }
             } else {
               console.warn(`Gemini STT model ${modelName} failed:`, await geminiRes.text());
             }

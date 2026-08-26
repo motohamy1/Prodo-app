@@ -14,7 +14,6 @@ import {
   Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { BlurView } from 'expo-blur';
 import useTheme from '@/hooks/useTheme';
 import { useTranslation } from '@/utils/i18n';
 import { AIChatMessage } from '@/types/voiceNote';
@@ -26,10 +25,279 @@ interface NoteAIChatSheetProps {
   chatHistory: AIChatMessage[];
   onSendMessage: (message: string) => Promise<void>;
   onInsertToNote?: (content: string) => void;
+  onClearChat?: () => void;
   onAddExtractedTasks?: (tasks: string[]) => void;
   isArabic?: boolean;
   isLoading?: boolean;
 }
+
+/**
+ * Clean any remaining thinking/reasoning tags or thinking headers from AI model responses.
+ */
+export const cleanClientText = (text: string): string => {
+  if (!text) return '';
+  return text
+    .replace(/<think>[\s\S]*?(?:<\/think>|$)/gi, '')
+    .replace(/<thought>[\s\S]*?(?:<\/thought>|$)/gi, '')
+    .replace(/<reasoning>[\s\S]*?(?:<\/reasoning>|$)/gi, '')
+    .replace(/<reflection>[\s\S]*?(?:<\/reflection>|$)/gi, '')
+    .replace(/<scratchpad>[\s\S]*?(?:<\/scratchpad>|$)/gi, '')
+    .replace(/<antThinking>[\s\S]*?(?:<\/antThinking>|$)/gi, '')
+    .replace(/```(?:thought|thinking|reasoning)[\s\S]*?```/gi, '')
+    .replace(/\[(?:Thinking Process|Thought Process|Reasoning)[\s\S]*?(?:\]|$)/gi, '')
+    .replace(/^(?:#{1,6}\s*)?\*?\*?(?:Thought|Thinking Process|Thought Process|Reasoning Process|Internal Thoughts|Chain of Thought)\*?\*?:?[\s\S]*?(?=\n\n|\n[#*A-Z\u0600-\u06FF]|$)/gim, '')
+    .replace(/^(?:Here's a thinking process|Let's analyze this step-by-step):?[\s\S]*?(?=\n\n|\n[#*A-Z\u0600-\u06FF]|$)/gim, '')
+    .trim();
+};
+
+/**
+ * Helper to render inline markdown tags (**bold**, *italic*, `code`).
+ */
+const renderInlineSpans = (text: string, colors: any, isArabic: boolean) => {
+  const parts = text.split(/(\*\*.*?\*\*|\*.*?\*|`.*?`)/g);
+
+  return parts.map((part, i) => {
+    if (part.startsWith('**') && part.endsWith('**') && part.length >= 4) {
+      return (
+        <Text key={i} style={{ fontWeight: '800', color: colors.text }}>
+          {part.slice(2, -2)}
+        </Text>
+      );
+    }
+    if (part.startsWith('*') && part.endsWith('*') && part.length >= 2) {
+      return (
+        <Text key={i} style={{ fontStyle: 'italic', color: colors.text }}>
+          {part.slice(1, -1)}
+        </Text>
+      );
+    }
+    if (part.startsWith('`') && part.endsWith('`') && part.length >= 2) {
+      return (
+        <Text
+          key={i}
+          style={{
+            fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
+            backgroundColor: 'rgba(150, 150, 150, 0.18)',
+            color: colors.primary || '#6366F1',
+            paddingHorizontal: 4,
+            borderRadius: 4,
+            fontSize: 12.5,
+          }}
+        >
+          {part.slice(1, -1)}
+        </Text>
+      );
+    }
+    return <React.Fragment key={i}>{part}</React.Fragment>;
+  });
+};
+
+/**
+ * Rich Formatted Markdown Content Renderer for AI Messages.
+ */
+const FormattedAIMessage: React.FC<{
+  content: string;
+  colors: any;
+  isDark: boolean;
+  isArabic: boolean;
+}> = ({ content, colors, isDark, isArabic }) => {
+  const sanitized = cleanClientText(content);
+  if (!sanitized) return null;
+
+  const lines = sanitized.split('\n');
+
+  return (
+    <View style={{ gap: 6 }}>
+      {lines.map((line, lineIdx) => {
+        const trimmed = line.trim();
+        if (!trimmed) {
+          return <View key={lineIdx} style={{ height: 4 }} />;
+        }
+
+        // H1 Heading
+        if (trimmed.startsWith('# ')) {
+          return (
+            <Text
+              key={lineIdx}
+              style={{
+                fontSize: 16,
+                fontWeight: '800',
+                color: colors.primary || '#6366F1',
+                marginTop: lineIdx > 0 ? 8 : 0,
+                textAlign: isArabic ? 'right' : 'left',
+              }}
+            >
+              {renderInlineSpans(trimmed.replace(/^#\s+/, ''), colors, isArabic)}
+            </Text>
+          );
+        }
+
+        // H2 Heading
+        if (trimmed.startsWith('## ')) {
+          return (
+            <Text
+              key={lineIdx}
+              style={{
+                fontSize: 15,
+                fontWeight: '700',
+                color: colors.text,
+                marginTop: lineIdx > 0 ? 6 : 0,
+                textAlign: isArabic ? 'right' : 'left',
+              }}
+            >
+              {renderInlineSpans(trimmed.replace(/^##\s+/, ''), colors, isArabic)}
+            </Text>
+          );
+        }
+
+        // H3 Heading
+        if (trimmed.startsWith('### ')) {
+          return (
+            <Text
+              key={lineIdx}
+              style={{
+                fontSize: 14,
+                fontWeight: '700',
+                color: colors.text,
+                marginTop: lineIdx > 0 ? 4 : 0,
+                textAlign: isArabic ? 'right' : 'left',
+              }}
+            >
+              {renderInlineSpans(trimmed.replace(/^###\s+/, ''), colors, isArabic)}
+            </Text>
+          );
+        }
+
+        // Bullet item
+        const bulletMatch = trimmed.match(/^[-*•]\s+(.*)$/);
+        if (bulletMatch) {
+          return (
+            <View
+              key={lineIdx}
+              style={{
+                flexDirection: isArabic ? 'row-reverse' : 'row',
+                alignItems: 'flex-start',
+                gap: 8,
+                paddingVertical: 1,
+              }}
+            >
+              <View
+                style={{
+                  width: 5,
+                  height: 5,
+                  borderRadius: 2.5,
+                  backgroundColor: colors.primary || '#6366F1',
+                  marginTop: 7,
+                }}
+              />
+              <Text
+                style={{
+                  flex: 1,
+                  fontSize: 14,
+                  lineHeight: 20,
+                  color: colors.text,
+                  textAlign: isArabic ? 'right' : 'left',
+                }}
+              >
+                {renderInlineSpans(bulletMatch[1], colors, isArabic)}
+              </Text>
+            </View>
+          );
+        }
+
+        // Numbered list item
+        const numberMatch = trimmed.match(/^(\d+)[.)]\s+(.*)$/);
+        if (numberMatch) {
+          return (
+            <View
+              key={lineIdx}
+              style={{
+                flexDirection: isArabic ? 'row-reverse' : 'row',
+                alignItems: 'flex-start',
+                gap: 6,
+                paddingVertical: 1,
+              }}
+            >
+              <View
+                style={{
+                  backgroundColor: isDark ? 'rgba(99, 102, 241, 0.25)' : 'rgba(99, 102, 241, 0.12)',
+                  borderRadius: 6,
+                  paddingHorizontal: 5,
+                  paddingVertical: 1,
+                  minWidth: 18,
+                  alignItems: 'center',
+                  marginTop: 1,
+                }}
+              >
+                <Text style={{ fontSize: 11, fontWeight: '800', color: colors.primary || '#6366F1' }}>
+                  {numberMatch[1]}
+                </Text>
+              </View>
+              <Text
+                style={{
+                  flex: 1,
+                  fontSize: 14,
+                  lineHeight: 20,
+                  color: colors.text,
+                  textAlign: isArabic ? 'right' : 'left',
+                }}
+              >
+                {renderInlineSpans(numberMatch[2], colors, isArabic)}
+              </Text>
+            </View>
+          );
+        }
+
+        // Blockquote
+        if (trimmed.startsWith('> ')) {
+          return (
+            <View
+              key={lineIdx}
+              style={{
+                borderLeftWidth: isArabic ? 0 : 3,
+                borderRightWidth: isArabic ? 3 : 0,
+                borderColor: colors.primary || '#6366F1',
+                paddingLeft: isArabic ? 0 : 10,
+                paddingRight: isArabic ? 10 : 0,
+                paddingVertical: 2,
+                marginVertical: 2,
+                backgroundColor: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)',
+                borderRadius: 4,
+              }}
+            >
+              <Text
+                style={{
+                  fontSize: 13.5,
+                  lineHeight: 19,
+                  fontStyle: 'italic',
+                  color: colors.textMuted,
+                  textAlign: isArabic ? 'right' : 'left',
+                }}
+              >
+                {renderInlineSpans(trimmed.replace(/^>\s+/, ''), colors, isArabic)}
+              </Text>
+            </View>
+          );
+        }
+
+        // Standard Paragraph
+        return (
+          <Text
+            key={lineIdx}
+            style={{
+              fontSize: 14,
+              lineHeight: 21,
+              color: colors.text,
+              textAlign: isArabic ? 'right' : 'left',
+            }}
+          >
+            {renderInlineSpans(trimmed, colors, isArabic)}
+          </Text>
+        );
+      })}
+    </View>
+  );
+};
 
 export const NoteAIChatSheet: React.FC<NoteAIChatSheetProps> = ({
   visible,
@@ -38,6 +306,7 @@ export const NoteAIChatSheet: React.FC<NoteAIChatSheetProps> = ({
   chatHistory = [],
   onSendMessage,
   onInsertToNote,
+  onClearChat,
   onAddExtractedTasks,
   isArabic = false,
   isLoading = false,
@@ -64,8 +333,9 @@ export const NoteAIChatSheet: React.FC<NoteAIChatSheetProps> = ({
   };
 
   const handleCopy = (text: string) => {
-    Clipboard.setString(text);
-    Alert.alert(t.actionSuccess || 'Copied', 'Response copied to clipboard.');
+    const cleaned = cleanClientText(text);
+    Clipboard.setString(cleaned);
+    Alert.alert(t.actionSuccess || 'Copied', isArabic ? 'تم نسخ الرد بنجاح.' : 'Response copied to clipboard.');
   };
 
   if (!visible) return null;
@@ -93,22 +363,47 @@ export const NoteAIChatSheet: React.FC<NoteAIChatSheetProps> = ({
           {/* Header */}
           <View style={[styles.header, isArabic && { flexDirection: 'row-reverse' }]}>
             <View style={styles.headerInfo}>
-              <View style={styles.headerBadge}>
+              <View style={[styles.headerBadge, isArabic && { flexDirection: 'row-reverse' }]}>
                 <Ionicons name="sparkles" size={14} color="#6366F1" />
                 <Text style={[styles.aiTitle, { color: colors.text }]}>
                   {t.aiAssistant}
                 </Text>
               </View>
               <Text
-                style={[styles.noteSubtitle, { color: colors.textMuted }]}
+                style={[styles.noteSubtitle, { color: colors.textMuted }, isArabic && { textAlign: 'right' }]}
                 numberOfLines={1}
               >
                 {noteTitle}
               </Text>
             </View>
-            <TouchableOpacity style={styles.closeBtn} onPress={onClose}>
-              <Ionicons name="close" size={20} color={colors.textMuted} />
-            </TouchableOpacity>
+            <View style={{ flexDirection: isArabic ? 'row-reverse' : 'row', alignItems: 'center', gap: 4 }}>
+              {chatHistory.length > 0 && onClearChat && (
+                <TouchableOpacity
+                  style={styles.closeBtn}
+                  onPress={() => {
+                    Alert.alert(
+                      isArabic ? 'بدء محادثة جديدة' : 'New Conversation',
+                      isArabic
+                        ? 'هل تريد مسح سجل المحادثة والبدء من جديد لهذه الملاحظة؟'
+                        : 'Do you want to clear chat history and start fresh for this note?',
+                      [
+                        { text: isArabic ? 'إلغاء' : 'Cancel', style: 'cancel' },
+                        {
+                          text: isArabic ? 'مسح وبدء جديد' : 'Start Fresh',
+                          style: 'destructive',
+                          onPress: onClearChat,
+                        },
+                      ]
+                    );
+                  }}
+                >
+                  <Ionicons name="refresh-outline" size={19} color={colors.textMuted} />
+                </TouchableOpacity>
+              )}
+              <TouchableOpacity style={styles.closeBtn} onPress={onClose}>
+                <Ionicons name="close" size={20} color={colors.textMuted} />
+              </TouchableOpacity>
+            </View>
           </View>
 
           {/* Messages Scroll Area */}
@@ -134,6 +429,9 @@ export const NoteAIChatSheet: React.FC<NoteAIChatSheetProps> = ({
 
             {chatHistory.map((msg, index) => {
               const isUser = msg.role === 'user';
+              const messageText = isUser ? msg.content : cleanClientText(msg.content);
+              if (!messageText && !isUser) return null;
+
               return (
                 <View
                   key={index}
@@ -166,20 +464,27 @@ export const NoteAIChatSheet: React.FC<NoteAIChatSheetProps> = ({
                           },
                     ]}
                   >
-                    <Text
-                      style={[
-                        styles.messageText,
-                        {
-                          color: isUser
-                            ? (colors.primaryText || (isDark ? '#181326' : '#FFFFFF'))
-                            : colors.text,
-                          fontWeight: isUser ? '600' : '400',
-                        },
-                        isArabic && { textAlign: 'right' },
-                      ]}
-                    >
-                      {msg.content}
-                    </Text>
+                    {isUser ? (
+                      <Text
+                        style={[
+                          styles.messageText,
+                          {
+                            color: colors.primaryText || (isDark ? '#181326' : '#FFFFFF'),
+                            fontWeight: '600',
+                          },
+                          isArabic && { textAlign: 'right' },
+                        ]}
+                      >
+                        {messageText}
+                      </Text>
+                    ) : (
+                      <FormattedAIMessage
+                        content={messageText}
+                        colors={colors}
+                        isDark={isDark}
+                        isArabic={isArabic}
+                      />
+                    )}
 
                     {/* Action buttons on AI responses */}
                     {!isUser && (
@@ -191,7 +496,7 @@ export const NoteAIChatSheet: React.FC<NoteAIChatSheetProps> = ({
                       >
                         <TouchableOpacity
                           style={styles.bubbleActionBtn}
-                          onPress={() => handleCopy(msg.content)}
+                          onPress={() => handleCopy(messageText)}
                         >
                           <Ionicons name="copy-outline" size={13} color={colors.textMuted} />
                           <Text style={[styles.bubbleActionText, { color: colors.textMuted }]}>
@@ -202,7 +507,7 @@ export const NoteAIChatSheet: React.FC<NoteAIChatSheetProps> = ({
                         {onInsertToNote && (
                           <TouchableOpacity
                             style={styles.bubbleActionBtn}
-                            onPress={() => onInsertToNote(msg.content)}
+                            onPress={() => onInsertToNote(messageText)}
                           >
                             <Ionicons name="add-circle-outline" size={13} color="#6366F1" />
                             <Text style={[styles.bubbleActionText, { color: '#6366F1' }]}>

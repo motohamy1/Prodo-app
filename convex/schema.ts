@@ -73,6 +73,7 @@ export default defineSchema({
     aiChatHistory: v.optional(
       v.array(
         v.object({
+          id: v.optional(v.string()),
           role: v.union(v.literal("user"), v.literal("model"), v.literal("system")),
           content: v.string(),
           timestamp: v.number(),

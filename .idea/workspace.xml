@@ -1,181 +1,116 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
-  <component name="AIDiffSettings">
-    <option name="showAIDiff" value="false" />
-  </component>
   <component name="AutoImportSettings">
-    <option name="autoReloadType" value="NONE" />
+    <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="b87c9e08-f42e-4f23-924d-1c872f1f61c6" name="Changes" comment="Add count-up timer support and refine task-related UI elements.">
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+    <list default="true" id="9f3141f1-cabc-4474-8cd8-97469cbbacfc" name="Changes" comment="">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/app/note-detail.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/app/note-detail.tsx" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/components/NoteAIChatSheet.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/components/NoteAIChatSheet.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/components/NoteBodyEditor.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/components/NoteBodyEditor.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/components/TaskDetailModal.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/components/TaskDetailModal.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/convex/_generated/server.d.ts" beforeDir="false" afterPath="$PROJECT_DIR$/convex/_generated/server.d.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/convex/_generated/server.js" beforeDir="false" afterPath="$PROJECT_DIR$/convex/_generated/server.js" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/convex/aiNotes.ts" beforeDir="false" afterPath="$PROJECT_DIR$/convex/aiNotes.ts" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/convex/audio.ts" beforeDir="false" afterPath="$PROJECT_DIR$/convex/audio.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/home-check.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/convex/schema.ts" beforeDir="false" afterPath="$PROJECT_DIR$/convex/schema.ts" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
     <option name="LAST_RESOLUTION" value="IGNORE" />
   </component>
-  <component name="ClangdSettings">
-    <option name="formatViaClangd" value="false" />
-  </component>
-  <component name="EmbeddingIndexingInfo">
-    <option name="cachedIndexableFilesCount" value="1414" />
-    <option name="fileBasedEmbeddingIndicesEnabled" value="true" />
-  </component>
   <component name="Git.Settings">
-    <option name="RECENT_BRANCH_BY_REPOSITORY">
-      <map>
-        <entry key="$PROJECT_DIR$" value="001-offline-sync" />
-      </map>
-    </option>
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
   </component>
+  <component name="GitHubPullRequestSearchHistory"><![CDATA[{
+  "lastFilter": {
+    "state": "OPEN",
+    "assignee": "motohamy1"
+  }
+}]]></component>
+  <component name="GithubPullRequestsUISettings"><![CDATA[{
+  "selectedUrlAndAccountId": {
+    "url": "git@github.com:motohamy1/to-do-app.git",
+    "accountId": "07bbffb5-376c-42dc-a015-83a195f05f11"
+  }
+}]]></component>
   <component name="McpProjectServerCommands">
     <commands />
     <urls />
   </component>
-  <component name="ProjectColorInfo">{
-  &quot;associatedIndex&quot;: 2
-}</component>
-  <component name="ProjectId" id="3Bzygnopfzl5I8roPK1LxtoXyYM" />
-  <component name="ProjectViewState">
-    <option name="hideEmptyMiddlePackages" value="true" />
-    <option name="showLibraryContents" value="true" />
+  <component name="NextEditCompletionFeaturesState">
+    <decayedCancelled>
+      <entry key="MS100" value="1.0011268224571386" />
+      <entry key="MS500" value="2.0816553502611974" />
+      <entry key="S2" value="10.1111866840311" />
+      <entry key="S5" value="21.891844557639207" />
+      <entry key="S10" value="36.47445795207817" />
+      <entry key="S30" value="62.908804980962046" />
+      <entry key="S60" value="74.67567298621614" />
+      <entry key="M2" value="81.82444812927432" />
+      <entry key="M5" value="86.59647525967166" />
+      <entry key="M10" value="88.27511850889351" />
+      <entry key="M15" value="88.844872319085" />
+      <entry key="M30" value="89.41981531159223" />
+      <entry key="H1" value="89.70924914003885" />
+      <entry key="H2" value="89.85445952620138" />
+      <entry key="H4" value="89.9271884501665" />
+      <entry key="D1" value="89.98785899936944" />
+      <entry key="W1" value="89.99826543065261" />
+    </decayedCancelled>
+    <decayedSelected>
+      <entry key="MS100" value="0.0" />
+      <entry key="MS500" value="0.0" />
+      <entry key="S2" value="0.0" />
+      <entry key="S5" value="0.0" />
+      <entry key="S10" value="0.0" />
+      <entry key="S30" value="0.0" />
+      <entry key="S60" value="0.0" />
+      <entry key="M2" value="0.0" />
+      <entry key="M5" value="0.0" />
+      <entry key="M10" value="0.0" />
+      <entry key="M15" value="0.0" />
+      <entry key="M30" value="0.0" />
+      <entry key="H1" value="0.0" />
+      <entry key="H2" value="0.0" />
+      <entry key="H4" value="0.0" />
+      <entry key="D1" value="0.0" />
+      <entry key="W1" value="0.0" />
+    </decayedSelected>
+    <decayedShown>
+      <entry key="MS100" value="0.8960987626913451" />
+      <entry key="MS500" value="2.0484827299143507" />
+      <entry key="S2" value="10.083588625562879" />
+      <entry key="S5" value="21.870695979697377" />
+      <entry key="S10" value="36.45762768393311" />
+      <entry key="S30" value="62.89933666570463" />
+      <entry key="S60" value="74.67007168320649" />
+      <entry key="M2" value="81.82138329246821" />
+      <entry key="M5" value="86.59517867752544" />
+      <entry key="M10" value="88.2744577829469" />
+      <entry key="M15" value="88.84442902072799" />
+      <entry key="M30" value="89.41959224222856" />
+      <entry key="H1" value="89.7091372478546" />
+      <entry key="H2" value="89.8544034904248" />
+      <entry key="H4" value="89.92716040981833" />
+      <entry key="D1" value="89.9878543228554" />
+      <entry key="W1" value="89.9982647625027" />
+    </decayedShown>
   </component>
   <component name="PropertiesComponent"><![CDATA[{
   "keyToString": {
-    "ASKED_SHARE_PROJECT_CONFIGURATION_FILES": "true",
-    "ModuleVcsDetector.initialDetectionPerformed": "true",
-    "RunOnceActivity.MCP Project settings loaded": "true",
-    "RunOnceActivity.ShowReadmeOnStart": "true",
-    "RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252": "true",
-    "RunOnceActivity.cidr.known.project.marker": "true",
-    "RunOnceActivity.git.unshallow": "true",
-    "RunOnceActivity.readMode.enableVisualFormatting": "true",
-    "RunOnceActivity.typescript.service.memoryLimit.init": "true",
-    "cf.first.check.clang-format": "false",
-    "cidr.known.project.marker": "true",
-    "codeWithMe.voiceChat.enabledByDefault": "false",
-    "com.google.services.firebase.aqiPopupShown": "true",
-    "com.intellij.ml.llm.matterhorn.ej.ui.settings.DefaultModelSelectionForGA.v1": "true",
     "dart.analysis.tool.window.visible": "false",
     "git-widget-placeholder": "main",
-    "git.auto.fetch.suggestion.counter": "1",
-    "ignore.virus.scanning.warn.message": "true",
-    "javascript.preferred.runtime.type.id": "node",
-    "junie.onboarding.icon.badge.shown": "true",
     "junie.plugin.stays.banner.dismissed": "true",
-    "kotlin-language-version-configured": "true",
-    "last_opened_file_path": "C:/Dev/Dev_World/Mobile_Projects/Prodo-app",
-    "node.js.detected.package.eslint": "true",
     "node.js.detected.package.tslint": "true",
-    "node.js.selected.package.eslint": "(autodetect)",
-    "node.js.selected.package.tslint": "(autodetect)",
-    "nodejs_package_manager_path": "npm",
-    "settings.editor.selected.configurable": "com.intellij.ml.llm.agents.skills.settings",
-    "show.migrate.to.gradle.popup": "false",
-    "to.speed.mode.migration.done": "true",
-    "ts.external.directory.path": "C:\\Dev\\Dev_World\\Mobile_Projects\\Prodo-app\\node_modules\\typescript\\lib",
-    "vue.rearranger.settings.migration": "true"
+    "node.js.selected.package.tslint": "(autodetect)"
   }
 }]]></component>
-  <component name="ReactDesignerToolWindowState">
-    <option name="myId2Visible">
-      <map>
-        <entry key="com.intellij.reactbuddy.reactComponents" value="false" />
-        <entry key="com.intellij.reactbuddy.reactInspector" value="false" />
-        <entry key="com.intellij.reactbuddy.storybook" value="false" />
-      </map>
-    </option>
-  </component>
-  <component name="SharedIndexes">
-    <attachedChunks>
-      <set>
-        <option value="bundled-jdk-30f59d01ecdd-34e2839f716b-intellij.indexing.shared.core-IU-262.9437.185" />
-        <option value="bundled-js-predefined-d6986cc7102b-4abd2a77f808-JavaScript-IU-262.9437.185" />
-      </set>
-    </attachedChunks>
-  </component>
   <component name="TaskManager">
-    <task active="true" id="Default" summary="Default task">
-      <changelist id="b87c9e08-f42e-4f23-924d-1c872f1f61c6" name="Changes" comment="" />
-      <created>1775506307386</created>
-      <option name="number" value="Default" />
-      <option name="presentableId" value="Default" />
-      <updated>1775506307386</updated>
-      <workItem from="1775532972307" duration="1683000" />
-      <workItem from="1775535595316" duration="290000" />
-      <workItem from="1775535898309" duration="381000" />
-      <workItem from="1775536295663" duration="5492000" />
-      <workItem from="1775596974942" duration="42000" />
-      <workItem from="1775800071163" duration="16968000" />
-      <workItem from="1775843904585" duration="2678000" />
-      <workItem from="1775867061732" duration="891000" />
-      <workItem from="1775986196352" duration="15236000" />
-      <workItem from="1776031049130" duration="17324000" />
-      <workItem from="1776538940403" duration="256000" />
-    </task>
-    <task id="LOCAL-00001" summary="update README.md with project overview, key features, tech stack, and setup instructions">
-      <option name="closed" value="true" />
-      <created>1775510016164</created>
-      <option name="number" value="00001" />
-      <option name="presentableId" value="LOCAL-00001" />
-      <option name="project" value="LOCAL" />
-      <updated>1775510016165</updated>
-    </task>
-    <task id="LOCAL-00002" summary="rename components for clarity and set displayName for NoteHeader">
-      <option name="closed" value="true" />
-      <created>1775844927831</created>
-      <option name="number" value="00002" />
-      <option name="presentableId" value="LOCAL-00002" />
-      <option name="project" value="LOCAL" />
-      <updated>1775844927831</updated>
-    </task>
-    <task id="LOCAL-00003" summary="implement Arabic layout improvements, task modal enhancements, and onboarding refinements">
-      <option name="closed" value="true" />
-      <created>1776000579442</created>
-      <option name="number" value="00003" />
-      <option name="presentableId" value="LOCAL-00003" />
-      <option name="project" value="LOCAL" />
-      <updated>1776000579442</updated>
-    </task>
-    <task id="LOCAL-00004" summary="Add count-up timer support and refine task-related UI elements.">
-      <option name="closed" value="true" />
-      <created>1776048964312</created>
-      <option name="number" value="00004" />
-      <option name="presentableId" value="LOCAL-00004" />
-      <option name="project" value="LOCAL" />
-      <updated>1776048964312</updated>
-    </task>
-    <option name="localTasksCounter" value="5" />
     <servers />
   </component>
   <component name="ThunderClientSettings">
     <option name="followRedirects" value="true" />
     <option name="saveToWorkspace" value="false" />
-  </component>
-  <component name="TypeScriptGeneratedFilesManager">
-    <option name="version" value="3" />
-  </component>
-  <component name="VcsManagerConfiguration">
-    <MESSAGE value="update README.md with project overview, key features, tech stack, and setup instructions" />
-    <MESSAGE value="group overdue tasks by date, update filters for overdue and in-progress tasks, and enhance TodoCard styling options" />
-    <MESSAGE value="rename components for clarity and set displayName for NoteHeader" />
-    <MESSAGE value="implement Arabic layout improvements, task modal enhancements, and onboarding refinements" />
-    <MESSAGE value="{&#10;    &quot;error&quot;: {&#10;        &quot;message&quot;: &quot;You didn't provide an API key. You need to provide your API key in an Authorization header using Bearer auth (i.e. Authorization: Bearer YOUR_KEY), or as the password field (with blank username) if you're accessing the API from your browser and are prompted for a username and password. You can obtain an API key from https://platform.openai.com/account/api-keys.&quot;,&#10;        &quot;type&quot;: &quot;invalid_request_error&quot;,&#10;        &quot;param&quot;: null,&#10;        &quot;code&quot;: null&#10;    }&#10;}" />
-    <MESSAGE value="Add count-up timer support and refine task-related UI elements." />
-    <option name="LAST_COMMIT_MESSAGE" value="Add count-up timer support and refine task-related UI elements." />
-    <option name="GROUP_MULTIFILE_MERGE_BY_DIRECTORY" value="true" />
-  </component>
-  <component name="XSLT-Support.FileAssociations.UIState">
-    <expand />
-    <select />
   </component>
 </project>

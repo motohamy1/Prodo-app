@@ -31,6 +31,7 @@ import { VoiceWaveform } from '@/components/VoiceWaveform';
 import * as FileSystem from 'expo-file-system/legacy';
 import { FileSystemUploadType } from 'expo-file-system/legacy';
 import NoteAIChatSheet from '@/components/NoteAIChatSheet';
+import NoteAIResultModal, { AIResultData, ExtractedTaskItem } from '@/components/NoteAIResultModal';
 import NoteBodyEditor, {
   ActiveBlockInfo,
   NoteBodyEditorHandle,
@@ -186,6 +187,8 @@ export default function NoteDetailScreen() {
 
   // Voice & AI State
   const [isAIChatVisible, setAIChatVisible] = useState(false);
+  const [isAIResultVisible, setAIResultVisible] = useState(false);
+  const [aiResultData, setAiResultData] = useState<AIResultData | null>(null);
   const [isAILoading, setIsAILoading] = useState(false);
   const [isTranscribing, setIsTranscribing] = useState(false);
 
@@ -218,25 +221,32 @@ export default function NoteDetailScreen() {
   const extractActionItemsAction = useAction(api.aiNotes.extractActionItems);
   const chatWithNoteAction = useAction(api.aiNotes.chatWithNote);
   const convertActionItemsToTasks = useMutation(api.aiNotes.convertActionItemsToTasks);
+  const clearNoteChatHistoryMutation = useMutation(api.aiNotes.clearNoteChatHistory);
 
   const audioUrl = useQuery(
     api.audio.getAudioUrl,
     existingNote?.audioStorageId ? { storageId: existingNote.audioStorageId } : 'skip'
   );
-  
+  const lastLoadedNoteIdRef = useRef<string | undefined>(undefined);
+
   useEffect(() => {
-    if (existingNote) {
+    setCurrentNoteId(id);
+    if (id !== lastLoadedNoteIdRef.current) {
+      // Switched note ID or brand new note -> immediately reset chat state
+      lastLoadedNoteIdRef.current = id;
+      setLocalChatHistory([]);
+    }
+
+    if (existingNote && existingNote._id === id) {
       setTitle(existingNote.text || '');
       setBody(existingNote.description || '');
       if (existingNote.hashtags && existingNote.hashtags.length > 0) {
         setNoteTag(existingNote.hashtags[0]);
+      } else {
+        setNoteTag(tag || '#work');
       }
-      if (existingNote.aiChatHistory) {
-        setLocalChatHistory(existingNote.aiChatHistory);
-      }
-      if (existingNote.transcript) {
-        setCurrentTranscript(existingNote.transcript);
-      }
+      setLocalChatHistory(existingNote.aiChatHistory || []);
+      setCurrentTranscript(existingNote.transcript || '');
       if (existingNote.dueDate) {
         setDueDate(existingNote.dueDate);
         const d = new Date(existingNote.dueDate);
@@ -245,9 +255,22 @@ export default function NoteDetailScreen() {
         setSelectedTime(d);
         setScheduleVisible(true);
         setDateTimeConfirmed(true);
+      } else {
+        setDueDate(0);
+        setScheduleVisible(isReminder === 'true');
+        setDateTimeConfirmed(false);
       }
+    } else {
+      setTitle('');
+      setBody('');
+      setNoteTag(tag || '#work');
+      setLocalChatHistory([]);
+      setCurrentTranscript('');
+      setDueDate(0);
+      setScheduleVisible(isReminder === 'true');
+      setDateTimeConfirmed(false);
     }
-  }, [existingNote]);
+  }, [id, existingNote, tag, isReminder]);
 
   const isSavingRef = useRef(false);
 
@@ -299,6 +322,18 @@ export default function NoteDetailScreen() {
       }
     }
     router.back();
+  };
+
+  const handleClearAIChat = async () => {
+    setLocalChatHistory([]);
+    const targetId = currentNoteId || id;
+    if (targetId) {
+      try {
+        await clearNoteChatHistoryMutation({ noteId: targetId as any });
+      } catch (err) {
+        console.warn('Could not clear remote chat history:', err);
+      }
+    }
   };
 
   const handleDeleteNote = async () => {
@@ -448,7 +483,14 @@ export default function NoteDetailScreen() {
   // AI Quick Actions
   const handleSummarizeNote = async () => {
     try {
+      setAiResultData({
+        type: 'summary',
+        summary: '',
+        keyTakeaways: [],
+      });
+      setAIResultVisible(true);
       setIsAILoading(true);
+
       const res = await generateNoteSummaryAction({
         noteId: id ? (id as any) : undefined,
         title: title.trim() || 'Untitled Note',
@@ -456,29 +498,20 @@ export default function NoteDetailScreen() {
         transcript: currentTranscript || existingNote?.transcript || '',
         language: isArabic ? 'ar' : 'en',
       });
+
       if (res?.summary) {
-        Alert.alert(
-          t.aiSummary || 'AI Summary',
-          res.summary,
-          [
-            { text: t.cancel, style: 'cancel' },
-            {
-              text: t.insertToNote || 'Insert into Note',
-              onPress: () => {
-                const header = isArabic ? '\n\n📝 **الملخص:**\n' : '\n\n📝 **Summary:**\n';
-                const summaryText = header + res.summary;
-                const insertPos = cursorPosRef.current ?? body.length;
-                const before = body.slice(0, insertPos);
-                const after = body.slice(insertPos);
-                setBody(before + summaryText + after);
-                scrollToBottom();
-              },
-            },
-          ]
-        );
+        setAiResultData({
+          type: 'summary',
+          summary: res.summary,
+          keyTakeaways: res.keyTakeaways || [],
+        });
+      } else {
+        setAIResultVisible(false);
+        Alert.alert('AI Notice', isArabic ? 'لم يتم العثور على محتوى كافٍ لإنشاء ملخص.' : 'Not enough content to generate a summary.');
       }
     } catch (err) {
       console.warn('Error generating AI summary:', err);
+      setAIResultVisible(false);
       Alert.alert('AI Error', 'Could not generate note summary. Please try again.');
     } finally {
       setIsAILoading(false);
@@ -487,7 +520,13 @@ export default function NoteDetailScreen() {
 
   const handleExtractTasks = async () => {
     try {
+      setAiResultData({
+        type: 'tasks',
+        tasks: [],
+      });
+      setAIResultVisible(true);
       setIsAILoading(true);
+
       const res = await extractActionItemsAction({
         noteId: id ? (id as any) : undefined,
         title: title.trim() || 'Untitled Note',
@@ -497,46 +536,65 @@ export default function NoteDetailScreen() {
       });
 
       if (res?.tasks && res.tasks.length > 0) {
-        Alert.alert(
-          t.aiTasksExtracted || 'Tasks Extracted',
-          `${res.tasks.length} ${isArabic ? 'مهمة مستخرجة' : 'task(s) found'}:\n` +
-            res.tasks.map((taskItem) => `• ${taskItem.text}`).join('\n') +
-            '\n\n' + (isArabic ? 'هل تريد إضافتها إلى لوحة المهام الخاصة بك؟' : 'Add them to your To-Do task list?'),
-          [
-            { text: t.cancel, style: 'cancel' },
-            {
-              text: t.addToTodoList || 'Add to Tasks',
-              onPress: async () => {
-                if (id) {
-                  await convertActionItemsToTasks({
-                    noteId: id as any,
-                    tasks: res.tasks,
-                  });
-                } else if (userId) {
-                  for (const item of res.tasks) {
-                    await addNote({
-                      userId,
-                      text: item.text,
-                      type: 'task',
-                      priority: item.priority || 'medium',
-                      isCompleted: false,
-                      status: 'not_started',
-                      date: Date.now(),
-                    });
-                  }
-                }
-                Alert.alert(t.actionSuccess || 'Success', isArabic ? 'تمت إضافة المهام إلى قائمة المهام بنجاح.' : 'Tasks added to your To-Do board.');
-              },
-            },
-          ]
-        );
+        setAiResultData({
+          type: 'tasks',
+          tasks: res.tasks,
+        });
+      } else {
+        setAIResultVisible(false);
+        Alert.alert('AI Notice', isArabic ? 'لم يتم العثور على مهام قابلة للتنفيذ في الملاحظة.' : 'No action items or tasks found in note.');
       }
     } catch (err) {
       console.warn('Error extracting action items:', err);
+      setAIResultVisible(false);
       Alert.alert('AI Error', 'Could not extract action items. Please try again.');
     } finally {
       setIsAILoading(false);
     }
+  };
+
+  const handleInsertSummaryToNote = (summaryContent: string) => {
+    const header = isArabic ? '\n\n📝 **الملخص التنفيذي:**\n' : '\n\n📝 **Executive Summary:**\n';
+    const insertPos = cursorPosRef.current ?? body.length;
+    const before = body.slice(0, insertPos);
+    const after = body.slice(insertPos);
+    const needsSpace = before.length > 0 && !before.endsWith('\n') && !before.endsWith(' ');
+    const inserted = (needsSpace ? '\n\n' : '') + header + summaryContent;
+    setBody(before + inserted + after);
+    scrollToBottom();
+  };
+
+  const handleAddTasksToTodoList = async (selectedTasks: ExtractedTaskItem[]) => {
+    if (id) {
+      await convertActionItemsToTasks({
+        noteId: id as any,
+        tasks: selectedTasks,
+      });
+    } else if (userId) {
+      for (const item of selectedTasks) {
+        await addNote({
+          userId,
+          text: item.text,
+          type: 'task',
+          priority: item.priority || 'medium',
+          isCompleted: false,
+          status: 'not_started',
+          date: Date.now(),
+        });
+      }
+    }
+  };
+
+  const handleInsertTasksAsChecklist = (tasks: ExtractedTaskItem[]) => {
+    const header = isArabic ? '\n\n📋 **المهام المستخرجة:**\n' : '\n\n📋 **Extracted Tasks:**\n';
+    const checklistText = tasks.map((t) => `- [ ] ${t.text}`).join('\n');
+    const insertPos = cursorPosRef.current ?? body.length;
+    const before = body.slice(0, insertPos);
+    const after = body.slice(insertPos);
+    const needsSpace = before.length > 0 && !before.endsWith('\n') && !before.endsWith(' ');
+    const inserted = (needsSpace ? '\n\n' : '') + header + checklistText;
+    setBody(before + inserted + after);
+    scrollToBottom();
   };
 
   const handleExplainNote = async () => {
@@ -553,7 +611,8 @@ export default function NoteDetailScreen() {
         content: userPrompt,
         timestamp: Date.now(),
       };
-      setLocalChatHistory((prev) => [...prev, userMsg]);
+      const updatedHistory = [...localChatHistory, userMsg];
+      setLocalChatHistory(updatedHistory);
 
       const res = await chatWithNoteAction({
         noteId: currentNoteId ? (currentNoteId as any) : (id ? (id as any) : undefined),
@@ -561,7 +620,7 @@ export default function NoteDetailScreen() {
         content: body,
         transcript: currentTranscript || existingNote?.transcript || '',
         message: userPrompt,
-        chatHistory: localChatHistory,
+        chatHistory: updatedHistory,
         language: isArabic ? 'ar' : 'en',
       });
 
@@ -1069,7 +1128,7 @@ export default function NoteDetailScreen() {
                   style={styles.toolbarIconBtn}
                   hitSlop={{ top: 8, bottom: 8, left: 4, right: 4 }}
                 >
-                  <Ionicons name="chevron-down" size={20} color={colors.textMuted} />
+                  <Ionicons name="chevron-down" size={20} color={colors.surfaceText} />
                 </TouchableOpacity>
 
                 <View style={{ width: 1, height: 20, backgroundColor: colors.border, marginHorizontal: 2 }} />
@@ -1098,7 +1157,7 @@ export default function NoteDetailScreen() {
 
                 <View style={{ width: 1, height: 20, backgroundColor: colors.border, marginHorizontal: 2 }} />
 
-                {/* 3. Inline Formats */}
+                {/* 3. Inline Styles */}
                 <TouchableOpacity
                   style={[styles.toolbarIconBtn, isBoldActive && styles.toolbarIconBtnActive]}
                   onPress={() => bodyEditorRef.current?.applyInlineFormat('**')}
@@ -1120,13 +1179,6 @@ export default function NoteDetailScreen() {
                   <Text style={{ fontSize: 14, fontWeight: '700', textDecorationLine: 'line-through', color: isStrikeActive ? colors.primary : colors.surfaceText }}>S</Text>
                 </TouchableOpacity>
 
-                <TouchableOpacity
-                  style={styles.toolbarIconBtn}
-                  onPress={() => bodyEditorRef.current?.applyInlineFormat('`')}
-                >
-                  <Ionicons name="code-slash" size={17} color={colors.surfaceText} />
-                </TouchableOpacity>
-
                 <View style={{ width: 1, height: 20, backgroundColor: colors.border, marginHorizontal: 2 }} />
 
                 {/* 4. Lists & Blocks */}
@@ -1134,44 +1186,28 @@ export default function NoteDetailScreen() {
                   style={[styles.toolbarIconBtn, isChecklistActive && styles.toolbarIconBtnActive]}
                   onPress={() => bodyEditorRef.current?.toggleChecklist()}
                 >
-                  <Ionicons
-                    name={isChecklistActive ? 'checkbox' : 'checkbox-outline'}
-                    size={19}
-                    color={isChecklistActive ? colors.primary : colors.surfaceText}
-                  />
+                  <Ionicons name={isChecklistActive ? 'checkbox' : 'checkbox-outline'} size={18} color={isChecklistActive ? colors.primary : colors.surfaceText} />
                 </TouchableOpacity>
 
                 <TouchableOpacity
                   style={[styles.toolbarIconBtn, isBulletActive && styles.toolbarIconBtnActive]}
                   onPress={() => bodyEditorRef.current?.toggleBullet()}
                 >
-                  <Ionicons
-                    name="list-outline"
-                    size={19}
-                    color={isBulletActive ? colors.primary : colors.surfaceText}
-                  />
+                  <Ionicons name="list-outline" size={18} color={isBulletActive ? colors.primary : colors.surfaceText} />
                 </TouchableOpacity>
 
                 <TouchableOpacity
                   style={[styles.toolbarIconBtn, isNumberActive && styles.toolbarIconBtnActive]}
                   onPress={() => bodyEditorRef.current?.toggleNumber()}
                 >
-                  <Ionicons
-                    name="reorder-four-outline"
-                    size={19}
-                    color={isNumberActive ? colors.primary : colors.surfaceText}
-                  />
+                  <Ionicons name="reorder-four-outline" size={18} color={isNumberActive ? colors.primary : colors.surfaceText} />
                 </TouchableOpacity>
 
                 <TouchableOpacity
                   style={[styles.toolbarIconBtn, isQuoteActive && styles.toolbarIconBtnActive]}
                   onPress={() => bodyEditorRef.current?.toggleQuote()}
                 >
-                  <Ionicons
-                    name="chatbox-ellipses-outline"
-                    size={18}
-                    color={isQuoteActive ? colors.primary : colors.surfaceText}
-                  />
+                  <Ionicons name="chatbox-ellipses-outline" size={17} color={isQuoteActive ? colors.primary : colors.surfaceText} />
                 </TouchableOpacity>
 
                 <TouchableOpacity
@@ -1543,6 +1579,19 @@ export default function NoteDetailScreen() {
         </View>
       </View>
 
+      {/* AI Summary / Extracted Tasks Result Bottom Sheet Modal */}
+      <NoteAIResultModal
+        visible={isAIResultVisible}
+        onClose={() => setAIResultVisible(false)}
+        resultData={aiResultData}
+        isLoading={isAILoading}
+        isArabic={isArabic}
+        onInsertSummaryToNote={handleInsertSummaryToNote}
+        onAddTasksToTodoList={handleAddTasksToTodoList}
+        onInsertTasksAsChecklist={handleInsertTasksAsChecklist}
+        onOpenAIChat={() => setAIChatVisible(true)}
+      />
+
       {/* AI Assistant Interactive Chat Bottom Sheet */}
       <NoteAIChatSheet
         visible={isAIChatVisible}
@@ -1551,6 +1600,7 @@ export default function NoteDetailScreen() {
         chatHistory={localChatHistory}
         onSendMessage={handleSendAIChat}
         onInsertToNote={handleInsertToNote}
+        onClearChat={handleClearAIChat}
         isArabic={isArabic}
         isLoading={isAILoading}
       />

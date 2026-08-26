@@ -3,9 +3,52 @@ import { action, mutation } from "./_generated/server";
 import { api } from "./_generated/api";
 
 /**
+ * Clean model output: strip all variations of thinking/reasoning tags,
+ * internal monologues, and markdown JSON wrappers if present.
+ */
+export function cleanModelResponse(text: string, jsonOnly: boolean = false): string {
+  if (!text) return "";
+  let cleaned = text;
+
+  // 1. Strip complete and unclosed XML thinking tags
+  cleaned = cleaned.replace(/<think>[\s\S]*?(?:<\/think>|$)/gi, "");
+  cleaned = cleaned.replace(/<thought>[\s\S]*?(?:<\/thought>|$)/gi, "");
+  cleaned = cleaned.replace(/<reasoning>[\s\S]*?(?:<\/reasoning>|$)/gi, "");
+  cleaned = cleaned.replace(/<reflection>[\s\S]*?(?:<\/reflection>|$)/gi, "");
+  cleaned = cleaned.replace(/<scratchpad>[\s\S]*?(?:<\/scratchpad>|$)/gi, "");
+  cleaned = cleaned.replace(/<antThinking>[\s\S]*?(?:<\/antThinking>|$)/gi, "");
+
+  // 2. Strip code-block thinking containers
+  cleaned = cleaned.replace(/```(?:thought|thinking|reasoning)[\s\S]*?```/gi, "");
+
+  // 3. Strip plain-text thinking headers and lists
+  cleaned = cleaned.replace(/\[(?:Thinking Process|Thought Process|Reasoning)[\s\S]*?(?:\]|$)/gi, "");
+  cleaned = cleaned.replace(/^(?:#{1,6}\s*)?\*?\*?(?:Thought|Thinking Process|Thought Process|Reasoning Process|Internal Thoughts|Chain of Thought)\*?\*?:?[\s\S]*?(?=\n\n|\n[#*A-Z\u0600-\u06FF]|$)/gim, "");
+  cleaned = cleaned.replace(/^(?:Here's a thinking process|Let's analyze this step-by-step):?[\s\S]*?(?=\n\n|\n[#*A-Z\u0600-\u06FF]|$)/gim, "");
+
+  cleaned = cleaned.trim();
+
+  if (jsonOnly) {
+    // Extract JSON block if wrapped in ```json ... ``` or ``` ... ```
+    const jsonMatch = cleaned.match(/```(?:json)?\s*([\s\S]*?)\s*```/i);
+    if (jsonMatch && jsonMatch[1]) {
+      cleaned = jsonMatch[1].trim();
+    } else {
+      const firstBrace = cleaned.indexOf("{");
+      const lastBrace = cleaned.lastIndexOf("}");
+      if (firstBrace !== -1 && lastBrace !== -1 && lastBrace >= firstBrace) {
+        cleaned = cleaned.substring(firstBrace, lastBrace + 1);
+      }
+    }
+  }
+
+  return cleaned.trim();
+}
+
+/**
  * Robust Multi-Provider LLM Caller:
- * Attempts active, non-deprecated models on Groq (Llama 3.3 70B Versatile, Llama 3.1 8B Instant)
- * and Google Gemini (Gemini 2.0 Flash, Gemini 1.5 Flash).
+ * Prioritizes high-precision non-reasoning conversational models (Llama 3.3 70B, Llama 3.1 8B, Gemini Flash)
+ * to ensure instant, clean, thinking-free output.
  */
 async function callLLM(options: {
   systemInstruction: string;
@@ -16,15 +59,21 @@ async function callLLM(options: {
   const groqApiKey = process.env.GROQ_API_KEY;
   const geminiApiKey = process.env.GEMINI_API_KEY;
 
-  // 1. Primary: Groq API with active current models
+  const enforcedSystem = `${options.systemInstruction}\n\nSTRICT INSTRUCTION: Output ONLY your direct final answer. Never output any internal thinking, reasoning steps, or <think> tags.`;
+
+  // 1. Primary: Groq API with fast, direct conversational models
   if (groqApiKey) {
     const groqModels = [
-      "llama-3.3-70b-versatile", // Current flagship non-deprecated 70B model
-      "llama-3.1-8b-instant",    // Fast, lightweight non-deprecated 8B fallback
+      "qwen/qwen3.6-27b",
+      "allam-2-7b",
+      "openai/gpt-oss-120b",
+      "openai/gpt-oss-20b",
+      "qwen/qwen3.6-27b",
+      "allam-2-7b",
     ];
 
     const groqMessages: Array<{ role: "system" | "user" | "assistant"; content: string }> = [
-      { role: "system", content: options.systemInstruction },
+      { role: "system", content: enforcedSystem },
     ];
 
     if (options.messages && options.messages.length > 0) {
@@ -43,8 +92,9 @@ async function callLLM(options: {
         const bodyPayload: any = {
           model: modelName,
           messages: groqMessages,
-          temperature: 0.4,
+          temperature: 0.3,
           max_tokens: 2048,
+          reasoning_format: "hidden",
         };
 
         if (options.jsonMode) {
@@ -62,8 +112,11 @@ async function callLLM(options: {
 
         if (res.ok) {
           const data = (await res.json()) as any;
-          const text = data.choices?.[0]?.message?.content?.trim();
-          if (text) return text;
+          const rawText = data.choices?.[0]?.message?.content?.trim();
+          if (rawText) {
+            const cleaned = cleanModelResponse(rawText, options.jsonMode);
+            if (cleaned) return cleaned;
+          }
         } else {
           console.warn(`Groq model ${modelName} returned status ${res.status}:`, await res.text());
         }
@@ -73,23 +126,14 @@ async function callLLM(options: {
     }
   }
 
-  // 2. Secondary / Fallback: Google Gemini API (Gemini 2.0 Flash / 1.5 Flash)
+  // 2. Secondary / Fallback: Google Gemini API
   if (geminiApiKey) {
     const geminiModels = [
-      "gemini-2.0-flash", // Current active latest generation
-      "gemini-1.5-flash", // Current active LTS generation
+      "gemini-2.5-flash",
+      "gemini-3.6-flash",
     ];
 
     const contents: any[] = [];
-
-    contents.push({
-      role: "user",
-      parts: [{ text: options.systemInstruction }],
-    });
-    contents.push({
-      role: "model",
-      parts: [{ text: "Understood. I will follow your instructions precisely." }],
-    });
 
     if (options.messages && options.messages.length > 0) {
       for (const m of options.messages) {
@@ -108,9 +152,15 @@ async function callLLM(options: {
     for (const modelName of geminiModels) {
       try {
         const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${geminiApiKey}`;
-        const geminiBody: any = { contents };
+        const geminiBody: any = {
+          systemInstruction: { parts: [{ text: enforcedSystem }] },
+          contents,
+          generationConfig: {
+            thinkingConfig: { thinkingBudget: 0 },
+          },
+        };
         if (options.jsonMode) {
-          geminiBody.generationConfig = { responseMimeType: "application/json" };
+          geminiBody.generationConfig.responseMimeType = "application/json";
         }
 
         const res = await fetch(geminiUrl, {
@@ -121,8 +171,11 @@ async function callLLM(options: {
 
         if (res.ok) {
           const data = (await res.json()) as any;
-          const text = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
-          if (text) return text;
+          const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
+          if (rawText) {
+            const cleaned = cleanModelResponse(rawText, options.jsonMode);
+            if (cleaned) return cleaned;
+          }
         } else {
           console.warn(`Gemini model ${modelName} returned status ${res.status}:`, await res.text());
         }
@@ -178,16 +231,17 @@ ${noteTranscript || "(لا يوجد تسجيل صوتي / No voice recording)"}
     const isArabic = transcriptLang === "ar" || args.language === "ar" || /[\u0600-\u06FF]/.test(noteText + noteDesc + noteTranscript);
 
     const systemInstruction = isArabic
-      ? `أنت خبير الذكاء الاصطناعي لتلخيص وتحليل الملاحظات في تطبيق نظام (Nizam). مهمتك قراءة وتحليل الملاحظة والتفريغ الصوتي بدقة وذكاء عالٍ، ثم استخراج ملخص تنفيذي مركز وواضح ونقاط رئيسية مستفادة باللغة العربية.
-يجب إخراج النتيجة بتنسيق JSON حصراً بالمخطط التالي:
+      ? `أنت مساعد الذكاء الاصطناعي الذكي لتلخيص وتحليل الملاحظات في تطبيق نظام (Nizam). مهمتك قراءة وتحليل الملاحظة والتفريغ الصوتي بدقة، وتقديم ملخص مباشر وواضح لأهم الأفكار ونقاط رئيسية مستفادة باللغة العربية.
+تنبيه صارم: قدم النتيجة بصيغة JSON فقط دون أي وسوم تفكير <think> أو نصوص خارج الكائن.
+المخطط المطلوب:
 {
-  "summary": "فقرة ملخص تنفيذي وافية تشرح الفكرة الجوهرية والنتائج...",
+  "summary": "فقرة ملخصة وواضحة تشرح الفكرة الجوهرية مباشرة دون مقدمات أو عناوين...",
   "keyTakeaways": ["نقطة رئيسية 1", "نقطة رئيسية 2", "نقطة رئيسية 3"]
 }`
-      : `You are an expert Note Intelligence AI assistant in the Nizam app. Your task is to carefully analyze the note title, written content, and voice recording transcript, and produce a sharp, insightful executive summary and key takeaways.
-Return ONLY valid JSON matching this schema:
+      : `You are a Note Intelligence AI assistant in the Nizam app. Your task is to analyze the note title, written content, and voice recording transcript, and produce a clear, direct summary paragraph and key takeaways.
+Return ONLY valid JSON matching this schema without any thinking tags:
 {
-  "summary": "Comprehensive executive summary paragraph capturing all core ideas...",
+  "summary": "Direct, clear summary paragraph capturing the core ideas without preambles or headers...",
   "keyTakeaways": ["Key takeaway 1", "Key takeaway 2", "Key takeaway 3"]
 }`;
 
@@ -224,28 +278,47 @@ ${noteContent}
         : `Summary of "${noteText}": Core concepts and points captured.`;
       keyTakeaways = isArabic
         ? ["مراجعة النقاط الأساسية", "متابعة المهام المسجلة في الملاحظة"]
-        : ["Review core discussion points", "Follow up on captured tasks"];
+        : ["Review core items", "Follow up on action points"];
     }
 
-    // Save summary to note if noteId exists
-    if (args.noteId) {
-      try {
-        await ctx.runMutation(api.aiNotes.saveNoteSummary, {
-          noteId: args.noteId,
-          summary,
-          actionItems: keyTakeaways,
-        });
-      } catch (saveErr) {
-        console.warn("Could not persist summary to note record:", saveErr);
-      }
-    }
-
-    return { summary, keyTakeaways };
+    return {
+      summary: cleanModelResponse(summary),
+      keyTakeaways: keyTakeaways.map((k) => cleanModelResponse(k)),
+    };
   },
 });
 
 /**
- * Extract actionable checklist items from note content and voice transcript.
+ * Mutation to clear chat history for a specific note.
+ */
+export const clearNoteChatHistory = mutation({
+  args: {
+    noteId: v.id("todos"),
+  },
+  handler: async (ctx, args) => {
+    await ctx.db.patch(args.noteId, {
+      aiChatHistory: [],
+    });
+  },
+});
+
+/**
+ * Mutation to clean up legacy chat history across all notes for clean start.
+ */
+export const clearAllNotesChatHistory = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const notes = await ctx.db.query("todos").collect();
+    for (const note of notes) {
+      if (note.aiChatHistory && note.aiChatHistory.length > 0) {
+        await ctx.db.patch(note._id, { aiChatHistory: [] });
+      }
+    }
+  },
+});
+
+/**
+ * Extract actionable tasks from a note's content and voice transcript.
  */
 export const extractActionItems = action({
   args: {
@@ -273,33 +346,38 @@ export const extractActionItems = action({
 
     const noteContent = `
 عنوان الملاحظة / Title: ${noteText}
-محتوى الملاحظة المكتوب / Written Content:
-${noteDesc || "(لا يوجد محتوى مكتوب)"}
+محتوى الملاحظة المكتوب / Written Note:
+${noteDesc || "(لا يوجد محتوى مكتوب / No written content)"}
 
-تفريغ التسجيل الصوتي / Voice Transcript:
-${noteTranscript || "(لا يوجد تسجيل صوتي)"}
+تفريغ التسجيل الصوتي / Voice Recording Transcript:
+${noteTranscript || "(لا يوجد تسجيل صوتي / No audio recording)"}
     `.trim();
 
     const isArabic = transcriptLang === "ar" || args.language === "ar" || /[\u0600-\u06FF]/.test(noteText + noteDesc + noteTranscript);
 
     const systemInstruction = isArabic
-      ? `أنت خبير استخراج المهام وإدارة الأعمال في تطبيق نظام (Nizam). استخرج بدقة جميع المهام العملية والواجبات المطلوبة والمتابعات من محتوى الملاحظة والتسجيل الصوتي التالي.
-أخرج النتيجة بصيغة JSON حصراً بالمخطط التالي:
+      ? `أنت خبير الذكاء الاصطناعي لاستخراج المهام والبنود التنفيذية في تطبيق نظام (Nizam).
+قم بتحليل محتوى الملاحظة والتسجيل الصوتي بدقة واستخرج كل المهام والخطوات العملية القابلة للتنفيذ.
+تنبيه صارم: أخرج النتيجة بصيغة JSON فقط دون أي وسوم تفكير <think> على الإطلاق.
+المخطط المطلوب:
 {
   "tasks": [
-    { "text": "اسم المهمة بأسلوب عملي واضح", "priority": "high" | "medium" | "low" }
+    { "text": "نص المهمة الواضح والمباشر", "priority": "high" },
+    { "text": "مهمة أخرى", "priority": "medium" }
   ]
 }`
-      : `You are an expert action-item and task extraction assistant in the Nizam app. Extract all actionable tasks, to-dos, and follow-ups from the note and voice transcript.
-Output ONLY valid JSON matching this schema:
+      : `You are an AI task extraction engine for the Nizam productivity app.
+Analyze the note content and voice transcript, identifying all concrete, actionable tasks and action items.
+Return ONLY valid JSON matching this schema without any thinking tags:
 {
   "tasks": [
-    { "text": "Clear actionable task title", "priority": "high" | "medium" | "low" }
+    { "text": "Direct actionable task item", "priority": "high" },
+    { "text": "Another actionable task", "priority": "medium" }
   ]
 }`;
 
     const prompt = `
-Extract all actionable tasks from this note and voice transcript:
+Extract actionable tasks from this note and voice transcript:
 """
 ${noteContent}
 """
@@ -316,9 +394,14 @@ ${noteContent}
     if (rawResponse) {
       try {
         const parsed = JSON.parse(rawResponse);
-        tasks = parsed.tasks || [];
+        if (Array.isArray(parsed.tasks)) {
+          tasks = parsed.tasks.map((t: any) => ({
+            text: cleanModelResponse(t.text || ""),
+            priority: (["low", "medium", "high"].includes(t.priority) ? t.priority : "medium") as any,
+          })).filter((t: any) => t.text.length > 0);
+        }
       } catch (parseErr) {
-        console.warn("Error parsing extracted tasks JSON:", parseErr);
+        console.warn("Error parsing tasks JSON:", parseErr);
       }
     }
 
@@ -345,6 +428,7 @@ export const chatWithNote = action({
     chatHistory: v.optional(
       v.array(
         v.object({
+          id: v.optional(v.string()),
           role: v.union(v.literal("user"), v.literal("model"), v.literal("system")),
           content: v.string(),
           timestamp: v.number(),
@@ -386,29 +470,28 @@ ${noteTranscript || "(لا يوجد تسجيل صوتي / No audio recording)"}
       ? `أنت مساعد الذكاء الاصطناعي الذكي والمتقدم داخل تطبيق نظام (Nizam).
 مهمتك:
 1. الإجابة عن استفسارات المستخدم، تحليل الأفكار، وشرح المفاهيم المعقدة، وتقديم الاقتراحات وصياغة النصوص بناءً على محتوى الملاحظة والتسجيل الصوتي المرفقين.
-2. التحدث بأسلوب راقٍ، واضح، منظم وداعم باللغة العربية الفصحى الجميلة.
-3. إذا طلب المستخدم شرحاً، قدم شرحاً عميقاً ومبسطاً ومدعماً بنقاط واضحة.
-4. إذا لم تكن المعلومة مذكورة في الملاحظة، يمكنك توضيح ذلك وتقديم المشورة العامة المفيدة مع التنبيه.
+2. التحدث بأسلوب راقٍ، واضح، منظم، ومكتوب بتنسيق Markdown احترافي وجميل (استخدم العناوين والنقاط والخط العريض لترتيب الأفكار).
+3. تنبيه حاسم: لا تضع أي وسوم تفكير داخلية مثل <think>...</think> أو مسودات تفكير على الإطلاق. قدم الرد النهائي المباشر والمنسق فقط.
 
 سياق الملاحظة الحالية:
 ${noteContext}`
       : `You are an intelligent, highly articulate AI Assistant inside the Nizam productivity app.
 Your goals:
 1. Answer the user's questions, analyze ideas, explain complex topics, summarize details, and provide constructive advice based on the note's written text and audio transcript.
-2. Maintain a friendly, clear, structured, and helpful tone.
-3. When asked to explain or brainstorm, provide deep, structured, easy-to-understand insights.
+2. Maintain a friendly, clear, structured, and helpful tone using clean markdown formatting (headings, bullet points, bold key terms).
+3. CRITICAL: Do NOT include any internal thoughts, reasoning tags like <think>...</think>, or drafts. Output ONLY your direct, polished final answer.
 
 Current Note Context:
 ${noteContext}`;
 
     const messages: Array<{ role: "user" | "model" | "system"; content: string }> = [];
 
-    // Append historical messages
+    // Append historical messages (sanitizing model responses)
     if (args.chatHistory && args.chatHistory.length > 0) {
       for (const msg of args.chatHistory) {
         messages.push({
           role: msg.role,
-          content: msg.content,
+          content: cleanModelResponse(msg.content),
         });
       }
     }
@@ -419,16 +502,18 @@ ${noteContext}`;
       content: args.message,
     });
 
-    let reply = await callLLM({
+    let rawReply = await callLLM({
       systemInstruction,
       messages,
       jsonMode: false,
     });
 
+    let reply = cleanModelResponse(rawReply);
+
     if (!reply) {
       reply = isArabic
-        ? `بناءً على ملاحظتك "${noteText}"، تم الاطلاع على التفاصيل. يرجى إعادة المحاولة إذا كنت بحاجة إلى تحليل إضافي.`
-        : `Based on your note "${noteText}", I analyzed the available context. Please try again if you need further insights.`;
+        ? `بناءً على ملاحظتك "${noteText}"، تم الاطلاع على التفاصيل. يرجى توضيح سؤالك لمساعدتك بشكل أفضل.`
+        : `Based on your note "${noteText}", I analyzed the available context. How else can I assist you with this note?`;
     }
 
     // Append to chat history in note if noteId exists
@@ -455,18 +540,16 @@ export const saveNoteSummary = mutation({
   args: {
     noteId: v.id("todos"),
     summary: v.string(),
-    actionItems: v.optional(v.array(v.string())),
   },
   handler: async (ctx, args) => {
     await ctx.db.patch(args.noteId, {
-      aiSummary: args.summary,
-      aiActionItems: args.actionItems,
+      aiSummary: cleanModelResponse(args.summary),
     });
   },
 });
 
 /**
- * Mutation to append messages to the note's chat history.
+ * Mutation to append a chat message to the note's conversation history.
  */
 export const appendChatMessage = mutation({
   args: {
@@ -481,20 +564,33 @@ export const appendChatMessage = mutation({
     const currentHistory = note.aiChatHistory || [];
     const now = Date.now();
 
-    const updatedHistory = [
+    const newHistory = [
       ...currentHistory,
-      { role: "user" as const, content: args.userMessage, timestamp: now },
-      { role: "model" as const, content: args.modelReply, timestamp: now + 1 },
+      {
+        id: `${now}-u`,
+        role: "user" as const,
+        content: args.userMessage,
+        timestamp: now,
+      },
+      {
+        id: `${now}-m`,
+        role: "model" as const,
+        content: cleanModelResponse(args.modelReply),
+        timestamp: now + 1,
+      },
     ];
 
+    // Cap chat history to last 50 messages to keep document light
+    const cappedHistory = newHistory.slice(-50);
+
     await ctx.db.patch(args.noteId, {
-      aiChatHistory: updatedHistory,
+      aiChatHistory: cappedHistory,
     });
   },
 });
 
 /**
- * Convert extracted action items directly into real Todo tasks in the user's task list.
+ * Convert extracted action items to real tasks on the user's board.
  */
 export const convertActionItemsToTasks = mutation({
   args: {
@@ -502,28 +598,29 @@ export const convertActionItemsToTasks = mutation({
     tasks: v.array(
       v.object({
         text: v.string(),
-        priority: v.optional(v.string()),
+        priority: v.optional(v.union(v.literal("low"), v.literal("medium"), v.literal("high"))),
       })
     ),
   },
   handler: async (ctx, args) => {
-    const note = await ctx.db.get(args.noteId);
-    if (!note) throw new Error("Note not found");
+    const sourceNote = await ctx.db.get(args.noteId);
+    if (!sourceNote) return;
 
-    const createdIds = [];
+    const userId = sourceNote.userId;
+
     for (const item of args.tasks) {
-      const id = await ctx.db.insert("todos", {
-        userId: note.userId,
-        text: item.text,
+      await ctx.db.insert("todos", {
+        userId,
+        text: cleanModelResponse(item.text),
         type: "task",
         priority: item.priority || "medium",
         isCompleted: false,
         status: "not_started",
         date: Date.now(),
+        hashtags: sourceNote.hashtags || ["#from-note"],
       });
-      createdIds.push(id);
     }
 
-    return { createdCount: createdIds.length, taskIds: createdIds };
+    return { success: true, count: args.tasks.length };
   },
 });
