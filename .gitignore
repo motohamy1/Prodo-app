@@ -63,3 +63,10 @@ specs
 .playwright-mcp
 
 .impeccable
+
+.agent
+
+graphify-out
+/graphify-out
+graphify
+/graphify
