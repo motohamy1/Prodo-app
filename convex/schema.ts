@@ -145,6 +145,20 @@ export default defineSchema({
     day: v.optional(v.number()),
     text: v.string(),
     description: v.optional(v.string()),
+    category: v.optional(v.string()),
+    color: v.optional(v.string()),
+    icon: v.optional(v.string()),
+    templateId: v.optional(v.string()),
+    milestones: v.optional(
+      v.array(
+        v.object({
+          id: v.string(),
+          text: v.string(),
+          isCompleted: v.boolean(),
+        })
+      )
+    ),
+    order: v.optional(v.number()),
     isCompleted: v.optional(v.boolean()),
     createdAt: v.optional(v.number()),
   })
@@ -159,12 +173,56 @@ export default defineSchema({
     day: v.optional(v.number()),
     text: v.string(),
     description: v.optional(v.string()),
+    category: v.optional(v.string()),
+    color: v.optional(v.string()),
+    icon: v.optional(v.string()),
+    templateId: v.optional(v.string()),
     isCompleted: v.optional(v.boolean()),
     createdAt: v.optional(v.number()),
   })
     .index("by_user_year", ["userId", "year"])
     .index("by_user_year_month", ["userId", "year", "month"])
     .index("by_user_year_month_day", ["userId", "year", "month", "day"]),
+
+  goalTemplates: defineTable({
+    templateId: v.string(),
+    name: v.string(),
+    nameAr: v.string(),
+    description: v.string(),
+    descriptionAr: v.string(),
+    icon: v.string(),
+    badge: v.string(),
+    badgeAr: v.string(),
+    color: v.string(),
+    gradientColors: v.array(v.string()),
+    artType: v.string(),
+    categories: v.array(
+      v.object({
+        id: v.string(),
+        title: v.string(),
+        titleAr: v.string(),
+        icon: v.string(),
+        color: v.string(),
+        description: v.optional(v.string()),
+        descriptionAr: v.optional(v.string()),
+      })
+    ),
+    isDefault: v.optional(v.boolean()),
+    order: v.number(),
+  }).index("by_templateId", ["templateId"]),
+
+  monthlyBlueprints: defineTable({
+    userId: v.union(v.id("users"), v.string()),
+    year: v.number(),
+    month: v.optional(v.number()),
+    templateId: v.string(),
+    themeTitle: v.string(),
+    themeTitleAr: v.optional(v.string()),
+    motivationalQuote: v.optional(v.string()),
+    motivationalQuoteAr: v.optional(v.string()),
+    updatedAt: v.number(),
+  }).index("by_user_year_month", ["userId", "year", "month"])
+    .index("by_user_year", ["userId", "year"]),
 
   categoryItems: defineTable({
     userId: v.optional(v.union(v.id("users"), v.string())),

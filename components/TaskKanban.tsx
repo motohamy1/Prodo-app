@@ -723,10 +723,8 @@ export const TaskKanban: React.FC<TaskKanbanProps> = ({ columns, homeStyles, isA
             style={{
               width: COLUMN_WIDTH,
               borderRadius: 20,
-              borderWidth: 1,
-              borderColor: colors.border,
-              backgroundColor: isDarkMode ? 'rgba(255,255,255,0.02)' : 'rgba(15,23,42,0.03)',
-              padding: 12,
+              paddingHorizontal: 2,
+              paddingTop: 4,
               alignSelf: 'flex-start',
             }}
           >

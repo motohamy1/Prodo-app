@@ -538,8 +538,8 @@ export const NoteAIResultModal: React.FC<NoteAIResultModalProps> = ({
                         onClose();
                       }}
                     >
-                      <Ionicons name="document-text-outline" size={17} color="#FFFFFF" />
-                      <Text style={styles.primaryBtnText}>
+                      <Ionicons name="document-text-outline" size={17} color={colors.primaryText} />
+                      <Text style={[styles.primaryBtnText, { color: colors.primaryText }]}>
                         {isArabic ? 'إدراج في الملاحظة' : 'Insert into Note'}
                       </Text>
                     </TouchableOpacity>
@@ -583,11 +583,11 @@ export const NoteAIResultModal: React.FC<NoteAIResultModalProps> = ({
                     onPress={handleAddTasksConfirm}
                   >
                     {isAddingTasks ? (
-                      <ActivityIndicator size="small" color="#FFFFFF" />
+                      <ActivityIndicator size="small" color={colors.primaryText} />
                     ) : (
                       <>
-                        <Ionicons name="add-circle" size={18} color="#FFFFFF" />
-                        <Text style={styles.primaryBtnText}>
+                        <Ionicons name="add-circle" size={18} color={colors.primaryText} />
+                        <Text style={[styles.primaryBtnText, { color: colors.primaryText }]}>
                           {isArabic
                             ? `إضافة ${selectedTaskIndices.size} مهمة إلى قائمة المهام`
                             : `Add ${selectedTaskIndices.size} Task(s) to Board`}

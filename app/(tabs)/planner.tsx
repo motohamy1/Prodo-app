@@ -357,7 +357,13 @@ const Planner = () => {
                       elevation: 4,
                     }
                   ]}
-                  onPress={() => router.push({ pathname: '/year-detail', params: { year: year.toString() } })}
+                  onPress={() => router.push({
+                    pathname: '/goals-detail',
+                    params: {
+                      year: year.toString(),
+                      title: isArabic ? `أهداف وإنجازات عام ${year}` : `${year} Goals & Achievements`,
+                    },
+                  })}
                   activeOpacity={0.88}
                 >
                   {/* Top Row: Year, Badge, Edit Icon */}
@@ -383,8 +389,18 @@ const Planner = () => {
                     gap: 8,
                     marginVertical: 4,
                   }}>
-                    {/* Goals stat */}
-                    <View style={[styles.yearStatCard, { backgroundColor: capsuleBg, borderColor: capsuleBorder }]}>
+                    {/* Goals stat capsule (Navigates to Year Goals) */}
+                    <TouchableOpacity
+                      style={[styles.yearStatCard, { backgroundColor: capsuleBg, borderColor: capsuleBorder }]}
+                      onPress={() => router.push({
+                        pathname: '/goals-detail',
+                        params: {
+                          year: year.toString(),
+                          title: isArabic ? `أهداف عام ${year}` : `${year} Goals`,
+                        }
+                      })}
+                      activeOpacity={0.75}
+                    >
                       <Ionicons name="flag-outline" size={16} color={flagIconColor} />
                       <View style={{ flex: 1 }}>
                         <Text style={[styles.yearStatValue, { color: textColor, textAlign: isArabic ? 'right' : 'left' }]}>
@@ -394,10 +410,20 @@ const Planner = () => {
                           {t.goalsOfTheYear}
                         </Text>
                       </View>
-                    </View>
+                    </TouchableOpacity>
 
-                    {/* Achievements stat */}
-                    <View style={[styles.yearStatCard, { backgroundColor: capsuleBg, borderColor: capsuleBorder }]}>
+                    {/* Achievements stat capsule (Navigates to Year Goals & Wins) */}
+                    <TouchableOpacity
+                      style={[styles.yearStatCard, { backgroundColor: capsuleBg, borderColor: capsuleBorder }]}
+                      onPress={() => router.push({
+                        pathname: '/goals-detail',
+                        params: {
+                          year: year.toString(),
+                          title: isArabic ? `إنجازات عام ${year}` : `${year} Achievements`,
+                        }
+                      })}
+                      activeOpacity={0.75}
+                    >
                       <Ionicons name="trophy-outline" size={16} color={trophyIconColor} />
                       <View style={{ flex: 1 }}>
                         <Text style={[styles.yearStatValue, { color: textColor, textAlign: isArabic ? 'right' : 'left' }]}>
@@ -407,7 +433,7 @@ const Planner = () => {
                           {t.achievementsOfTheYear}
                         </Text>
                       </View>
-                    </View>
+                    </TouchableOpacity>
                   </View>
 
                   {/* Bottom Row: Progress bar or Tap to plan */}

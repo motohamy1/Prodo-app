@@ -573,7 +573,7 @@ const CategoriesView = ({ styles, colors, onSelectCategory, onAddCategory, onEdi
             {isArabic ? 'اضغط أدناه لإنشاء أول مساحة عمل وتنظيم مشاريعك.' : 'Create your first category workspace to organize projects and tasks.'}
           </Text>
           <TouchableOpacity style={[styles.addCategoryBtn, { marginTop: 20, width: '100%' }]} onPress={onAddCategory}>
-            <Ionicons name="add" size={20} color="#FFFFFF" />
+            <Ionicons name="add" size={20} color={colors.text} />
             <Text style={styles.addCategoryBtnText}>{isArabic ? 'إنشاء فئة جديدة' : 'Create Category'}</Text>
           </TouchableOpacity>
         </View>

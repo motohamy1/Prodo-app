@@ -83,13 +83,13 @@ export const WavyBorder = ({
   accentColor,
   style,
 }: WavyBorderProps) => {
-  const { colors, isDarkMode } = useTheme();
+  const { colors } = useTheme();
   const [layoutWidth, setLayoutWidth] = useState(0);
 
   const baseFill = fillColor || colors.surface;
-  // Neo Lime accent color for the layered waves
-  const primaryWave = waveColor || (isDarkMode ? 'rgba(212, 255, 0, 0.32)' : 'rgba(180, 225, 0, 0.35)');
-  const secondaryWave = accentColor || (isDarkMode ? 'rgba(212, 255, 0, 0.16)' : 'rgba(180, 225, 0, 0.18)');
+  // No accent tint on the layered waves; the border line is removed
+  const primaryWave = waveColor || 'transparent';
+  const secondaryWave = accentColor || 'transparent';
 
   if (height <= 0) return null;
 

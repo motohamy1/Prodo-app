@@ -49,6 +49,20 @@ export const updateGoal = mutation({
     id: v.id("yearlyGoals"),
     text: v.optional(v.string()),
     description: v.optional(v.string()),
+    category: v.optional(v.string()),
+    color: v.optional(v.string()),
+    icon: v.optional(v.string()),
+    templateId: v.optional(v.string()),
+    milestones: v.optional(
+      v.array(
+        v.object({
+          id: v.string(),
+          text: v.string(),
+          isCompleted: v.boolean(),
+        })
+      )
+    ),
+    order: v.optional(v.number()),
     isCompleted: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
@@ -111,6 +125,10 @@ export const updateAchievement = mutation({
     id: v.id("yearlyAchievements"),
     text: v.optional(v.string()),
     description: v.optional(v.string()),
+    category: v.optional(v.string()),
+    color: v.optional(v.string()),
+    icon: v.optional(v.string()),
+    templateId: v.optional(v.string()),
     isCompleted: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
@@ -161,6 +179,19 @@ export const addMonthGoal = mutation({
     month: v.number(),
     text: v.string(),
     description: v.optional(v.string()),
+    category: v.optional(v.string()),
+    color: v.optional(v.string()),
+    icon: v.optional(v.string()),
+    templateId: v.optional(v.string()),
+    milestones: v.optional(
+      v.array(
+        v.object({
+          id: v.string(),
+          text: v.string(),
+          isCompleted: v.boolean(),
+        })
+      )
+    ),
   },
   handler: async (ctx, args) => {
     return await ctx.db.insert("yearlyGoals", {
@@ -169,6 +200,11 @@ export const addMonthGoal = mutation({
       month: args.month,
       text: args.text,
       description: args.description,
+      category: args.category,
+      color: args.color,
+      icon: args.icon,
+      templateId: args.templateId,
+      milestones: args.milestones,
       isCompleted: false,
       createdAt: Date.now(),
     });
@@ -231,6 +267,10 @@ export const addMonthAchievement = mutation({
     month: v.number(),
     text: v.string(),
     description: v.optional(v.string()),
+    category: v.optional(v.string()),
+    color: v.optional(v.string()),
+    icon: v.optional(v.string()),
+    templateId: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     return await ctx.db.insert("yearlyAchievements", {
@@ -239,6 +279,11 @@ export const addMonthAchievement = mutation({
       month: args.month,
       text: args.text,
       description: args.description,
+      category: args.category,
+      color: args.color,
+      icon: args.icon,
+      templateId: args.templateId,
+      isCompleted: false,
       createdAt: Date.now(),
     });
   },
