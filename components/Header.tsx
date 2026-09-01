@@ -17,13 +17,6 @@ const Header = () => {
     const userSettings = useOfflineQuery<any>('auth.getUserSettings', api.auth.getUserSettings, (userId && !isLocalGuest) ? { userId } : "skip");
     const homeStyles = createHomeStyles(colors, isArabic);
 
-    const now = new Date();
-    const formattedDate = now.toLocaleDateString(isArabic ? 'ar-SA' : 'en-US', {
-        weekday: 'long',
-        day: 'numeric',
-        month: 'long'
-    });
-
     const greeting = isArabic ? `مرحباً، ${userSettings?.name || t.guest}` : `Hi, ${userSettings?.name || 'Guest'}`;
 
     return (
@@ -34,7 +27,6 @@ const Header = () => {
         >
             <View style={[homeStyles.header, { paddingTop: 8, paddingBottom: 4 }, isArabic && { flexDirection: 'row-reverse' }]}>
                 <View style={[homeStyles.headerLeft, isArabic && { alignItems: 'flex-end' }]}>
-                    <Text style={[homeStyles.headerDate, isArabic && { textAlign: 'right' }]}>{formattedDate}</Text>
                     <Text style={[homeStyles.headerGreeting, isArabic && { textAlign: 'right' }]}>{greeting}</Text>
                 </View>
 

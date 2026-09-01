@@ -5,7 +5,7 @@ import * as Haptics from 'expo-haptics';
 import useTheme from '@/hooks/useTheme';
 import { useTranslation } from '@/utils/i18n';
 import { useAuth } from '@/hooks/useAuth';
-import { createScrollStackStyles } from '@/assets/styles/scrollStack.styles';
+import { createScrollStackStyles, CARD_ACCENTS, createCardFrame } from '@/assets/styles/scrollStack.styles';
 
 interface InsightsCardProps {
   insights: any;
@@ -20,6 +20,7 @@ export const InsightsCard: React.FC<InsightsCardProps> = ({
   const { language } = useAuth();
   const { t, isArabic } = useTranslation(language);
   const baseStyles = createScrollStackStyles(colors, isArabic, isDarkMode);
+  const frame = createCardFrame(CARD_ACCENTS.lavender, isDarkMode, colors.secondaryText);
 
   const productivity = insights?.productivityScore ?? 85;
   const balance = insights?.balanceScore ?? 78;
@@ -33,25 +34,27 @@ export const InsightsCard: React.FC<InsightsCardProps> = ({
     return colors.danger;
   };
 
+  const handlePress = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    onPress();
+  };
+
   return (
-    <TouchableOpacity
-      activeOpacity={0.92}
-      onPress={() => {
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-        onPress();
-      }}
-      style={baseStyles.card}
-    >
+    <View style={[baseStyles.card, { borderColor: frame.edge }]}>
       {/* Header */}
-      <View style={baseStyles.cardHeader}>
+      <TouchableOpacity
+        style={baseStyles.cardHeader}
+        onPress={handlePress}
+        activeOpacity={0.8}
+      >
         <View style={baseStyles.cardHeaderLeft}>
           <View
             style={[
               baseStyles.iconBadge,
-              { backgroundColor: isDarkMode ? 'rgba(168, 85, 247, 0.2)' : 'rgba(168, 85, 247, 0.15)' },
+              { backgroundColor: frame.badgeBg },
             ]}
           >
-            <Ionicons name="analytics" size={20} color="#a855f7" />
+            <Ionicons name="analytics" size={20} color={frame.badgeFg} />
           </View>
           <View style={isArabic ? { alignItems: 'flex-end' } : { alignItems: 'flex-start' }}>
             <Text style={baseStyles.cardTitle}>{t.tabInsights || (isArabic ? 'رؤى الذكاء الاصطناعي' : 'AI Insights & Wellbeing')}</Text>
@@ -61,16 +64,20 @@ export const InsightsCard: React.FC<InsightsCardProps> = ({
           </View>
         </View>
 
-        <View style={[baseStyles.headerPill, { backgroundColor: isDarkMode ? 'rgba(168, 85, 247, 0.15)' : 'rgba(168, 85, 247, 0.12)' }]}>
-          <Ionicons name="sparkles" size={13} color="#a855f7" />
-          <Text style={[baseStyles.headerPillText, { color: '#a855f7' }]}>
+        <View style={[baseStyles.headerPill, { backgroundColor: frame.pillBg }]}>
+          <Ionicons name="sparkles" size={13} color={frame.pillFg} />
+          <Text style={[baseStyles.headerPillText, { color: frame.pillFg }]}>
             {isArabic ? 'تحليل ذكي' : 'AI Health'}
           </Text>
         </View>
-      </View>
+      </TouchableOpacity>
 
       {/* Metrics Row */}
-      <View style={styles.metricsRow}>
+      <TouchableOpacity
+        style={styles.metricsRow}
+        onPress={handlePress}
+        activeOpacity={0.85}
+      >
         <View style={[styles.metricPill, { backgroundColor: isDarkMode ? '#1F222A' : '#F4F5F8' }]}>
           <View style={[styles.miniDot, { backgroundColor: getScoreColor(productivity) }]} />
           <Text style={[styles.metricVal, { color: colors.text }]}>{productivity}%</Text>
@@ -88,11 +95,13 @@ export const InsightsCard: React.FC<InsightsCardProps> = ({
           <Text style={[styles.metricVal, { color: colors.text }]}>{streak}d</Text>
           <Text style={[styles.metricLbl, { color: colors.textMuted }]}>{isArabic ? 'استمرار' : 'Streak'}</Text>
         </View>
-      </View>
+      </TouchableOpacity>
 
       {/* Focus & Neglected highlight strip */}
       {neglectedCount > 0 ? (
-        <View
+        <TouchableOpacity
+          onPress={handlePress}
+          activeOpacity={0.85}
           style={[
             styles.alertBanner,
             {
@@ -101,13 +110,15 @@ export const InsightsCard: React.FC<InsightsCardProps> = ({
             },
           ]}
         >
-          <Ionicons name="alert-circle-outline" size={16} color="#eab308" />
+          <Ionicons name="alert-circle-outline" size={16} color={isDarkMode ? '#fef08a' : '#854d0e'} />
           <Text style={[styles.alertText, { color: isDarkMode ? '#fef08a' : '#854d0e' }]} numberOfLines={1}>
             {neglectedCount} {isArabic ? 'مجالات تحتاج إلى انتباه اليوم' : 'areas need attention today'}
           </Text>
-        </View>
+        </TouchableOpacity>
       ) : (
-        <View
+        <TouchableOpacity
+          onPress={handlePress}
+          activeOpacity={0.85}
           style={[
             styles.alertBanner,
             {
@@ -120,14 +131,18 @@ export const InsightsCard: React.FC<InsightsCardProps> = ({
           <Text style={[styles.alertText, { color: isDarkMode ? '#86efac' : '#15803d' }]} numberOfLines={1}>
             {isArabic ? 'كل مجالات التركيز متوازنة بشكل ممتاز' : 'All focus topics are on track'}
           </Text>
-        </View>
+        </TouchableOpacity>
       )}
 
       {/* Footer */}
-      <View style={baseStyles.cardFooter}>
+      <TouchableOpacity 
+        style={baseStyles.cardFooter}
+        onPress={handlePress}
+        activeOpacity={0.8}
+      >
         <View style={baseStyles.footerActionBtn}>
-          <Ionicons name="arrow-forward" size={14} color={colors.primary} />
-          <Text style={[baseStyles.footerActionText, { color: colors.primary }]}>
+          <Ionicons name="arrow-forward" size={14} color={frame.fg} />
+          <Text style={[baseStyles.footerActionText, { color: frame.fg }]}>
             {isArabic ? 'عرض التقرير الكامل ورادار التركيز' : 'View Full Insights & Radar'}
           </Text>
         </View>
@@ -135,8 +150,8 @@ export const InsightsCard: React.FC<InsightsCardProps> = ({
         <Text style={baseStyles.footerHintText}>
           {isArabic ? 'تحديث يومي' : 'Daily Sync'}
         </Text>
-      </View>
-    </TouchableOpacity>
+      </TouchableOpacity>
+    </View>
   );
 };
 

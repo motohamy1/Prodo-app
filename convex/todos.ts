@@ -26,6 +26,25 @@ export const getSubtasks = query({
   },
 });
 
+// All subtask references for a user (bounded), used to show linked-child
+// counts on the home checklist without reading full documents per parent.
+export const getLinkedChildren = query({
+  args: { userId: v.union(v.id("users"), v.string()) },
+  handler: async (ctx, args) => {
+    const children = await ctx.db
+      .query("todos")
+      .withIndex("by_user", (q) => q.eq("userId", args.userId))
+      .filter((q) => q.neq(q.field("parentId"), undefined))
+      .take(1000);
+    return children.map((t) => ({
+      id: t._id,
+      parentId: t.parentId!,
+      text: t.text,
+      status: t.status,
+    }));
+  },
+});
+
 export const getById = query({
   args: { id: v.id("todos") },
   handler: async (ctx, args) => {
@@ -440,6 +459,9 @@ export const pauseSubtaskTimer = mutation({
 export const deleteTodo = mutation({
   args: { id: v.id('todos') },
   handler: async (ctx, args) => {
+    const existing = await ctx.db.get(args.id);
+    if (!existing) return;
+
     const subtasks = await ctx.db
       .query("todos")
       .withIndex("by_parent", (q) => q.eq("parentId", args.id))
@@ -447,6 +469,26 @@ export const deleteTodo = mutation({
       
     for (const sub of subtasks) {
       await ctx.db.delete(sub._id);
+    }
+    await ctx.db.delete(args.id);
+  }
+})
+
+// Deleting a checklist item must not destroy the tasks linked beneath it:
+// unlink the children back to top level first, then remove the item.
+export const deleteChecklistItem = mutation({
+  args: { id: v.id('todos') },
+  handler: async (ctx, args) => {
+    const existing = await ctx.db.get(args.id);
+    if (!existing) return;
+
+    const children = await ctx.db
+      .query("todos")
+      .withIndex("by_parent", (q) => q.eq("parentId", args.id))
+      .collect();
+
+    for (const child of children) {
+      await ctx.db.patch(child._id, { parentId: undefined });
     }
     await ctx.db.delete(args.id);
   }
@@ -616,6 +658,9 @@ export const toggleTaskChecklistItem = mutation({
 export const deleteTaskChecklistItem = mutation({
   args: { id: v.id("taskChecklists") },
   handler: async (ctx, args) => {
-    await ctx.db.delete(args.id);
+    const item = await ctx.db.get(args.id);
+    if (item) {
+      await ctx.db.delete(args.id);
+    }
   },
 });

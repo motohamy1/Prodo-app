@@ -110,13 +110,15 @@ export default function GoalsDetailScreen() {
   );
 
   // ─── Mutations ───────────────────────────────────────────────────────────────
+  // IMPORTANT: the mutationPath must match the exact function chosen, or the
+  // offline queue replay and optimistic cache both hit the wrong Convex fn.
   const addGoalMut = useOfflineMutation(
     isDay ? api.yearlyGoals.addDayGoal : isMonth ? api.yearlyGoals.addMonthGoal : api.yearlyGoals.addGoal,
-    'yearlyGoals:addGoal'
+    isDay ? 'yearlyGoals:addDayGoal' : isMonth ? 'yearlyGoals:addMonthGoal' : 'yearlyGoals:addGoal'
   );
   const addAchievementMut = useOfflineMutation(
     isDay ? api.yearlyGoals.addDayAchievement : isMonth ? api.yearlyGoals.addMonthAchievement : api.yearlyGoals.addAchievement,
-    'yearlyGoals:addAchievement'
+    isDay ? 'yearlyGoals:addDayAchievement' : isMonth ? 'yearlyGoals:addMonthAchievement' : 'yearlyGoals:addAchievement'
   );
   const updateGoal = useOfflineMutation(api.yearlyGoals.updateGoal, 'yearlyGoals:updateGoal');
   const deleteGoal = useOfflineMutation(api.yearlyGoals.deleteGoal, 'yearlyGoals:deleteGoal');
@@ -626,52 +628,90 @@ export default function GoalsDetailScreen() {
           </View>
 
           {/* ─── Hierarchical Nested Sections & Goals List ─────────────────── */}
-          {groupedSections.length === 0 ? (
-            <View style={styles.emptyContainer}>
-              <View style={[styles.emptyIconCircle, { backgroundColor: isDarkMode ? '#1E1E28' : '#F3F4F6' }]}>
-                <Ionicons name="flag-outline" size={32} color={colors.textMuted} />
-              </View>
-              <Text style={[styles.emptyTitle, { color: colors.text }]}>
-                {isArabic ? 'لا توجد أهداف أو إنجازات بعد' : 'No goals yet'}
-              </Text>
-              <Text style={[styles.emptyDesc, { color: colors.textMuted }]}>
-                {isArabic
-                  ? 'اضغط على زر (+) لإضافة هدف مع خيارات كاملة، أو استخدم الذكاء الاصطناعي لتوليد خطة متكاملة.'
-                  : 'Tap (+) to add a detailed goal with checklists, or use AI to craft a monthly plan.'}
-              </Text>
-              <TouchableOpacity
-                style={[styles.emptyAddBtn, { backgroundColor: colors.primary }]}
-                onPress={() => handleOpenCreate()}
-              >
-                <Ionicons name="add" size={18} color={colors.primaryText} />
-                <Text style={[styles.emptyAddBtnText, { color: colors.primaryText }]}>
-                  {isArabic ? 'إضافة هدف جديد' : 'Add New Goal'}
-                </Text>
-              </TouchableOpacity>
-            </View>
-          ) : (
-            groupedSections
-              .filter((group) => {
-                if (selectedCategoryFilter && group.category !== selectedCategoryFilter) return false;
-                if (activeTab === 'goals' && group.goals.length === 0) return false;
-                if (
-                  activeTab === 'achievements' &&
-                  group.achievements.length === 0 &&
-                  !group.goals.some((g) => g.isCompleted)
-                ) {
-                  return false;
-                }
-                return true;
-              })
-              .map((group) => {
-                const isSectionExpanded = expandedSectionIds[group.category] ?? true;
-                const visibleGoals =
-                  activeTab === 'achievements'
-                    ? group.goals.filter((g) => g.isCompleted)
-                    : group.goals;
-                const visibleAchievements = activeTab === 'goals' ? [] : group.achievements;
-                const secCompletedGoals = group.goals.filter((g) => g.isCompleted).length;
-                const secTotalGoals = group.goals.length;
+          {(() => {
+            if (groupedSections.length === 0) {
+              return (
+                <View style={styles.emptyContainer}>
+                  <View style={[styles.emptyIconCircle, { backgroundColor: isDarkMode ? '#1E1E28' : '#F3F4F6' }]}>
+                    <Ionicons name="flag-outline" size={32} color={colors.textMuted} />
+                  </View>
+                  <Text style={[styles.emptyTitle, { color: colors.text }]}>
+                    {isArabic ? 'لا توجد أهداف أو إنجازات بعد' : 'No goals yet'}
+                  </Text>
+                  <Text style={[styles.emptyDesc, { color: colors.textMuted }]}>
+                    {isArabic
+                      ? 'اضغط على زر (+) لإضافة هدف مع خيارات كاملة، أو استخدم الذكاء الاصطناعي لتوليد خطة متكاملة.'
+                      : 'Tap (+) to add a detailed goal with checklists, or use AI to craft a monthly plan.'}
+                  </Text>
+                  <TouchableOpacity
+                    style={[styles.emptyAddBtn, { backgroundColor: colors.primary }]}
+                    onPress={() => handleOpenCreate()}
+                  >
+                    <Ionicons name="add" size={18} color={colors.primaryText} />
+                    <Text style={[styles.emptyAddBtnText, { color: colors.primaryText }]}>
+                      {isArabic ? 'إضافة هدف جديد' : 'Add New Goal'}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              );
+            }
+
+            const filteredSections = groupedSections.filter((group) => {
+              if (selectedCategoryFilter && group.category !== selectedCategoryFilter) return false;
+              if (activeTab === 'goals' && group.goals.length === 0) return false;
+              if (
+                activeTab === 'achievements' &&
+                group.achievements.length === 0 &&
+                !group.goals.some((g) => g.isCompleted)
+              ) {
+                return false;
+              }
+              return true;
+            });
+
+            if (filteredSections.length === 0) {
+              if (activeTab === 'achievements') {
+                return (
+                  <View style={styles.emptyContainer}>
+                    <View style={[styles.emptyIconCircle, { backgroundColor: isDarkMode ? '#1E1E28' : '#F0FDF4' }]}>
+                      <Ionicons name="trophy-outline" size={32} color={colors.success} />
+                    </View>
+                    <Text style={[styles.emptyTitle, { color: colors.text }]}>
+                      {isArabic ? 'لا توجد إنجازات محققة بعد' : 'No Completed Wins Yet'}
+                    </Text>
+                    <Text style={[styles.emptyDesc, { color: colors.textMuted }]}>
+                      {isArabic
+                        ? 'عند إتمام أهدافك وتحديدها كمكتملة بالضغط على علامة الصح، ستظهر هنا في قائمة الإنجازات المحققة للاحتفاء بها!'
+                        : 'When you complete goals by checking them off, they will appear here as your achieved wins!'}
+                    </Text>
+                  </View>
+                );
+              }
+
+              return (
+                <View style={styles.emptyContainer}>
+                  <View style={[styles.emptyIconCircle, { backgroundColor: isDarkMode ? '#1E1E28' : '#F3F4F6' }]}>
+                    <Ionicons name="filter-outline" size={32} color={colors.textMuted} />
+                  </View>
+                  <Text style={[styles.emptyTitle, { color: colors.text }]}>
+                    {isArabic ? 'لا توجد عناصر مطابقة' : 'No matching items'}
+                  </Text>
+                  <Text style={[styles.emptyDesc, { color: colors.textMuted }]}>
+                    {isArabic ? 'جرب تغيير التصفية أو القسم المختار.' : 'Try changing your category filter.'}
+                  </Text>
+                </View>
+              );
+            }
+
+            return filteredSections.map((group) => {
+              const isSectionExpanded = expandedSectionIds[group.category] ?? true;
+              const visibleGoals =
+                activeTab === 'achievements'
+                  ? group.goals.filter((g) => g.isCompleted)
+                  : group.goals;
+              const visibleAchievements = activeTab === 'goals' ? [] : group.achievements;
+              const secCompletedGoals = group.goals.filter((g) => g.isCompleted).length;
+              const secTotalGoals = group.goals.length;
 
                 return (
                   <View
@@ -990,8 +1030,8 @@ export default function GoalsDetailScreen() {
                     )}
                   </View>
                 );
-              })
-          )}
+              });
+          })()}
 
           {/* Bottom spacing for FAB */}
           <View style={{ height: 100 }} />

@@ -193,6 +193,12 @@ export const GoalFormModal: React.FC<GoalFormModalProps> = ({
       onClose();
     } catch (err) {
       console.warn('Save failed:', err);
+      Alert.alert(
+        isArabic ? 'تعذر الحفظ' : 'Save Failed',
+        isArabic
+          ? 'حدث خطأ أثناء الحفظ. يرجى المحاولة مرة أخرى.'
+          : 'Something went wrong while saving. Please try again.'
+      );
     } finally {
       setIsSaving(false);
     }

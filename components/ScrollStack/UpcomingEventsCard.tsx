@@ -4,7 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import useTheme from '@/hooks/useTheme';
 import { useTranslation } from '@/utils/i18n';
 import { useAuth } from '@/hooks/useAuth';
-import { createScrollStackStyles } from '@/assets/styles/scrollStack.styles';
+import { createScrollStackStyles, CARD_ACCENTS, createCardFrame, CardAccent } from '@/assets/styles/scrollStack.styles';
 import { Id } from '@/convex/_generated/dataModel';
 
 export interface UpcomingEventDisplay {
@@ -17,21 +17,13 @@ export interface UpcomingEventDisplay {
   meetingLink?: string;
   priority?: string;
   type?: string;
+  description?: string;
 }
 
 interface UpcomingEventsCardProps {
   events: UpcomingEventDisplay[];
   onOpenEventModal: (eventToEdit?: UpcomingEventDisplay) => void;
 }
-
-const VIOLET_THEME = {
-  primary: '#8B5CF6',
-  light: '#dbd4fd',
-  badgeBgDark: 'rgba(219, 212, 253, 0.2)',
-  badgeBgLight: 'rgba(219, 212, 253, 0.35)',
-  pillBgDark: 'rgba(139, 92, 246, 0.18)',
-  pillBgLight: 'rgba(139, 92, 246, 0.12)',
-};
 
 export const UpcomingEventsCard: React.FC<UpcomingEventsCardProps> = ({
   events,
@@ -42,6 +34,17 @@ export const UpcomingEventsCard: React.FC<UpcomingEventsCardProps> = ({
   const { t, isArabic } = useTranslation(language);
   const styles = createScrollStackStyles(colors, isArabic, isDarkMode);
 
+  const frame = createCardFrame(CARD_ACCENTS.lime, isDarkMode, colors.secondaryText);
+
+  // Per-type chip accent: light mode always uses the deep ink so nothing sits
+  // as a pale wash-on-wash; dark mode uses the pastel. Reminder uses the card's lime.
+  const typeAccent = (kind: 'meeting' | 'appointment' | 'reminder' | 'event'): CardAccent => {
+    if (kind === 'meeting') return CARD_ACCENTS.sky;
+    if (kind === 'appointment') return CARD_ACCENTS.amber;
+    if (kind === 'reminder') return { pastel: colors.secondary, ink: CARD_ACCENTS.lime.ink };
+    return CARD_ACCENTS.mint;
+  };
+
   const formatTime = (ts?: number) => {
     if (!ts) return '';
     return new Date(ts).toLocaleTimeString(
@@ -51,7 +54,7 @@ export const UpcomingEventsCard: React.FC<UpcomingEventsCardProps> = ({
   };
 
   return (
-    <View style={styles.card}>
+    <View style={[styles.card, { borderColor: frame.edge }]}>
       {/* Header */}
       <TouchableOpacity 
         style={styles.cardHeader} 
@@ -59,39 +62,39 @@ export const UpcomingEventsCard: React.FC<UpcomingEventsCardProps> = ({
         activeOpacity={0.8}
       >
         <View style={styles.cardHeaderLeft}>
-          <View style={[styles.iconBadge, { backgroundColor: isDarkMode ? VIOLET_THEME.badgeBgDark : VIOLET_THEME.badgeBgLight }]}>
-            <Ionicons name="calendar" size={20} color={isDarkMode ? VIOLET_THEME.light : VIOLET_THEME.primary} />
+          <View style={[styles.iconBadge, { backgroundColor: frame.badgeBg }]}>
+            <Ionicons name="calendar" size={20} color={frame.badgeFg} />
           </View>
           <View style={isArabic ? { alignItems: 'flex-end' } : { alignItems: 'flex-start' }}>
-            <Text style={styles.cardTitle}>{t.upcomingEvents}</Text>
+            <Text style={styles.cardTitle}>{t.remindersAndEvents}</Text>
             <Text style={styles.cardSubtitle}>
-              {events.length} {t.tasksScheduled}
+              {events.length} {t.remindersAndEventsSubtitle}
             </Text>
           </View>
         </View>
 
         <TouchableOpacity
-          style={[styles.headerPill, { backgroundColor: isDarkMode ? VIOLET_THEME.pillBgDark : VIOLET_THEME.pillBgLight }]}
+          style={[styles.headerPill, { backgroundColor: frame.pillBg }]}
           onPress={() => onOpenEventModal()}
           activeOpacity={0.7}
         >
-          <Ionicons name="add-circle" size={15} color={isDarkMode ? VIOLET_THEME.light : VIOLET_THEME.primary} />
-          <Text style={[styles.headerPillText, { color: isDarkMode ? VIOLET_THEME.light : VIOLET_THEME.primary }]}>{t.addEvent}</Text>
+          <Ionicons name="add-circle" size={15} color={frame.pillFg} />
+          <Text style={[styles.headerPillText, { color: frame.pillFg }]}>{isArabic ? 'إضافة' : 'Add'}</Text>
         </TouchableOpacity>
       </TouchableOpacity>
 
       {/* Body: Events list with Nested Scroll or Empty State */}
       {events.length === 0 ? (
         <View style={styles.emptyCardContent}>
-          <Ionicons name="calendar-outline" size={28} color={isDarkMode ? VIOLET_THEME.light : VIOLET_THEME.primary} />
-          <Text style={styles.emptyCardTitle}>{t.noUpcomingEvents}</Text>
+          <Ionicons name="notifications-outline" size={28} color={frame.fg} />
+          <Text style={styles.emptyCardTitle}>{t.noUpcomingRemindersEvents}</Text>
           <TouchableOpacity 
-            style={[styles.emptyCardBtn, { borderColor: isDarkMode ? VIOLET_THEME.badgeBgDark : VIOLET_THEME.badgeBgLight }]} 
+            style={[styles.emptyCardBtn, { borderColor: frame.border }]} 
             onPress={() => onOpenEventModal()}
             activeOpacity={0.8}
           >
-            <Ionicons name="add" size={16} color={isDarkMode ? VIOLET_THEME.light : VIOLET_THEME.primary} />
-            <Text style={[styles.emptyCardBtnText, { color: isDarkMode ? VIOLET_THEME.light : VIOLET_THEME.primary }]}>{t.addEvent}</Text>
+            <Ionicons name="add" size={16} color={frame.fg} />
+            <Text style={[styles.emptyCardBtnText, { color: frame.fg }]}>{t.addReminder}</Text>
           </TouchableOpacity>
         </View>
       ) : (
@@ -112,22 +115,28 @@ export const UpcomingEventsCard: React.FC<UpcomingEventsCardProps> = ({
             const isReminder = evt.type === 'reminder';
 
             let chipIcon = "time-outline";
-            let chipColor = "#defef9";
             let typeBadgeText = "";
+            let accent: CardAccent = typeAccent('event');
 
             if (isMeeting) {
               chipIcon = "videocam-outline";
-              chipColor = "#38BDF8";
-              typeBadgeText = isArabic ? "اجتماع" : "Meeting";
+              accent = typeAccent('meeting');
+              typeBadgeText = t.typeMeeting;
             } else if (isAppointment) {
               chipIcon = "calendar-outline";
-              chipColor = "#F59E0B";
-              typeBadgeText = isArabic ? "موعد" : "Appointment";
+              accent = typeAccent('appointment');
+              typeBadgeText = t.typeAppointment;
             } else if (isReminder) {
               chipIcon = "alarm-outline";
-              chipColor = "#EC4899";
-              typeBadgeText = isArabic ? "تذكير" : "Reminder";
+              accent = typeAccent('reminder');
+              typeBadgeText = t.typeReminder;
+            } else {
+              typeBadgeText = t.typeEvent;
             }
+
+            const chipFg = isDarkMode ? accent.pastel : accent.ink;
+            const chipWash = isDarkMode ? `${accent.pastel}33` : `${accent.pastel}8C`;
+            const badgeWash = isDarkMode ? `${accent.pastel}26` : `${accent.pastel}66`;
 
             return (
               <TouchableOpacity
@@ -137,9 +146,9 @@ export const UpcomingEventsCard: React.FC<UpcomingEventsCardProps> = ({
                 activeOpacity={0.7}
               >
                 {/* Time Badge with dynamic type-aware icon */}
-                <View style={[styles.eventTimeChip, { backgroundColor: isDarkMode ? `${chipColor}20` : `${chipColor}35` }]}>
-                  <Ionicons name={chipIcon as any} size={13} color={chipColor} />
-                  <Text style={[styles.eventTimeText, { color: isDarkMode ? chipColor : '#0A2B3A' }]}>
+                <View style={[styles.eventTimeChip, { backgroundColor: chipWash }]}>
+                  <Ionicons name={chipIcon as any} size={13} color={chipFg} />
+                  <Text style={[styles.eventTimeText, { color: chipFg }]}>
                     {formatTime(evt.startTime || evt.date)}
                   </Text>
                 </View>
@@ -151,12 +160,19 @@ export const UpcomingEventsCard: React.FC<UpcomingEventsCardProps> = ({
                       {evt.title}
                     </Text>
                     {typeBadgeText ? (
-                      <View style={{ backgroundColor: isDarkMode ? `${chipColor}20` : `${chipColor}25`, paddingHorizontal: 5, paddingVertical: 1.5, borderRadius: 4, flexShrink: 0 }}>
-                        <Text style={{ fontSize: 9, fontWeight: '700', color: chipColor }}>{typeBadgeText}</Text>
+                      <View style={{ backgroundColor: badgeWash, paddingHorizontal: 5, paddingVertical: 1.5, borderRadius: 4, flexShrink: 0 }}>
+                        <Text style={{ fontSize: 9, fontWeight: '700', color: chipFg }}>{typeBadgeText}</Text>
                       </View>
                     ) : null}
                   </View>
                   
+                  {evt.description ? (
+                    <View style={[styles.eventMeta, { width: '100%' }]}>
+                      <Ionicons name="document-text-outline" size={12} color={colors.textMuted} style={{ flexShrink: 0 }} />
+                      <Text style={[styles.eventMetaText, { flex: 1, flexShrink: 1 }]} numberOfLines={1} ellipsizeMode="tail">{evt.description}</Text>
+                    </View>
+                  ) : null}
+
                   {(evt.location || evt.meetingLink) && (
                     <View style={[styles.eventMeta, { width: '100%' }]}>
                       {evt.location ? (
@@ -167,8 +183,8 @@ export const UpcomingEventsCard: React.FC<UpcomingEventsCardProps> = ({
                       ) : null}
                       {evt.meetingLink ? (
                         <>
-                          <Ionicons name="videocam-outline" size={12} color="#38BDF8" style={{ flexShrink: 0 }} />
-                          <Text style={[styles.eventMetaText, { color: '#38BDF8', flex: 1, flexShrink: 1 }]} numberOfLines={1} ellipsizeMode="tail">
+                          <Ionicons name="videocam-outline" size={12} color={isDarkMode ? CARD_ACCENTS.sky.pastel : CARD_ACCENTS.sky.ink} style={{ flexShrink: 0 }} />
+                          <Text style={[styles.eventMetaText, { color: isDarkMode ? CARD_ACCENTS.sky.pastel : CARD_ACCENTS.sky.ink, flex: 1, flexShrink: 1 }]} numberOfLines={1} ellipsizeMode="tail">
                             {isArabic ? 'رابط الاجتماع' : 'Meeting Link'}
                           </Text>
                         </>
@@ -193,11 +209,11 @@ export const UpcomingEventsCard: React.FC<UpcomingEventsCardProps> = ({
           activeOpacity={0.7}
         >
           <Ionicons name="create-outline" size={16} color={colors.textMuted} />
-          <Text style={styles.footerActionText}>{t.editEvent}</Text>
+          <Text style={styles.footerActionText}>{t.quickEdit}</Text>
         </TouchableOpacity>
 
         <TouchableOpacity onPress={() => onOpenEventModal()}>
-          <Text style={[styles.footerHintText, { color: isDarkMode ? VIOLET_THEME.light : VIOLET_THEME.primary }]}>{t.addReminder} +</Text>
+          <Text style={[styles.footerHintText, { color: frame.fg }]}>{t.addReminder} +</Text>
         </TouchableOpacity>
       </View>
     </View>

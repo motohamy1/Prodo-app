@@ -421,6 +421,8 @@ async function callLLMForGoals(systemPrompt: string, userPrompt: string): Promis
   // 1. Try Groq
   if (groqApiKey) {
     const groqModels = [
+      "llama-3.3-70b-versatile",
+      "llama-3.1-8b-instant",
       "qwen/qwen3.6-27b",
       "allam-2-7b",
       "openai/gpt-oss-120b",
@@ -461,7 +463,12 @@ async function callLLMForGoals(systemPrompt: string, userPrompt: string): Promis
 
   // 2. Try Gemini
   if (geminiApiKey) {
-    const geminiModels = ["gemini-2.5-flash", "gemini-3.6-flash"];
+    const geminiModels = [
+      "gemini-2.0-flash",
+      "gemini-1.5-flash",
+      "gemini-2.5-flash",
+      "gemini-3.6-flash",
+    ];
     for (const model of geminiModels) {
       try {
         const res = await fetch(
@@ -594,59 +601,72 @@ export const generateMonthlyPlan = action({
       ? `Full Year ${args.year} (Annual Vision & Grand Milestones)`
       : `Month index ${args.month} (0=Jan..11=Dec), Year ${args.year}`;
 
-    const systemPrompt = `You are an elite productivity strategist and executive goal architect.
-Your mission is to transform the user's natural language aspirations into a realistic, inspiring, high-impact ${
-      isYearly ? "Annual Blueprint & Grand Strategic Vision for the entire year" : "Monthly Blueprint"
-    }.
+    const systemPrompt = `You are an elite productivity strategist and goal architect.
+Your mission is to transform the user's stated goals into a clear, realistic, and inspiring ${
+      isYearly ? "Annual Blueprint" : "Monthly Blueprint"
+    } organized using the chosen framework archetype.
 
-Selected Framework: "${template.name}" (${template.description})
+======================================================================
+CRITICAL PRINCIPLE — USER INPUT IS THE ONLY SOURCE OF TRUTH:
+1. Base all goals and milestones EXCLUSIVELY on what the user explicitly specified.
+2. NEVER invent, hallucinate, or force unrelated life categories. For example:
+   - If the user talks about coding or building an app, DO NOT invent health courses (e.g. diabetes or asthma), financial goals, or random hobbies.
+   - If the user talks about fitness, DO NOT invent software or business goals.
+   - NEVER add courses, screening, or generic filler topics that the user never asked for.
+3. If the user only specified ONE goal or focus area, generate goals ONLY for that specific topic. Break that single goal down into smart, actionable milestones.
+4. If the user specified MULTIPLE goals, generate goals covering only those specific stated goals.
+======================================================================
+
+Selected Framework Archetype: "${template.name}" (${template.description})
 Target Period: ${targetPeriodText}
-Language: ${isArabic ? "Arabic (العربية الفصحى الراقية والملهمة)" : "English"}
+Language: ${isArabic ? "Arabic (العربية الفصحى الراقية والواضحة)" : "English"}
 
-Framework Categories Available:
+Framework Category Reference:
 ${categorySpecs}
+
+How to Apply the Framework Archetype:
+- The framework is a structural lens and card design style to format the user's actual goals:
+  * For phased/process frameworks (e.g., Weekly Sprint, Deep Work & Launch): Decompose the user's specific goals across the sequential phases (e.g. Week 1 Kickoff, Week 2 Build, Week 3 Polish, Week 4 Deliver; or Scope MVP, QA Polish, Launch).
+  * For metric/OKR frameworks (e.g., OKR Ambition Engine): Frame the user's stated goals as Objectives with measurable Key Results as milestones.
+  * For habit/behavior frameworks (e.g., Atomic Systems): Structure the user's goal into Target Deliverable (Outcome) + Daily Keystone Habits + Distraction Boundaries / Anti-Goals.
+  * For life domain frameworks (e.g., Life Pillars, Balance Wheel, Health, Wealth):
+    ONLY include the category or categories that match what the user actually asked for. OMIT all unmentioned categories. If none of the template's predefined category IDs fit the user's goal, use a clean relevant title and categoryId that directly reflects the user's focus (e.g. categoryId: "software_mvp", title: "Mobile App Development").
 
 Strict JSON Output Schema:
 {
-  "themeTitle": "${isYearly ? "Short 3-6 word grand annual motto or theme for the year" : "Short 3-6 word punchy theme for the month"}",
-  "motivationalQuote": "A memorable 1-sentence quote or driving principle",
+  "themeTitle": "${isYearly ? "Short 3-6 word grand annual motto or theme reflecting user's goals" : "Short 3-6 word punchy theme reflecting user's goals"}",
+  "motivationalQuote": "A memorable 1-sentence quote or driving principle directly relevant to user's goals",
   "sections": [
     {
-      "categoryId": "MUST match one of the exact category IDs listed above",
+      "categoryId": "Matching category ID from framework or a clean snake_case ID matching user's topic",
       "title": "Category title in ${isArabic ? "Arabic" : "English"}",
       "goals": [
         {
-          "text": "Specific, actionable, outcome-driven goal statement",
+          "text": "Specific, actionable, outcome-driven goal statement directly matching user's input",
           "description": "Optional 1-sentence context or definition of done",
           "milestones": [
-            "Milestone / Sub-step 1",
-            "Milestone / Sub-step 2"
+            "Actionable milestone / sub-step 1",
+            "Actionable milestone / sub-step 2",
+            "Actionable milestone / sub-step 3"
           ]
         }
       ]
-    }
-  ],
-  "targetAchievements": [
-    {
-      "text": "Key milestone to celebrate upon completion",
-      "category": "Category name"
     }
   ]
 }
 
 Guidelines:
-1. Distribute goals logically into the framework's categories. Provide 1 to 3 strong goals per category.
-2. Provide 2-3 crisp, concrete sub-milestones per goal.
-3. Formulate 2-4 target achievements that reflect ${isYearly ? "winning the year with major breakthroughs" : "winning the month"}.
-4. Keep the tone ambitious, energizing, yet practical and actionable.
-5. All text content MUST strictly match the requested language (${isArabic ? "Arabic" : "English"}).`;
+1. Generate 1 to 3 relevant sections containing only the goals the user requested.
+2. Provide 2-4 concrete, actionable sub-milestones per goal that actually guide execution.
+3. Keep the tone practical, disciplined, energizing, and free of fluff.
+4. All text content MUST strictly match the requested language (${isArabic ? "Arabic" : "English"}).`;
 
-    const userContent = `User Aspirations & Notes for ${isYearly ? `Year ${args.year}` : `Month ${args.month}, ${args.year}`}:
+    const userContent = `User Aspirations & Goals for ${isYearly ? `Year ${args.year}` : `Month ${args.month}, ${args.year}`}:
 """
 ${args.userPrompt.trim()}
 """
 
-Synthesize this into the "${template.name}" framework JSON now.`;
+Format these exact goals into the "${template.name}" framework JSON now.`;
 
     const rawJson = await callLLMForGoals(systemPrompt, userContent);
     const parsed = JSON.parse(rawJson);
@@ -657,7 +677,6 @@ Synthesize this into the "${template.name}" framework JSON now.`;
       themeTitle: parsed.themeTitle || (isArabic ? (isYearly ? `رؤية عام ${args.year}` : "خطة الشهر الطموحة") : (isYearly ? `${args.year} Annual Vision` : "Monthly Focus Blueprint")),
       motivationalQuote: parsed.motivationalQuote || "",
       sections: parsed.sections || [],
-      targetAchievements: parsed.targetAchievements || [],
     };
   },
 });
@@ -676,10 +695,29 @@ export const refineMonthlyPlan = action({
     const systemPrompt = `You are an elite productivity strategist.
 The user has an existing goals blueprint and wants to tweak or refine it based on their instructions.
 
-Language: ${isArabic ? "Arabic" : "English"}
+Language: ${isArabic ? "Arabic (العربية الفصحى الراقية)" : "English"}
 
-Analyze the existing plan JSON and apply the requested adjustments.
-Output ONLY the updated valid JSON matching the identical schema (themeTitle, motivationalQuote, sections with categoryId, title, goals [text, description, milestones], and targetAchievements).`;
+CRITICAL RULES:
+1. Apply the user's requested adjustments to the existing goals and milestones.
+2. Strictly maintain the user's focused scope — NEVER invent unrelated life domains, medical courses, or generic filler.
+3. Output ONLY the updated valid JSON matching the identical schema:
+   {
+     "themeTitle": "...",
+     "motivationalQuote": "...",
+     "sections": [
+       {
+         "categoryId": "...",
+         "title": "...",
+         "goals": [
+           {
+             "text": "...",
+             "description": "...",
+             "milestones": ["..."]
+           }
+         ]
+       }
+     ]
+   }`;
 
     const userPrompt = `Existing Plan:
 ${args.currentPlanJson}
@@ -725,13 +763,15 @@ export const saveMonthlyBlueprint = mutation({
         ),
       })
     ),
-    achievements: v.array(
-      v.object({
-        text: v.string(),
-        description: v.optional(v.string()),
-        category: v.optional(v.string()),
-        color: v.optional(v.string()),
-      })
+    achievements: v.optional(
+      v.array(
+        v.object({
+          text: v.string(),
+          description: v.optional(v.string()),
+          category: v.optional(v.string()),
+          color: v.optional(v.string()),
+        })
+      )
     ),
   },
   handler: async (ctx, args) => {
@@ -794,23 +834,28 @@ export const saveMonthlyBlueprint = mutation({
       });
     }
 
-    // 3. Batch insert target achievements
-    for (let j = 0; j < args.achievements.length; j++) {
-      const a = args.achievements[j];
-      await ctx.db.insert("yearlyAchievements", {
-        userId: args.userId,
-        year: args.year,
-        month: args.month,
-        text: a.text,
-        description: a.description,
-        category: a.category,
-        color: a.color,
-        templateId: args.templateId,
-        isCompleted: false,
-        createdAt: now + j,
-      });
+    // 3. Batch insert target achievements (if any provided)
+    if (args.achievements && args.achievements.length > 0) {
+      for (let j = 0; j < args.achievements.length; j++) {
+        const a = args.achievements[j];
+        await ctx.db.insert("yearlyAchievements", {
+          userId: args.userId,
+          year: args.year,
+          month: args.month,
+          text: a.text,
+          description: a.description,
+          category: a.category,
+          color: a.color,
+          isCompleted: false,
+          createdAt: now + j,
+        });
+      }
     }
 
-    return { success: true, addedGoals: args.goals.length, addedAchievements: args.achievements.length };
+    return {
+      success: true,
+      addedGoals: args.goals.length,
+      addedAchievements: args.achievements ? args.achievements.length : 0,
+    };
   },
 });

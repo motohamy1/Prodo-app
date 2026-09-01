@@ -5,7 +5,7 @@ import * as Haptics from 'expo-haptics';
 import useTheme from '@/hooks/useTheme';
 import { useTranslation } from '@/utils/i18n';
 import { useAuth } from '@/hooks/useAuth';
-import { createScrollStackStyles } from '@/assets/styles/scrollStack.styles';
+import { createScrollStackStyles, CARD_ACCENTS, createCardFrame } from '@/assets/styles/scrollStack.styles';
 
 interface ProductivityCardProps {
   streakDays: number;
@@ -22,14 +22,15 @@ export const ProductivityCard: React.FC<ProductivityCardProps> = ({
   const { language } = useAuth();
   const { t, isArabic } = useTranslation(language);
   const styles = createScrollStackStyles(colors, isArabic, isDarkMode);
+  const frame = createCardFrame(CARD_ACCENTS.mint, isDarkMode, colors.secondaryText);
 
   return (
-    <View style={styles.card}>
+    <View style={[styles.card, { borderColor: frame.edge }]}>
       {/* Header */}
       <View style={styles.cardHeader}>
         <View style={styles.cardHeaderLeft}>
-          <View style={[styles.iconBadge, { backgroundColor: isDarkMode ? 'rgba(229, 241, 157, 0.18)' : 'rgba(229, 241, 157, 0.35)' }]}>
-            <Ionicons name="flame" size={20} color="#e5f19d" />
+          <View style={[styles.iconBadge, { backgroundColor: frame.badgeBg }]}>
+            <Ionicons name="flame" size={20} color={frame.badgeFg} />
           </View>
           <View style={isArabic ? { alignItems: 'flex-end' } : { alignItems: 'flex-start' }}>
             <Text style={styles.cardTitle}>{t.productivityFocus}</Text>
@@ -39,9 +40,9 @@ export const ProductivityCard: React.FC<ProductivityCardProps> = ({
           </View>
         </View>
 
-        <View style={styles.headerPill}>
-          <Ionicons name="flash" size={14} color="#e5f19d" />
-          <Text style={[styles.headerPillText, { color: '#e5f19d' }]}>{streakDays}d Streak</Text>
+        <View style={[styles.headerPill, { backgroundColor: frame.pillBg }]}>
+          <Ionicons name="flash" size={14} color={frame.pillFg} />
+          <Text style={[styles.headerPillText, { color: frame.pillFg }]}>{streakDays}d Streak</Text>
         </View>
       </View>
 
@@ -49,26 +50,26 @@ export const ProductivityCard: React.FC<ProductivityCardProps> = ({
       <View style={styles.productivityRow}>
         {/* Streak Counter Box */}
         <View style={styles.streakCard}>
-          <View style={styles.streakIconCircle}>
-            <Ionicons name="flame" size={22} color="#16270E" />
+          <View style={[styles.streakIconCircle, { backgroundColor: CARD_ACCENTS.mint.pastel }]}>
+            <Ionicons name="flame" size={22} color={colors.secondaryText} />
           </View>
           <View style={isArabic ? { alignItems: 'flex-end' } : { alignItems: 'flex-start' }}>
-            <Text style={styles.streakNumber}>{streakDays}</Text>
+            <Text style={[styles.streakNumber, { color: frame.fg }]}>{streakDays}</Text>
             <Text style={styles.streakLabel}>{t.dailyStreak}</Text>
           </View>
         </View>
 
         {/* Start Focus Button */}
         <TouchableOpacity
-          style={styles.focusActionBtn}
+          style={[styles.focusActionBtn, { backgroundColor: CARD_ACCENTS.mint.pastel }]}
           onPress={() => {
             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
             onStartFocus();
           }}
           activeOpacity={0.8}
         >
-          <Ionicons name="timer-outline" size={18} color="#FFFFFF" />
-          <Text style={styles.focusActionBtnText}>{t.startFocus}</Text>
+          <Ionicons name="timer-outline" size={18} color={colors.secondaryText} />
+          <Text style={[styles.focusActionBtnText, { color: colors.secondaryText }]}>{t.startFocus}</Text>
         </TouchableOpacity>
       </View>
 

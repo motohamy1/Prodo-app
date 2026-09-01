@@ -28,6 +28,7 @@ import { useTaskTimers } from "@/hooks/useTaskTimers";
 import Header from "@/components/Header";
 import DateBar from "@/components/DateBar";
 import ActionModal from "@/components/ActionModal";
+import ChecklistItemModal from "@/components/ChecklistItemModal";
 import ScreenGuide, { GuideTip } from "@/components/ScreenGuide";
 import TaskDetailModal from "@/components/TaskDetailModal";
 import TaskKanban, { KanbanColumn } from "@/components/TaskKanban";
@@ -49,8 +50,7 @@ import {
 
 import { api } from "../../convex/_generated/api";
 import { Id } from '../../convex/_generated/dataModel';
-
-const startOfDay = (ts: number) => new Date(ts).setHours(0, 0, 0, 0);
+import { getEffectiveTaskDay, startOfDay, isDayPastCutoff } from '@/utils/taskDateUtils';
 
 const months_en = [
   'January', 'February', 'March', 'April', 'May', 'June',
@@ -70,6 +70,7 @@ const Index = () => {
 
   // Convex Queries & Mutations
   const todos = useOfflineQuery<any[]>('todos', api.todos.get, userId ? { userId } : 'skip');
+  const linkedChildren = useOfflineQuery<any[]>('todos.getLinkedChildren', api.todos.getLinkedChildren, userId ? { userId } : 'skip');
   const deleteTodo = useOfflineMutation(api.todos.deleteTodo, "todos:deleteTodo");
   const updateStatus = useOfflineMutation(api.todos.updateStatus, "todos:updateStatus");
   const addTodoMutation = useOfflineMutation(api.todos.addTodo, "todos:addTodo");
@@ -97,6 +98,9 @@ const Index = () => {
   const [sortActive, setSortActive] = useState('');
   const [isTaskModalVisible, setIsTaskModalVisible] = useState(false);
   const [isEventModalVisible, setIsEventModalVisible] = useState(false);
+  const [isChecklistItemModalVisible, setIsChecklistItemModalVisible] = useState(false);
+  const [editingChecklistItemId, setEditingChecklistItemId] = useState<Id<"todos"> | null>(null);
+  const [checklistItemSession, setChecklistItemSession] = useState(0);
   const [eventToEdit, setEventToEdit] = useState<EventData | null>(null);
   const [isFocusTimerModalVisible, setFocusTimerModalVisible] = useState(false);
 
@@ -137,25 +141,29 @@ const Index = () => {
     if (!todos) return [];
     const nowTs = Date.now();
     return todos
-      .filter(t => 
-        t.type === 'reminder' || 
-        t.type === 'meeting' || 
-        t.type === 'appointment' || 
-        Boolean(t.meetingLink) || 
-        Boolean(t.location) ||
-        (t.dueDate && t.dueDate >= todayStart && t.type !== 'task')
+      .filter(t =>
+        !(t.status === 'done' || t.isCompleted) &&
+        (
+          t.type === 'reminder' ||
+          t.type === 'meeting' ||
+          t.type === 'appointment' ||
+          Boolean(t.meetingLink) ||
+          Boolean(t.location) ||
+          (t.dueDate && t.dueDate >= todayStart && t.type !== 'task')
+        )
       )
-      .sort((a, b) => (a.date || a.dueDate || 0) - (b.date || b.dueDate || 0))
+      .sort((a, b) => (a.dueDate || a.date || 0) - (b.dueDate || b.date || 0))
       .map(t => ({
         _id: t._id,
         title: t.text,
-        date: t.date || t.dueDate || nowTs,
+        date: t.dueDate || t.date || nowTs,
         startTime: t.timerStartTime || t.dueDate || t.date,
         endTime: t.dueDate,
         location: t.location,
         meetingLink: t.meetingLink,
         priority: t.priority,
         type: t.type,
+        description: t.description,
       }));
   }, [todos, todayStart]);
 
@@ -163,16 +171,12 @@ const Index = () => {
 
   // Today's Progress Stats
   const { todayDoneForProgress, todayAllForProgress } = useMemo(() => {
-    const tomorrowStart = todayStart + 86400000;
     let doneCount = 0;
     let totalCount = 0;
 
     normalizedTodos.forEach(t => {
-      const isScheduledForToday = (t.date !== undefined && t.date >= todayStart && t.date < tomorrowStart) ||
-                                  (t.date === undefined && t._creationTime && t._creationTime >= todayStart && t._creationTime < tomorrowStart);
-      const isCompletedToday = t.status === 'done' && t.completedAt && t.completedAt >= todayStart && t.completedAt < tomorrowStart;
-
-      if (isScheduledForToday || isCompletedToday) {
+      const effectiveDay = getEffectiveTaskDay(t, todayStart);
+      if (effectiveDay === todayStart) {
         totalCount++;
         if (t.status === 'done') {
           doneCount++;
@@ -192,8 +196,8 @@ const Index = () => {
     let total = 0;
 
     normalizedTodos.forEach(t => {
-      const itemDate = t.completedAt || t.date || t._creationTime || 0;
-      if (itemDate >= monthStart && itemDate < nextMonthStart) {
+      const effectiveDay = getEffectiveTaskDay(t, todayStart);
+      if (effectiveDay >= monthStart && effectiveDay < nextMonthStart) {
         total++;
         if (t.status === 'done') done++;
       }
@@ -206,14 +210,14 @@ const Index = () => {
       monthTotalCount: Math.max(total, done),
       activeMonthlyGoals: activeGoals,
     };
-  }, [normalizedTodos, yearlyGoals, currentYear, currentMonthIdx]);
+  }, [normalizedTodos, yearlyGoals, currentYear, currentMonthIdx, todayStart]);
 
   // Productivity & Streak Stats
   const { streakCount, weeklyRatePercent } = useMemo(() => {
     // Calculate simple streak based on consecutive completed days
     const completedTimestamps = normalizedTodos
       .filter(t => t.status === 'done' && t.completedAt)
-      .map(t => startOfDay(t.completedAt!));
+      .map(t => getEffectiveTaskDay(t, todayStart));
 
     const uniqueDays = Array.from(new Set(completedTimestamps)).sort((a, b) => b - a);
 
@@ -233,8 +237,8 @@ const Index = () => {
     }
 
     const weekStart = todayStart - 6 * 86400000;
-    const weekTotal = normalizedTodos.filter(t => (t.date || t._creationTime || 0) >= weekStart).length;
-    const weekDone = normalizedTodos.filter(t => t.status === 'done' && (t.completedAt || 0) >= weekStart).length;
+    const weekTotal = normalizedTodos.filter(t => getEffectiveTaskDay(t, todayStart) >= weekStart).length;
+    const weekDone = normalizedTodos.filter(t => t.status === 'done' && getEffectiveTaskDay(t, todayStart) >= weekStart).length;
     const rate = weekTotal === 0 ? 100 : Math.round((weekDone / weekTotal) * 100);
 
     return {
@@ -256,13 +260,7 @@ const Index = () => {
     const dayEnd = selectedDate + 86400000;
 
     const anchorOf = (t: any): number => {
-      if (t.status === 'done') {
-        if (t.completedAt) return startOfDay(t.completedAt);
-        if (t.date !== undefined) return startOfDay(t.date);
-        return todayStart;
-      }
-      if (t.date !== undefined) return startOfDay(t.date);
-      return todayStart;
+      return getEffectiveTaskDay(t, todayStart);
     };
 
     const counts = new Map<number, number>();
@@ -271,6 +269,7 @@ const Index = () => {
       counts.set(a, (counts.get(a) || 0) + 1);
     });
 
+    const isDayClosed = isDayPastCutoff(selectedDate);
     const dayTasks = normalizedTodos.filter(t => anchorOf(t) === selectedDate);
     const carryOverdue = isViewingToday
       ? normalizedTodos.filter(t => {
@@ -279,14 +278,24 @@ const Index = () => {
         })
       : [];
 
-    const todoCol = dayTasks.filter(t => t.status === 'not_started' || t.status === 'paused').sort(byPriority);
-    const inProgressCol = dayTasks.filter(t => t.status === 'in_progress').sort(byPriority);
+    // When a past day has exceeded its Day D+1 7:00 AM cutoff, uncompleted tasks automatically move to "Not Done"
+    const todoCol = isDayClosed
+      ? []
+      : dayTasks.filter(t => t.status === 'not_started' || t.status === 'paused').sort(byPriority);
+
+    const inProgressCol = isDayClosed
+      ? []
+      : dayTasks.filter(t => t.status === 'in_progress').sort(byPriority);
+
     const doneCol = dayTasks.filter(t => t.status === 'done').sort(byPriority);
-    const notDoneCol = [
-      ...dayTasks.filter(t => t.status === 'not_done'),
-      ...dayTasks.filter(t => (t.status === 'not_started' || t.status === 'paused') && t.dueDate && t.dueDate < dayEnd),
-      ...carryOverdue,
-    ].sort(byPriority);
+
+    const notDoneCol = isDayClosed
+      ? dayTasks.filter(t => t.status !== 'done').sort(byPriority)
+      : [
+          ...dayTasks.filter(t => t.status === 'not_done'),
+          ...dayTasks.filter(t => (t.status === 'not_started' || t.status === 'paused') && t.dueDate && t.dueDate < dayEnd),
+          ...carryOverdue,
+        ].sort(byPriority);
 
     const columns: KanbanColumn[] = [
       { key: 'todo', title: t.toDoColumn, color: colors.primary, tasks: todoCol },
@@ -297,7 +306,12 @@ const Index = () => {
 
     const empty = todoCol.length + inProgressCol.length + doneCol.length + notDoneCol.length === 0;
 
-    // Daily checklist tasks for Card 1 (prioritize active, then done, including tasks & day checklist items)
+    // Daily checklist rows for Card 1: today's tasks + checklist items
+    const linkedCountByParent = new Map<string, number>();
+    (linkedChildren || []).forEach((c: any) => {
+      if (c.parentId) linkedCountByParent.set(c.parentId, (linkedCountByParent.get(c.parentId) || 0) + 1);
+    });
+
     const dayChecklistRaw = (todos || []).filter(t => {
       const a = anchorOf(t);
       return a === selectedDate && (t.type === 'task' || t.type === 'checklist' || !t.type);
@@ -309,6 +323,8 @@ const Index = () => {
       status: task.status || ((task as any).isCompleted ? 'done' : 'not_started'),
       priority: task.priority,
       dueDate: task.dueDate,
+      kind: task.type === 'checklist' ? ('checklist' as const) : ('task' as const),
+      linkedCount: linkedCountByParent.get(task._id) || 0,
     }));
 
     return { 
@@ -317,7 +333,7 @@ const Index = () => {
       boardIsEmpty: empty, 
       todayChecklistTasks: checklistTasks 
     };
-  }, [normalizedTodos, selectedDate, sortActive, todayStart, isViewingToday, colors, t]);
+  }, [normalizedTodos, selectedDate, sortActive, todayStart, isViewingToday, colors, t, linkedChildren]);
 
   const checklistDoneCount = useMemo(
     () => todayChecklistTasks.filter(t => t.status === 'done').length,
@@ -341,6 +357,14 @@ const Index = () => {
     updateStatus({ id, status: nextStatus });
   };
 
+  // Checklist items live in the Today's Checklist card, not on the Kanban board
+  const openChecklistItemModal = (id: Id<"todos"> | null) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setEditingChecklistItemId(id);
+    setChecklistItemSession((s) => s + 1);
+    setIsChecklistItemModalVisible(true);
+  };
+
   // Smooth scroll down to the relocated Tasks section
   const handleScrollToTasksSection = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -351,7 +375,7 @@ const Index = () => {
     }
   };
 
-  // Event Management Handlers
+  // Reminder / Event Management Handlers
   const handleOpenEventModal = (evt?: UpcomingEventDisplay) => {
     if (evt) {
       setEventToEdit({
@@ -363,6 +387,8 @@ const Index = () => {
         location: evt.location,
         meetingLink: evt.meetingLink,
         priority: evt.priority,
+        type: evt.type === 'meeting' || evt.type === 'appointment' ? evt.type : 'reminder',
+        description: evt.description,
       });
     } else {
       setEventToEdit(null);
@@ -371,14 +397,17 @@ const Index = () => {
   };
 
   const handleSaveEvent = async (evt: EventData) => {
+    const itemType = evt.type || 'reminder';
     if (evt._id) {
       await updateTodoMutation({
         id: evt._id,
         text: evt.title,
+        type: itemType,
         date: evt.date,
         dueDate: evt.startTime,
         location: evt.location,
         meetingLink: evt.meetingLink,
+        description: evt.description,
         priority: evt.priority,
       });
     } else {
@@ -386,11 +415,12 @@ const Index = () => {
       await addTodoMutation({
         userId,
         text: evt.title,
-        type: 'reminder',
+        type: itemType,
         date: evt.date,
         dueDate: evt.startTime,
         location: evt.location,
         meetingLink: evt.meetingLink,
+        description: evt.description,
         priority: evt.priority,
         status: 'not_started',
       });
@@ -478,7 +508,7 @@ const Index = () => {
 
             {/* 2. Hero Section: Scroll Stack Component */}
             <ScrollStack isArabic={isArabic}>
-              {/* Card 1: Today's Checklist */}
+              {/* Card 1: Today's Checklist (tasks + checklist items) */}
               <ChecklistCard
                 tasks={todayChecklistTasks}
                 doneCount={checklistDoneCount}
@@ -488,6 +518,8 @@ const Index = () => {
                 onQuickManage={() => setGlobalActionModalVisible(true)}
                 onScrollToTasksSection={handleScrollToTasksSection}
                 onAddNewTask={() => setIsTaskModalVisible(true)}
+                onAddChecklistItem={() => openChecklistItemModal(null)}
+                onOpenChecklistItem={(id) => openChecklistItemModal(id)}
               />
 
               {/* Card 2: Upcoming Events */}
@@ -585,6 +617,17 @@ const Index = () => {
           onClose={() => { setEditingTaskId(null); setEditingTaskSection(undefined); }}
           todoId={editingTaskId}
           initialSection={editingTaskSection}
+        />
+
+        {/* Checklist Item Modal (add / edit items inside Today's Checklist) */}
+        <ChecklistItemModal
+          visible={isChecklistItemModalVisible}
+          onClose={() => { setIsChecklistItemModalVisible(false); setEditingChecklistItemId(null); }}
+          itemId={editingChecklistItemId}
+          session={checklistItemSession}
+          initialDate={selectedDate}
+          candidateTasks={normalizedTodos.map(task => ({ _id: task._id, text: task.text, status: task.status }))}
+          onOpenTask={(id) => handleEditTask(id)}
         />
 
         {/* Event Management Modal */}

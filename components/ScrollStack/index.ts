@@ -9,4 +9,4 @@ export { default as EventManagementModal } from './EventManagementModal';
 
 export type { ChecklistTaskItem } from './ChecklistCard';
 export type { UpcomingEventDisplay } from './UpcomingEventsCard';
-export type { EventData } from './EventManagementModal';
+export type { EventData, ManagedItemType } from './EventManagementModal';

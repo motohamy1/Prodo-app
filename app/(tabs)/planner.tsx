@@ -30,6 +30,7 @@ import LivePress from '@/components/LivePress';
 import DayTimelineSchedule from '@/components/DayTimelineSchedule';
 import TaskDetailModal from '@/components/TaskDetailModal';
 import AnimatedWavyHeader from '@/components/AnimatedWavyHeader';
+import { getEffectiveTaskDay } from '@/utils/taskDateUtils';
 
 const months_en = [
   'January', 'February', 'March', 'April',
@@ -240,9 +241,8 @@ const Planner = () => {
 
   const getTasksForDay = (day: number, month: number, year: number) => {
     return todos.filter(todo => {
-      const targetDate = (todo.status === 'done' && todo.completedAt) ? todo.completedAt : (todo.dueDate || todo.date);
-      if (!targetDate) return false;
-      const todoDate = new Date(targetDate);
+      const effectiveDayTs = getEffectiveTaskDay(todo);
+      const todoDate = new Date(effectiveDayTs);
       return todoDate.getDate() === day && 
              todoDate.getMonth() === month && 
              todoDate.getFullYear() === year;
@@ -256,9 +256,8 @@ const Planner = () => {
 
   const getTasksForMonth = (monthIndex: number) => {
     return todos.filter(todo => {
-      const targetDate = (todo.status === 'done' && todo.completedAt) ? todo.completedAt : (todo.dueDate || todo.date);
-      if (!targetDate) return false;
-      const todoDate = new Date(targetDate);
+      const effectiveDayTs = getEffectiveTaskDay(todo);
+      const todoDate = new Date(effectiveDayTs);
       return todoDate.getMonth() === monthIndex && todoDate.getFullYear() === currentYear;
     });
   };

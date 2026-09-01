@@ -1,4 +1,4 @@
-import { applyOptimisticMutation, pushMutationToQueue, updateCachedQuery } from '@/utils/offlineStorage';
+import { applyOptimisticMutation, pushMutationToQueue, rollbackOptimisticEntry, updateCachedQuery } from '@/utils/offlineStorage';
 import NetInfo from '@react-native-community/netinfo';
 import { useMutation } from 'convex/react';
 
@@ -60,19 +60,45 @@ export function useOfflineMutation(mutationFn: any, mutationPath: string) {
       return fallbackResult;
     }
 
-    // 4. If online, race Convex mutation against a strict 1500ms timeout
+    // 4. If online, race Convex mutation against a 4000ms timeout
     // to prevent sluggish networks / hanging WebSockets from freezing the UI
     try {
       const serverResultPromise = convexMutation(args);
       const timeoutPromise = new Promise<never>((_, reject) => {
-        setTimeout(() => reject(new Error('NETWORK_TIMEOUT')), 1500);
+        setTimeout(() => reject(new Error('NETWORK_TIMEOUT')), 4000);
       });
 
       const result = await Promise.race([serverResultPromise, timeoutPromise]);
       return result !== undefined ? result : (typeof optimisticResult === 'string' ? optimisticResult : { _id: tempId, ...optimisticResult });
     } catch (err: any) {
+      const msg = String(err?.message || err || '');
+      const isNetworkIssue =
+        msg === 'NETWORK_TIMEOUT' ||
+        !_isConnected ||
+        /network|offline|transport|websocket|fetch failed|client is closed|socket|timed? ?out|unavailable|ENOTFOUND|ECONNRESET|EAI_AGAIN|50[234]/i.test(msg);
+
+      // Real server-side rejections (validation, auth, app errors) must surface
+      // to the caller instead of being silently queued forever.
+      if (!isNetworkIssue) {
+        console.error(`Mutation ${mutationPath} rejected by Convex:`, msg);
+        if (tempId) {
+          if (mutationPath.startsWith('yearlyGoals:') && /Goal/.test(mutationPath)) {
+            rollbackOptimisticEntry(
+              ['CACHE_yearlyGoals', 'CACHE_monthlyGoals', 'CACHE_dailyGoals'],
+              tempId
+            );
+          } else if (mutationPath.startsWith('yearlyGoals:') && /Achievement/.test(mutationPath)) {
+            rollbackOptimisticEntry(
+              ['CACHE_yearlyAchievements', 'CACHE_monthlyAchievements', 'CACHE_dailyAchievements'],
+              tempId
+            );
+          }
+        }
+        throw err;
+      }
+
       // On network timeout or connection drop, silently queue for background sync
-      console.warn(`Mutation ${mutationPath} deferred to offline queue (Network condition: ${err?.message || err})`);
+      console.warn(`Mutation ${mutationPath} deferred to offline queue (Network condition: ${msg})`);
       await pushMutationToQueue(mutationPath, mutationPath, args, tempId);
       return typeof optimisticResult === 'string' ? optimisticResult : { _id: tempId, id: tempId, ...optimisticResult };
     }

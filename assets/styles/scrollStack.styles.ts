@@ -3,6 +3,47 @@ import { Platform, StyleSheet, Dimensions } from "react-native";
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
+// Shared ScrollStack card accent system.
+// Each accent is a pair: a VIVID light tint (bright, colorful, 8:1+ WCAG on
+// the dark card surface #181922) and a deep INK of the same hue (for light
+// surfaces). Tints are used as solid gem fills and as text/icons on dark;
+// inks are used for text/icons and washes on light. Hues are spread ~60-90
+// deg apart so sibling cards never collide.
+export interface CardAccent {
+  pastel: string;
+  ink: string;
+}
+
+export const CARD_ACCENTS = {
+  rose: { pastel: '#F9A8D4', ink: '#9D174D' },
+  lime: { pastel: '#e5f19d', ink: '#5E6D0F' },
+  mint: { pastel: '#99F6E4', ink: '#115E59' },
+  cream: { pastel: '#FCE2A8', ink: '#8A6A2F' },
+  lavender: { pastel: '#C7B9FE', ink: '#5B5485' },
+  sky: { pastel: '#BAE6FD', ink: '#075985' },
+  amber: { pastel: '#FDE68A', ink: '#92400E' },
+  urgent: { pastel: '#FCA5A5', ink: '#A11B1B' },
+} as const satisfies Record<string, CardAccent>;
+
+export type CardAccentName = keyof typeof CARD_ACCENTS;
+
+// solidInk = near-black used for marks on solid pastel fills (badges, pills,
+// checkboxes) — always high contrast in both modes.
+export const createCardFrame = (accent: CardAccent, isDarkMode: boolean, solidInk: string) => ({
+  // text/icons sitting directly on the card surface
+  fg: isDarkMode ? accent.pastel : accent.ink,
+  // solid gem chip: same treatment in both modes, it is the card's signature
+  badgeBg: accent.pastel,
+  badgeFg: solidInk,
+  pillBg: accent.pastel,
+  pillFg: solidInk,
+  // translucent tint for chips/rows/banners
+  washBg: isDarkMode ? `${accent.pastel}33` : `${accent.pastel}8C`,
+  // hairline accents: chip borders and the card edge tint
+  border: isDarkMode ? `${accent.pastel}4D` : `${accent.ink}59`,
+  edge: isDarkMode ? `${accent.pastel}38` : `${accent.pastel}B3`,
+});
+
 export const createScrollStackStyles = (colors: ColorScheme, isArabic: boolean = false, isDarkMode: boolean = false) => {
   return StyleSheet.create({
     // Main Container
@@ -150,6 +191,34 @@ export const createScrollStackStyles = (colors: ColorScheme, isArabic: boolean =
       fontSize: 10,
       fontWeight: '700',
       textTransform: 'uppercase',
+    },
+    checklistAddRow: {
+      flexDirection: isArabic ? 'row-reverse' : 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 6,
+      paddingVertical: 7,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderStyle: 'dashed',
+      borderColor: isDarkMode ? 'rgba(255, 255, 255, 0.16)' : 'rgba(0, 0, 0, 0.14)',
+      marginBottom: 2,
+    },
+    checklistAddRowText: {
+      fontSize: 12.5,
+      fontWeight: '700',
+    },
+    kindDot: {
+      paddingHorizontal: 6,
+      paddingVertical: 3,
+      borderRadius: 7,
+      flexDirection: isArabic ? 'row-reverse' : 'row',
+      alignItems: 'center',
+      gap: 3,
+    },
+    kindDotText: {
+      fontSize: 10,
+      fontWeight: '700',
     },
     cardFooter: {
       flexDirection: isArabic ? 'row-reverse' : 'row',
@@ -451,6 +520,49 @@ export const createScrollStackStyles = (colors: ColorScheme, isArabic: boolean =
       color: colors.text,
       textAlign: isArabic ? 'right' : 'left',
     },
+    modalTypeRow: {
+      flexDirection: isArabic ? 'row-reverse' : 'row',
+      gap: 8,
+      width: '100%',
+    },
+    modalTypeChip: {
+      flex: 1,
+      flexDirection: isArabic ? 'row-reverse' : 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 6,
+      paddingVertical: 10,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: colors.border,
+      backgroundColor: isDarkMode ? '#1E202E' : '#F8FAFC',
+    },
+    modalTypeChipActive: {
+      borderColor: colors.secondary,
+      backgroundColor: isDarkMode ? `${colors.secondary}1F` : `${colors.secondary}8C`,
+    },
+    modalTypeChipText: {
+      fontSize: 12,
+      fontWeight: '700',
+      color: colors.textMuted,
+    },
+    modalTypeChipTextActive: {
+      color: colors.text,
+    },
+    modalNotesInput: {
+      width: '100%',
+      minHeight: 84,
+      backgroundColor: isDarkMode ? '#1E202E' : '#F8FAFC',
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: 14,
+      paddingHorizontal: 14,
+      paddingVertical: 12,
+      fontSize: 15,
+      color: colors.text,
+      textAlign: isArabic ? 'right' : 'left',
+      textAlignVertical: 'top',
+    },
     modalTimeRow: {
       flexDirection: isArabic ? 'row-reverse' : 'row',
       gap: 12,
@@ -500,6 +612,67 @@ export const createScrollStackStyles = (colors: ColorScheme, isArabic: boolean =
       justifyContent: 'center',
       borderWidth: 1,
       borderColor: 'rgba(239, 68, 68, 0.3)',
+    },
+
+    // Checklist Item Modal
+    itemKindBadge: {
+      width: 30,
+      height: 30,
+      borderRadius: 10,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    linkRow: {
+      flexDirection: isArabic ? 'row-reverse' : 'row',
+      alignItems: 'center',
+      gap: 10,
+      width: '100%',
+      borderWidth: 1,
+      borderRadius: 14,
+      paddingHorizontal: 14,
+      paddingVertical: 12,
+    },
+    linkRowText: {
+      flex: 1,
+      fontSize: 14,
+      fontWeight: '600',
+      textAlign: isArabic ? 'right' : 'left',
+    },
+    taskPickerBox: {
+      borderWidth: 1,
+      borderRadius: 14,
+      padding: 12,
+      gap: 10,
+      backgroundColor: isDarkMode ? 'rgba(255, 255, 255, 0.03)' : 'rgba(0, 0, 0, 0.02)',
+    },
+    taskPickerHint: {
+      fontSize: 11.5,
+      fontWeight: '500',
+      textAlign: isArabic ? 'right' : 'left',
+    },
+    taskSearchInput: {
+      borderWidth: 1,
+      borderRadius: 10,
+      paddingHorizontal: 12,
+      paddingVertical: 9,
+      fontSize: 13.5,
+      backgroundColor: isDarkMode ? '#1E202E' : '#F8FAFC',
+    },
+    taskPickerRow: {
+      flexDirection: isArabic ? 'row-reverse' : 'row',
+      alignItems: 'center',
+      gap: 10,
+      paddingVertical: 9,
+    },
+    linkedTaskRow: {
+      flexDirection: isArabic ? 'row-reverse' : 'row',
+      alignItems: 'center',
+      gap: 8,
+      borderWidth: 1,
+      borderRadius: 12,
+      paddingHorizontal: 12,
+      paddingVertical: 9,
+      backgroundColor: isDarkMode ? 'rgba(255, 255, 255, 0.03)' : 'rgba(0, 0, 0, 0.02)',
     },
   });
 };

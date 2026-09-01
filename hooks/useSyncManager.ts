@@ -12,6 +12,7 @@ const mutationMap: Record<string, any> = {
   'todos:updateTodo': apiAny.todos.updateTodo,
   'todos:updateStatus': apiAny.todos.updateStatus,
   'todos:deleteTodo': apiAny.todos.deleteTodo,
+  'todos:deleteChecklistItem': apiAny.todos.deleteChecklistItem,
   'todos:setTimer': apiAny.todos.setTimer,
   'todos:startTimer': apiAny.todos.startTimer,
   'todos:pauseTimer': apiAny.todos.pauseTimer,

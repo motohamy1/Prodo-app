@@ -141,9 +141,6 @@ export default function AddScreen() {
   const insets = useSafeAreaInsets();
   const { showGuide, dismissGuide } = useScreenGuide('addScreen');
 
-  // Top Category Tabs: 'all' | 'notes' | 'reminders' (Horizontally Centered)
-  const [categoryType, setCategoryType] = useState<'all' | 'notes' | 'reminders'>('all');
-
   // Input Mode: Voice vs Typing
   const [inputMode, setInputMode] = useState<'voice' | 'text'>('voice');
   const [isListening, setIsListening] = useState(false);
@@ -161,11 +158,9 @@ export default function AddScreen() {
 
   // Search & Filter State
   const [searchQuery, setSearchQuery] = useState('');
-  const [isFilterModalVisible, setFilterModalVisible] = useState(false);
 
-  // Calendar / Time Reminder State
+  // Reminder Time Picker (option inside the note composer)
   const [isCalendarModalVisible, setCalendarModalVisible] = useState(false);
-  const [reminderDate, setReminderDate] = useState(new Date());
   const [reminderTime, setReminderTime] = useState(new Date());
   const [showTimePicker, setShowTimePicker] = useState(false);
 
@@ -360,13 +355,6 @@ export default function AddScreen() {
       list = [...DEFAULT_MOCKUP_NOTES];
     }
 
-    // Filter by category type: 'all' | 'notes' | 'reminders'
-    if (categoryType === 'notes') {
-      list = list.filter((item) => item.type === 'note' && (!item.dueDate || item.dueDate === 0));
-    } else if (categoryType === 'reminders') {
-      list = list.filter((item) => item.type === 'reminder' || (item.dueDate && item.dueDate > 0));
-    }
-
     // Filter by search query
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
@@ -378,7 +366,7 @@ export default function AddScreen() {
     }
 
     return list;
-  }, [todos, categoryType, searchQuery]);
+  }, [todos, searchQuery]);
 
   // Group notes by Dynamic Hashtags into sections
   const groupedByHashtags = useMemo(() => {
@@ -437,19 +425,13 @@ export default function AddScreen() {
     }
   };
 
-  // Handler for creating a scheduled reminder from the calendar icon
-  const handleCreateReminderFromCalendar = () => {
+  // Applies the picked time to the composer's reminder option (next occurrence)
+  const handleApplyReminderTime = () => {
     setCalendarModalVisible(false);
-    const combinedDate = new Date(reminderDate);
-    combinedDate.setHours(reminderTime.getHours(), reminderTime.getMinutes(), 0, 0);
-
-    router.push({
-      pathname: '/note-detail',
-      params: {
-        isReminder: 'true',
-        tag: currentHashtag,
-      },
-    });
+    const target = new Date();
+    target.setHours(reminderTime.getHours(), reminderTime.getMinutes(), 0, 0);
+    if (target.getTime() <= Date.now()) target.setDate(target.getDate() + 1);
+    setTypingDueDate(target.getTime());
   };
 
   return (
@@ -460,7 +442,7 @@ export default function AddScreen() {
           <View style={styles.statusBadge}>
             <View style={styles.statusDot} />
             <Text style={styles.statusText}>
-              {isArabic ? 'الملاحظات والتذكيرات' : 'Notes & Reminders'}
+              {isArabic ? 'الملاحظات' : 'Notes'}
             </Text>
           </View>
 
@@ -473,31 +455,6 @@ export default function AddScreen() {
           </TouchableOpacity>
         </View>
       </AnimatedWavyHeader>
-
-      {/* ─── Horizontally Centered Category Switcher ──────────────── */}
-      <View style={styles.centeredTabsWrapper}>
-        <View style={styles.categoryTabsSegmented}>
-          {[
-            { id: 'all', label: isArabic ? 'الكل' : 'All' },
-            { id: 'notes', label: isArabic ? 'الملاحظات' : 'Notes' },
-            { id: 'reminders', label: isArabic ? 'التذكيرات' : 'Reminders' },
-          ].map((tab) => {
-            const isActive = categoryType === tab.id;
-            return (
-              <TouchableOpacity
-                key={tab.id}
-                style={[styles.categoryTabPill, isActive && styles.categoryTabPillActive]}
-                activeOpacity={0.8}
-                onPress={() => setCategoryType(tab.id as any)}
-              >
-                <Text style={[styles.categoryTabText, isActive && styles.categoryTabTextActive]}>
-                  {tab.label}
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
-        </View>
-      </View>
 
       {/* ─── Mode Switcher: Voice vs Type ─────────────────────────── */}
       <View style={styles.modeSelectorRow}>
@@ -528,7 +485,7 @@ export default function AddScreen() {
             router.push({
               pathname: '/note-detail',
               params: {
-                isReminder: categoryType === 'reminders' ? 'true' : 'false',
+                isReminder: 'false',
                 tag: currentHashtag,
               },
             });
@@ -769,7 +726,10 @@ export default function AddScreen() {
                 {typingType === 'reminder' ? (
                   <TouchableOpacity
                     style={styles.typingReminderBtn}
-                    onPress={() => setCalendarModalVisible(true)}
+                    onPress={() => {
+                      if (typingDueDate) setReminderTime(new Date(typingDueDate));
+                      setCalendarModalVisible(true);
+                    }}
                     activeOpacity={0.8}
                   >
                     <Ionicons name="time-outline" size={15} color="#FBBF24" />
@@ -808,7 +768,7 @@ export default function AddScreen() {
             <Ionicons name="search-outline" size={19} color="#8E92A0" />
             <TextInput
               style={[styles.searchInput, isArabic && { textAlign: 'right' }]}
-              placeholder={isArabic ? 'البحث في الملاحظات والتذكيرات' : 'Search Notes & Reminders'}
+              placeholder={isArabic ? 'البحث في الملاحظات' : 'Search Notes'}
               placeholderTextColor="#6B7280"
               value={searchQuery}
               onChangeText={setSearchQuery}
@@ -821,31 +781,6 @@ export default function AddScreen() {
               </TouchableOpacity>
             )}
           </View>
-
-          {/* Calendar / Reminder Time Button */}
-          <TouchableOpacity
-            style={styles.controlIconButton}
-            activeOpacity={0.8}
-            onPress={() => setCalendarModalVisible(true)}
-          >
-            <Ionicons name="calendar-outline" size={20} color="#FFFFFF" />
-          </TouchableOpacity>
-
-          {/* Filter Options Button */}
-          <TouchableOpacity
-            style={[
-              styles.controlIconButton,
-              categoryType !== 'all' && styles.controlIconButtonActive,
-            ]}
-            activeOpacity={0.8}
-            onPress={() => setFilterModalVisible(true)}
-          >
-            <Ionicons
-              name="options-outline"
-              size={20}
-              color={categoryType !== 'all' ? '#D4FF00' : '#FFFFFF'}
-            />
-          </TouchableOpacity>
         </Animated.View>
 
         {/* ─── Grouped Sections By Dynamic Hashtags ─────────────────── */}
@@ -854,7 +789,7 @@ export default function AddScreen() {
             <View style={{ padding: 30, alignItems: 'center' }}>
               <Ionicons name="document-text-outline" size={42} color="#6B7280" />
               <Text style={{ color: '#9CA3AF', fontSize: 15, fontWeight: '600', marginTop: 10 }}>
-                {isArabic ? 'لا توجد ملاحظات أو تذكيرات' : 'No notes or reminders found'}
+                {isArabic ? 'لا توجد ملاحظات بعد' : 'No notes found'}
               </Text>
             </View>
           ) : (
@@ -1127,72 +1062,17 @@ export default function AddScreen() {
                 />
               )}
 
-              {/* Action Button: Create Reminder */}
+              {/* Action Button: Apply time to reminder option */}
               <TouchableOpacity
                 style={styles.modalActionBtn}
                 activeOpacity={0.88}
-                onPress={handleCreateReminderFromCalendar}
+                onPress={handleApplyReminderTime}
               >
                 <Text style={styles.modalActionBtnText}>
-                  {isArabic ? 'إنشاء تذكير جديد بهذا الموعد' : 'Create Scheduled Reminder'}
+                  {isArabic ? 'تعيين وقت التذكير' : 'Set Reminder Time'}
                 </Text>
               </TouchableOpacity>
             </View>
-          </TouchableOpacity>
-        </TouchableOpacity>
-      </Modal>
-
-      {/* ─── Filter Options Modal ─────────────────────────────────── */}
-      <Modal
-        visible={isFilterModalVisible}
-        transparent={true}
-        animationType="slide"
-        onRequestClose={() => setFilterModalVisible(false)}
-      >
-        <TouchableOpacity
-          style={styles.modalOverlay}
-          activeOpacity={1}
-          onPress={() => setFilterModalVisible(false)}
-        >
-          <TouchableOpacity activeOpacity={1} style={styles.modalSheet}>
-            <View style={styles.modalHandle} />
-
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>
-                {isArabic ? 'تصفية العرض' : 'Filter Display'}
-              </Text>
-              <TouchableOpacity
-                style={styles.modalCloseBtn}
-                onPress={() => setFilterModalVisible(false)}
-              >
-                <Ionicons name="close" size={22} color="#9CA3AF" />
-              </TouchableOpacity>
-            </View>
-
-            {/* Options */}
-            {[
-              { id: 'all', label: isArabic ? 'الكل (ملاحظات وتذكيرات)' : 'All (Notes & Reminders)', icon: 'layers-outline' },
-              { id: 'notes', label: isArabic ? 'الملاحظات فقط' : 'Notes Only', icon: 'document-text-outline' },
-              { id: 'reminders', label: isArabic ? 'التذكيرات فقط' : 'Reminders Only', icon: 'alarm-outline' },
-            ].map((opt) => (
-              <TouchableOpacity
-                key={opt.id}
-                style={styles.filterOption}
-                activeOpacity={0.7}
-                onPress={() => {
-                  setCategoryType(opt.id as any);
-                  setFilterModalVisible(false);
-                }}
-              >
-                <View style={{ flexDirection: isArabic ? 'row-reverse' : 'row', alignItems: 'center', gap: 12 }}>
-                  <Ionicons name={opt.icon as any} size={20} color="#D4FF00" />
-                  <Text style={styles.filterOptionText}>{opt.label}</Text>
-                </View>
-                {categoryType === opt.id && (
-                  <Ionicons name="checkmark" size={20} color="#D4FF00" />
-                )}
-              </TouchableOpacity>
-            ))}
           </TouchableOpacity>
         </TouchableOpacity>
       </Modal>
@@ -1225,10 +1105,9 @@ export default function AddScreen() {
             onPress: () => dismissGuide && dismissGuide(),
           },
           {
-            label: isArabic ? 'إعادة ضبط الفلاتر' : 'Reset Filters',
+            label: isArabic ? 'مسح البحث' : 'Clear Search',
             icon: 'refresh-outline',
             onPress: () => {
-              setCategoryType('all');
               setSearchQuery('');
             },
           },

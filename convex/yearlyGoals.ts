@@ -1,6 +1,25 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 
+const goalMeta = v.object({
+  description: v.optional(v.string()),
+  category: v.optional(v.string()),
+  color: v.optional(v.string()),
+  icon: v.optional(v.string()),
+  templateId: v.optional(v.string()),
+  milestones: v.optional(
+    v.array(
+      v.object({
+        id: v.string(),
+        text: v.string(),
+        isCompleted: v.boolean(),
+      })
+    )
+  ),
+});
+
+const achievementMeta = goalMeta.omit("milestones");
+
 export const getGoals = query({
   args: { userId: v.union(v.id("users"), v.string()), year: v.number() },
   handler: async (ctx, args) => {
@@ -30,14 +49,15 @@ export const addGoal = mutation({
     userId: v.union(v.id("users"), v.string()),
     year: v.number(),
     text: v.string(),
-    description: v.optional(v.string()),
+    ...goalMeta.fields,
   },
   handler: async (ctx, args) => {
+    const { userId, year, text, ...meta } = args;
     return await ctx.db.insert("yearlyGoals", {
-      userId: args.userId,
-      year: args.year,
-      text: args.text,
-      description: args.description,
+      userId,
+      year,
+      text,
+      ...meta,
       isCompleted: false,
       createdAt: Date.now(),
     });
@@ -67,14 +87,20 @@ export const updateGoal = mutation({
   },
   handler: async (ctx, args) => {
     const { id, ...updates } = args;
-    await ctx.db.patch(id, updates);
+    const existing = await ctx.db.get(id);
+    if (existing) {
+      await ctx.db.patch(id, updates);
+    }
   },
 });
 
 export const deleteGoal = mutation({
   args: { id: v.id("yearlyGoals") },
   handler: async (ctx, args) => {
-    await ctx.db.delete(args.id);
+    const existing = await ctx.db.get(args.id);
+    if (existing) {
+      await ctx.db.delete(args.id);
+    }
   },
 });
 
@@ -107,14 +133,16 @@ export const addAchievement = mutation({
     userId: v.union(v.id("users"), v.string()),
     year: v.number(),
     text: v.string(),
-    description: v.optional(v.string()),
+    ...achievementMeta.fields,
   },
   handler: async (ctx, args) => {
+    const { userId, year, text, ...meta } = args;
     return await ctx.db.insert("yearlyAchievements", {
-      userId: args.userId,
-      year: args.year,
-      text: args.text,
-      description: args.description,
+      userId,
+      year,
+      text,
+      ...meta,
+      isCompleted: false,
       createdAt: Date.now(),
     });
   },
@@ -133,14 +161,20 @@ export const updateAchievement = mutation({
   },
   handler: async (ctx, args) => {
     const { id, ...updates } = args;
-    await ctx.db.patch(id, updates);
+    const existing = await ctx.db.get(id);
+    if (existing) {
+      await ctx.db.patch(id, updates);
+    }
   },
 });
 
 export const deleteAchievement = mutation({
   args: { id: v.id("yearlyAchievements") },
   handler: async (ctx, args) => {
-    await ctx.db.delete(args.id);
+    const existing = await ctx.db.get(args.id);
+    if (existing) {
+      await ctx.db.delete(args.id);
+    }
   },
 });
 
@@ -178,33 +212,16 @@ export const addMonthGoal = mutation({
     year: v.number(),
     month: v.number(),
     text: v.string(),
-    description: v.optional(v.string()),
-    category: v.optional(v.string()),
-    color: v.optional(v.string()),
-    icon: v.optional(v.string()),
-    templateId: v.optional(v.string()),
-    milestones: v.optional(
-      v.array(
-        v.object({
-          id: v.string(),
-          text: v.string(),
-          isCompleted: v.boolean(),
-        })
-      )
-    ),
+    ...goalMeta.fields,
   },
   handler: async (ctx, args) => {
+    const { userId, year, month, text, ...meta } = args;
     return await ctx.db.insert("yearlyGoals", {
-      userId: args.userId,
-      year: args.year,
-      month: args.month,
-      text: args.text,
-      description: args.description,
-      category: args.category,
-      color: args.color,
-      icon: args.icon,
-      templateId: args.templateId,
-      milestones: args.milestones,
+      userId,
+      year,
+      month,
+      text,
+      ...meta,
       isCompleted: false,
       createdAt: Date.now(),
     });
@@ -218,16 +235,17 @@ export const addDayGoal = mutation({
     month: v.number(),
     day: v.number(),
     text: v.string(),
-    description: v.optional(v.string()),
+    ...goalMeta.fields,
   },
   handler: async (ctx, args) => {
+    const { userId, year, month, day, text, ...meta } = args;
     return await ctx.db.insert("yearlyGoals", {
-      userId: args.userId,
-      year: args.year,
-      month: args.month,
-      day: args.day,
-      text: args.text,
-      description: args.description,
+      userId,
+      year,
+      month,
+      day,
+      text,
+      ...meta,
       isCompleted: false,
       createdAt: Date.now(),
     });
@@ -266,23 +284,16 @@ export const addMonthAchievement = mutation({
     year: v.number(),
     month: v.number(),
     text: v.string(),
-    description: v.optional(v.string()),
-    category: v.optional(v.string()),
-    color: v.optional(v.string()),
-    icon: v.optional(v.string()),
-    templateId: v.optional(v.string()),
+    ...achievementMeta.fields,
   },
   handler: async (ctx, args) => {
+    const { userId, year, month, text, ...meta } = args;
     return await ctx.db.insert("yearlyAchievements", {
-      userId: args.userId,
-      year: args.year,
-      month: args.month,
-      text: args.text,
-      description: args.description,
-      category: args.category,
-      color: args.color,
-      icon: args.icon,
-      templateId: args.templateId,
+      userId,
+      year,
+      month,
+      text,
+      ...meta,
       isCompleted: false,
       createdAt: Date.now(),
     });
@@ -296,16 +307,18 @@ export const addDayAchievement = mutation({
     month: v.number(),
     day: v.number(),
     text: v.string(),
-    description: v.optional(v.string()),
+    ...achievementMeta.fields,
   },
   handler: async (ctx, args) => {
+    const { userId, year, month, day, text, ...meta } = args;
     return await ctx.db.insert("yearlyAchievements", {
-      userId: args.userId,
-      year: args.year,
-      month: args.month,
-      day: args.day,
-      text: args.text,
-      description: args.description,
+      userId,
+      year,
+      month,
+      day,
+      text,
+      ...meta,
+      isCompleted: false,
       createdAt: Date.now(),
     });
   },

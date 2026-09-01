@@ -61,7 +61,7 @@ interface GeneratedPlan {
   themeTitle: string;
   motivationalQuote: string;
   sections: DraftSection[];
-  targetAchievements: DraftAchievement[];
+  targetAchievements?: DraftAchievement[];
 }
 
 interface AIGoalGeneratorModalProps {
@@ -255,18 +255,29 @@ export const AIGoalGeneratorModal: React.FC<AIGoalGeneratorModalProps> = ({
 
       // Normalize generated plan into structured editable draft
       const normalizedSections: DraftSection[] = (res.sections || []).map((sec: any, sIdx: number) => {
-        const matchedTemplate = templatesData.find((t) => t.templateId === selectedTemplateId);
+        const matchedTemplate: any = templatesData.find((t: any) => t.templateId === selectedTemplateId);
         const catInfo = matchedTemplate?.categories?.find((c: any) => c.id === sec.categoryId);
+        const templatePalette = [
+          matchedTemplate?.accent || matchedTemplate?.color || '#EA580C',
+          matchedTemplate?.accentSecondary || matchedTemplate?.gradientColors?.[1] || '#2563EB',
+          ...(matchedTemplate?.categories?.map((c: any) => c.color).filter(Boolean) || []),
+          '#059669',
+          '#7C3AED',
+          '#D97706',
+        ];
+        const sectionColor = catInfo?.color || templatePalette[sIdx % templatePalette.length];
+        const sectionIcon = catInfo?.icon || matchedTemplate?.icon || 'flag-outline';
+
         return {
           categoryId: sec.categoryId || `cat_${sIdx}`,
-          title: sec.title || (catInfo ? (isArabic ? catInfo.titleAr || catInfo.title : catInfo.title) : 'General'),
+          title: sec.title || (catInfo ? (isArabic ? catInfo.titleAr || catInfo.title : catInfo.title) : 'Goals'),
           goals: (sec.goals || []).map((g: any, gIdx: number) => ({
             id: `goal_${sIdx}_${gIdx}_${Date.now()}`,
             text: g.text || '',
             description: g.description || '',
             category: sec.title,
-            color: catInfo?.color || '#6366F1',
-            icon: catInfo?.icon || 'flag-outline',
+            color: sectionColor,
+            icon: sectionIcon,
             milestones: (g.milestones || []).map((mText: string, mIdx: number) => ({
               id: `ms_${sIdx}_${gIdx}_${mIdx}`,
               text: mText,
@@ -276,21 +287,12 @@ export const AIGoalGeneratorModal: React.FC<AIGoalGeneratorModalProps> = ({
         };
       });
 
-      const normalizedAchievements: DraftAchievement[] = (res.targetAchievements || []).map(
-        (a: any, aIdx: number) => ({
-          id: `ach_${aIdx}_${Date.now()}`,
-          text: typeof a === 'string' ? a : a.text || '',
-          category: a.category || undefined,
-        })
-      );
-
       setGeneratedPlan({
         templateId: res.templateId || selectedTemplateId,
         templateName: res.templateName || 'Blueprint',
         themeTitle: res.themeTitle || (isArabic ? 'خطة الشهر' : 'Monthly Blueprint'),
         motivationalQuote: res.motivationalQuote || '',
         sections: normalizedSections,
-        targetAchievements: normalizedAchievements,
       });
 
       setStep('review');
@@ -340,11 +342,6 @@ export const AIGoalGeneratorModal: React.FC<AIGoalGeneratorModalProps> = ({
                   isCompleted: false,
                 })),
               })),
-            })),
-            targetAchievements: (refined.targetAchievements || []).map((a: any, aIdx: number) => ({
-              id: `ref_ach_${aIdx}_${Date.now()}`,
-              text: typeof a === 'string' ? a : a.text || '',
-              category: a.category,
             })),
           };
         });
@@ -410,13 +407,6 @@ export const AIGoalGeneratorModal: React.FC<AIGoalGeneratorModalProps> = ({
     setGeneratedPlan(updated);
   };
 
-  const handleDeleteAchievement = (aIdx: number) => {
-    if (!generatedPlan) return;
-    const updated = { ...generatedPlan };
-    updated.targetAchievements.splice(aIdx, 1);
-    setGeneratedPlan(updated);
-  };
-
   // Save Final Blueprint to Convex Database
   const handleSaveAndApply = async () => {
     if (!generatedPlan || !userId) return;
@@ -439,16 +429,6 @@ export const AIGoalGeneratorModal: React.FC<AIGoalGeneratorModalProps> = ({
         });
       });
 
-      const allAchievementsToSave: any[] = generatedPlan.targetAchievements
-        .filter((a) => a.text.trim())
-        .map((a) => ({
-          text: a.text.trim(),
-          category:
-            a.category ||
-            generatedPlan.sections[0]?.title ||
-            (isArabic ? 'إنجازات رئيسية' : 'Key Achievements'),
-        }));
-
       await saveBlueprintMut({
         userId,
         year,
@@ -457,7 +437,7 @@ export const AIGoalGeneratorModal: React.FC<AIGoalGeneratorModalProps> = ({
         themeTitle: generatedPlan.themeTitle,
         motivationalQuote: generatedPlan.motivationalQuote || undefined,
         goals: allGoalsToSave,
-        achievements: allAchievementsToSave,
+        achievements: [],
       });
 
       onPlanApplied?.();
@@ -660,11 +640,14 @@ export const AIGoalGeneratorModal: React.FC<AIGoalGeneratorModalProps> = ({
 
             {/* ─── Template Selector Section ──────────────────────────────── */}
             <View style={[styles.sectionHeaderRow, isArabic && styles.rowReverse]}>
-              <View>
+              <View style={{ flex: 1, minWidth: 0 }}>
                 <Text style={[styles.sectionTitle, { color: colors.text }]}>
                   {isArabic ? 'اختر القالب الهندسي' : 'Select Goal Framework'}
                 </Text>
-                <Text style={[styles.sectionSubtitle, { color: colors.textMuted }]}>
+                <Text
+                  style={[styles.sectionSubtitle, { color: colors.textMuted }]}
+                  numberOfLines={2}
+                >
                   {isArabic
                     ? 'سيتم تنظيم وتوزيع أهدافك في هذا الهيكل'
                     : 'AI will map your goals into this framework structure'}
@@ -718,12 +701,17 @@ export const AIGoalGeneratorModal: React.FC<AIGoalGeneratorModalProps> = ({
                   },
                 ]}
               >
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 3 }}>
                   <Ionicons name="sparkles-outline" size={14} color="#EA580C" />
                   <Text style={{ fontSize: 12, fontWeight: '700', color: colors.text }}>
-                    {isArabic ? 'الأقسام التي سيتم إنشاؤها:' : 'Categories that will be generated:'}
+                    {isArabic ? 'النمط الهيكلي والجمالي المختار:' : 'Selected Framework Archetype:'}
                   </Text>
                 </View>
+                <Text style={{ fontSize: 11, color: colors.textMuted, marginBottom: 8, textAlign: isArabic ? 'right' : 'left' }}>
+                  {isArabic
+                    ? 'سيتم صياغة أهدافك المحددة ضمن هذا الهيكل الجمالي والأقسام المناسبة لها:'
+                    : 'Your specific goals will be shaped into this visual style with tailored milestones:'}
+                </Text>
                 <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
                   {activeTemplate.categories?.map((cat: any) => (
                     <View key={cat.id} style={[styles.miniCatChip, { backgroundColor: (cat.color || '#6366F1') + '15' }]}>
@@ -922,58 +910,7 @@ export const AIGoalGeneratorModal: React.FC<AIGoalGeneratorModalProps> = ({
                 </View>
               ))}
 
-              {/* Target Achievements Section */}
-              {generatedPlan.targetAchievements.length > 0 && (
-                <View
-                  style={[
-                    styles.sectionCard,
-                    {
-                      backgroundColor: colors.surface,
-                      borderColor: isDarkMode ? '#2D2D3E' : '#E5E7EB',
-                    },
-                  ]}
-                >
-                  <View style={[styles.sectionCardHeader, isArabic && styles.rowReverse]}>
-                    <View style={{ flexDirection: isArabic ? 'row-reverse' : 'row', alignItems: 'center', gap: 8 }}>
-                      <Ionicons name="trophy" size={18} color="#059669" />
-                      <Text style={[styles.secTitleText, { color: colors.text }]}>
-                        {isArabic ? 'إنجازات مستهدفة للاحتفاء بها' : 'Target Wins & Achievements'}
-                      </Text>
-                    </View>
-                  </View>
 
-                  {generatedPlan.targetAchievements.map((ach, aIdx) => (
-                    <View
-                      key={ach.id || aIdx}
-                      style={[
-                        styles.achievementRow,
-                        {
-                          backgroundColor: isDarkMode ? '#1E1E28' : '#F0FDF4',
-                          borderColor: isDarkMode ? '#2D2D3E' : '#DCFCE7',
-                        },
-                        isArabic && styles.rowReverse,
-                      ]}
-                    >
-                      <Ionicons name="medal-outline" size={16} color="#059669" />
-                      <TextInput
-                        style={[
-                          styles.achievementInput,
-                          { color: colors.text, textAlign: isArabic ? 'right' : 'left' },
-                        ]}
-                        value={ach.text}
-                        onChangeText={(txt) => {
-                          const updated = { ...generatedPlan };
-                          updated.targetAchievements[aIdx].text = txt;
-                          setGeneratedPlan(updated);
-                        }}
-                      />
-                      <TouchableOpacity onPress={() => handleDeleteAchievement(aIdx)}>
-                        <Ionicons name="trash-outline" size={15} color={colors.danger} />
-                      </TouchableOpacity>
-                    </View>
-                  ))}
-                </View>
-              )}
 
               {/* Conversational AI Refinement Box */}
               <View
@@ -1186,6 +1123,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    gap: 10,
     marginBottom: 8,
   },
   sectionTitle: {
@@ -1253,6 +1191,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 5,
+    alignSelf: 'flex-start',
+    flexShrink: 0,
+    maxWidth: '100%',
     paddingHorizontal: 10,
     paddingVertical: 5,
     borderRadius: 10,

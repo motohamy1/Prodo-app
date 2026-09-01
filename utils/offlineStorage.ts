@@ -152,6 +152,24 @@ export const setMutationQueue = async (queue: QueuedMutation[]) => {
   }
 };
 
+// Remove an optimistic temp entry from all caches matching the given prefixes.
+export const rollbackOptimisticEntry = (prefixes: string[], tempId: string) => {
+  if (!tempId) return;
+  Object.keys(memoryCache).forEach((key) => {
+    if (prefixes.some((p) => key.startsWith(p))) {
+      const current = memoryCache[key];
+      if (Array.isArray(current)) {
+        const updated = current.filter((item: any) => item?._id !== tempId);
+        if (updated.length !== current.length) {
+          memoryCache[key] = updated;
+          AsyncStorage.setItem(key, JSON.stringify(updated)).catch(() => {});
+        }
+      }
+    }
+  });
+  notifyCacheChanged();
+};
+
 // --- Automatic Optimistic Local Store Execution ---
 
 export const applyOptimisticMutation = (mutationPath: string, args: any): any => {
@@ -281,7 +299,13 @@ export const applyOptimisticMutation = (mutationPath: string, args: any): any =>
 
       updateMatchingCaches('CACHE_todos_', (list) => {
         if (!Array.isArray(list)) return list;
-        return list.map(patchTodo);
+        let next = list.map(patchTodo);
+        // The server `todos` get-query only returns top-level items: mirror
+        // that by dropping an item the moment it is nested under a parent.
+        if (mutationPath === 'todos:updateTodo' && args.parentId) {
+          next = next.filter((t: any) => t._id !== targetId);
+        }
+        return next;
       });
 
       updateMatchingCaches('CACHE_todos.getSubtasks_', (list) => {
@@ -311,6 +335,22 @@ export const applyOptimisticMutation = (mutationPath: string, args: any): any =>
       updateMatchingCaches('CACHE_todos.getSubtasks_', (list) => {
         if (!Array.isArray(list)) return list;
         return list.filter((t: any) => t._id !== targetId);
+      });
+
+      notifyCacheChanged();
+      return { success: true };
+    }
+
+    case 'todos:deleteChecklistItem': {
+      const targetId = args.id || args.todoId;
+      if (!targetId) break;
+
+      // The item disappears, but its linked tasks survive (server unlinks them).
+      updateMatchingCaches('CACHE_todos_', (list) => {
+        if (!Array.isArray(list)) return list;
+        return list
+          .filter((t: any) => t._id !== targetId)
+          .map((t: any) => (t.parentId === targetId ? { ...t, parentId: undefined } : t));
       });
 
       notifyCacheChanged();
@@ -650,10 +690,11 @@ export const applyOptimisticMutation = (mutationPath: string, args: any): any =>
         ...args,
       };
 
-      updateMatchingCaches('CACHE_yearlyGoals', (list) => {
-        if (!Array.isArray(list)) return [newGoal];
-        return [...list.filter((g: any) => g._id !== tempId), newGoal];
-      });
+      const prependGoal = (list: any) =>
+        Array.isArray(list) ? [...list.filter((g: any) => g._id !== tempId), newGoal] : [newGoal];
+      updateMatchingCaches('CACHE_yearlyGoals', prependGoal);
+      updateMatchingCaches('CACHE_monthlyGoals', prependGoal);
+      updateMatchingCaches('CACHE_dailyGoals', prependGoal);
 
       notifyCacheChanged();
       return tempId;
@@ -692,10 +733,11 @@ export const applyOptimisticMutation = (mutationPath: string, args: any): any =>
         ...args,
       };
 
-      updateMatchingCaches('CACHE_yearlyAchievements', (list) => {
-        if (!Array.isArray(list)) return [newAch];
-        return [...list.filter((a: any) => a._id !== tempId), newAch];
-      });
+      const prependAch = (list: any) =>
+        Array.isArray(list) ? [...list.filter((a: any) => a._id !== tempId), newAch] : [newAch];
+      updateMatchingCaches('CACHE_yearlyAchievements', prependAch);
+      updateMatchingCaches('CACHE_monthlyAchievements', prependAch);
+      updateMatchingCaches('CACHE_dailyAchievements', prependAch);
 
       notifyCacheChanged();
       return tempId;
